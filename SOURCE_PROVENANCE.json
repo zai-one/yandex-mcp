@@ -1,0 +1,338 @@
+{
+  "source_repository": "git@git.zai.one:zai.one/mcp-platform.git",
+  "runtime_status": "extraction in progress; not a release",
+  "files": [
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "src/mcp_platform/providers/base.py",
+      "destination": "src/zai_yandex/transport.py",
+      "source_sha256": "df809567bbf609f73cd8f1a9507272aff3a202666a75b54a186091235817d2c3",
+      "initial_extracted_sha256": "775809e31c46f1a3c9a24d011bcbc4324dec11010a8afe8f5cee45460d4344ea"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "src/mcp_platform/providers/coalescing.py",
+      "destination": "src/zai_yandex/coalescing.py",
+      "source_sha256": "dedecb5c994e34f039028540ca3c48f5dd1c06dcce2e01ea27d364beb1fc6f15",
+      "initial_extracted_sha256": "dedecb5c994e34f039028540ca3c48f5dd1c06dcce2e01ea27d364beb1fc6f15"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "src/mcp_platform/response_sanitizer.py",
+      "destination": "src/zai_yandex/sanitizer.py",
+      "source_sha256": "8682ff32b5108b2f8f6fe667af0d85d40f6d6b9dada596a15a6629be07e5cecd",
+      "initial_extracted_sha256": "8682ff32b5108b2f8f6fe667af0d85d40f6d6b9dada596a15a6629be07e5cecd"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "src/mcp_platform/error_envelope.py",
+      "destination": "src/zai_yandex/errors.py",
+      "source_sha256": "c5ac994b93383c4f5dca52695316a4fbe50df48c2b2cd6021747b407061e9a3e",
+      "initial_extracted_sha256": "d61b433ca0fc67eafe35e2fc34e8cfc6ff459c2244199198ce1a248dfa5ffd3f"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "src/mcp_platform/providers/yandex_direct.py",
+      "destination": "src/zai_yandex/adapters/direct.py",
+      "source_sha256": "50f77dd89a867e94baf978109eb26c342c1f34cf3a78072546bc293005fd4b5e",
+      "initial_extracted_sha256": "8e53a29db81abc03d5aeef35f2c2a9e0d191f11ce15e0df78a8cef85c2872e5c"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "src/mcp_platform/providers/yandex_metrika.py",
+      "destination": "src/zai_yandex/adapters/metrika.py",
+      "source_sha256": "7a619178f376c5d1e1424208fc25e2719702f3b35c4a899abfc20f23faab1f70",
+      "initial_extracted_sha256": "85250c611f2e2796a136333b507bf8fe91c589050327e17c9b0a84f3559c3fe2"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "src/mcp_platform/providers/yandex_search.py",
+      "destination": "src/zai_yandex/adapters/search.py",
+      "source_sha256": "aa3188b7e7b2ca272df7a7faeb5d5763787e94596cdbe74565fd4c4db1a4b014",
+      "initial_extracted_sha256": "b73f8c0b44d70f8c8445219737cf9267d6a9b090ace8d57cb7b47dcf0372c985"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "tests/providers/test_yandex_direct_keywords.py",
+      "destination": "tests/test_direct_keywords.py",
+      "source_sha256": "d82394ac54428a7eeccf5ab2ad0f0047ce1d68f68d121d8f0d1ba14edbf19a0b",
+      "initial_extracted_sha256": "e381724045731fa35d0bdc603426f43948dbfc13135302cd3d9809257db9d03a"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "tests/providers/test_yandex_direct_reports.py",
+      "destination": "tests/test_direct_reports.py",
+      "source_sha256": "7a1b0e26e7b2632cd67d6c8633fce39fa09b6a4031f68222f86d7572b4c29659",
+      "initial_extracted_sha256": "d8566211b31b53373f92f9a08004dceb87785746e720520b9e78d98adba8f64f"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "tests/providers/test_yandex_metrika.py",
+      "destination": "tests/test_metrika.py",
+      "source_sha256": "62c4b49be12191366c3a8068ec94ea83237e63885eb1575449e7a46647e94fee",
+      "initial_extracted_sha256": "c2a7e63f181a6edfc25c2cf9bc49dee2320b15c3c230f1f66538505f031edf90"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "tests/providers/test_yandex_metrika_write.py",
+      "destination": "tests/test_metrika_write.py",
+      "source_sha256": "f4d68cf18479259e754f82b4d7dcf5709f89a7e23593c8fff3084fe7cdd792ab",
+      "initial_extracted_sha256": "ea14f16e69403428b0540496e800c5f3011cf63d2d3edbdf5207b36a9f35f69f"
+    },
+    {
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source": "tests/test_response_sanitizer.py",
+      "destination": "tests/test_sanitizer.py",
+      "source_sha256": "e2ed7b37e992bd6e6aec15729aa518b20637d49eddc91e0dd0003d341ccedeb5",
+      "initial_extracted_sha256": "51421453e4a86e4409fbf8c96c944c07ae7095ebf26b7455a3babf54c08f1201"
+    },
+    {
+      "source_revision": "4c5352382133d3f4e0fefe3ebd50e0c6250ed098",
+      "source": "src/mcp_platform/providers/yandex_webmaster.py",
+      "destination": "src/zai_yandex/adapters/webmaster.py",
+      "source_sha256": "ff781dfa2c8802bc8f6aa95fb87b198c011b4d8106ba2e9d5a39e5241ae24c8b",
+      "initial_extracted_sha256": "ec63e9b53738557c15e771f81b1e0d524b2423034c0fc8f353513d914fd9baac"
+    },
+    {
+      "source_revision": "4c5352382133d3f4e0fefe3ebd50e0c6250ed098",
+      "source": "tests/test_yandex_webmaster_adapter.py",
+      "destination": "tests/test_webmaster_adapter.py",
+      "source_sha256": "8ea87546333e24ddec2c5bc69cfd8edc3130d86e023eb09e2d606fc1eaffca7d",
+      "initial_extracted_sha256": "a569532dace2234930d7759adfb36590a75365b1ab68a6da93e7c206024ee942"
+    },
+    {
+      "source_revision": "4c5352382133d3f4e0fefe3ebd50e0c6250ed098",
+      "source": "third_party/webmaster/UPSTREAM.md",
+      "destination": "third_party/webmaster/UPSTREAM.md",
+      "source_sha256": "caee3368b0950a7269b0667eae4176076098604e5d58cb219afb70a15664d582",
+      "initial_extracted_sha256": "caee3368b0950a7269b0667eae4176076098604e5d58cb219afb70a15664d582"
+    },
+    {
+      "source_revision": "4c5352382133d3f4e0fefe3ebd50e0c6250ed098",
+      "source": "third_party/webmaster/webkoth-LICENSE",
+      "destination": "third_party/webmaster/webkoth-LICENSE",
+      "source_sha256": "ac54592001fa0028cec8afda816882a2dcbdd20f7fc56423db4f40e35fff75c1",
+      "initial_extracted_sha256": "ac54592001fa0028cec8afda816882a2dcbdd20f7fc56423db4f40e35fff75c1"
+    },
+    {
+      "source_revision": "4c5352382133d3f4e0fefe3ebd50e0c6250ed098",
+      "source": "third_party/webmaster/weselow-LICENSE",
+      "destination": "third_party/webmaster/weselow-LICENSE",
+      "source_sha256": "83d579de31e09bdb5b46e6b343df112031626fa6ce8982e52a05463a3945b093",
+      "initial_extracted_sha256": "83d579de31e09bdb5b46e6b343df112031626fa6ce8982e52a05463a3945b093"
+    }
+  ],
+  "tool_functions": [
+    {
+      "name": "yandex_wordstat_get_top",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1534,
+        1588
+      ],
+      "source_sha256": "223afd4400a70d156b76d41115c4390146e04f0fc7b79c8037617c4d432defda"
+    },
+    {
+      "name": "yandex_serp_prepare",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1590,
+        1604
+      ],
+      "source_sha256": "c8fabf13bc15b6f54b0d7468f27b8110845c15c8b5f10986b3ebb5991e74e3fd"
+    },
+    {
+      "name": "yandex_serp_submit",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1606,
+        1625
+      ],
+      "source_sha256": "9ee27ea3d3cfa59709791fae2394a6bf80669f5278adf1e6d1a870fd5c28f306"
+    },
+    {
+      "name": "yandex_serp_status",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1627,
+        1630
+      ],
+      "source_sha256": "7239d559aa7c0c6c9f0c78d7dbabe0fe038261b22eeae860a31389e6e01fc460"
+    },
+    {
+      "name": "yandex_serp_get_result",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1632,
+        1635
+      ],
+      "source_sha256": "7b58cc25dca5ad538f7093d68d55a6d0bebca0f2eedebdfc84016c41029d9e88"
+    },
+    {
+      "name": "_direct_read",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1637,
+        1645
+      ],
+      "source_sha256": "2fd1d2fa29a02ba4f36c1b5cfe4073357707335a8f9981e9c57a27d8a4c180cc"
+    },
+    {
+      "name": "_list_campaigns",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1647,
+        1657
+      ],
+      "source_sha256": "62f6c0eaf3367599a5e3bbdf09464d69298decc92a0b7debff4d048993faebc8"
+    },
+    {
+      "name": "direct_list_campaigns",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1659,
+        1662
+      ],
+      "source_sha256": "c390d7dc20787b46a341f4bbbdea8e59ebc6554eabb475bab03c4c915b9ef81c"
+    },
+    {
+      "name": "direct_get_campaign",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1664,
+        1667
+      ],
+      "source_sha256": "a86962898458bb6e8d7efeda1c6b1b1eb9751c59c605133f6b0edc65d43970d6"
+    },
+    {
+      "name": "direct_get_inventory",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1669,
+        1675
+      ],
+      "source_sha256": "b7ba900fa521c42a5963773ee4cb1f318f1a2b66150d2e16fd35b4ade1224be0"
+    },
+    {
+      "name": "direct_get_statistics",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1677,
+        1701
+      ],
+      "source_sha256": "d3d15153a748a82d2284d1830217148fb3be74eaf465ffee03f5e3dd3fc5afa0"
+    },
+    {
+      "name": "direct_keyword_forecast",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1703,
+        1728
+      ],
+      "source_sha256": "ab42412582eab3d3d20a64778a6db564156f4278908dd339917ba125d20d4b70"
+    },
+    {
+      "name": "direct_prepare_changes",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1730,
+        1764
+      ],
+      "source_sha256": "accdf107cb8e55770a8d6d882de1f3bd434262ebcfc721c5d491b62e33f18eb0"
+    },
+    {
+      "name": "direct_apply_changes",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1766,
+        1824
+      ],
+      "source_sha256": "5a8420212b5935ff326c6f313890bcb64f7610bb00443693c4e1a72ebea0d1d9"
+    },
+    {
+      "name": "_direct_readback_ids",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1826,
+        1841
+      ],
+      "source_sha256": "56e0e665738ab2b3f13599fe56d50bcbcede8f358722bfa15fc6d087c31bee1c"
+    },
+    {
+      "name": "direct_write",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1843,
+        1873
+      ],
+      "source_sha256": "a1a4ab26f93656252368dfd8e12f84f95168edb1f56871f5af1342f16c76114b"
+    },
+    {
+      "name": "metrika_list_counters",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1875,
+        1878
+      ],
+      "source_sha256": "53ab7bcdb063703bf69f1ae4c4885ddaafbf1b4bfa139300954900ee69f11f04"
+    },
+    {
+      "name": "metrika_list_goals",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1880,
+        1890
+      ],
+      "source_sha256": "4492675b9ce975ddc7348149665c5ec246e1a1a280fde59b49b9bba3b7054eb4"
+    },
+    {
+      "name": "metrika_get_statistics",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1892,
+        1902
+      ],
+      "source_sha256": "06cbdb21fb8e60438ccf2d33d453f3a59bd8a42f9ba4ae22e0db1e274fd288d0"
+    },
+    {
+      "name": "metrika_apply_goal",
+      "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+      "source_lines": [
+        1904,
+        1934
+      ],
+      "source_sha256": "742b6990b75c49cb98097d1ce676897813ee7d4ef2d4d9ead51ea416c5854f8a"
+    }
+  ],
+  "webmaster_tools_source_sha256": "5c2f7bdce6f0d8710a42cd769fa3522aadc9e53dc4fb6aea537a76dbdd2d574a",
+  "webmaster_tools": [
+    "webmaster_get_user",
+    "webmaster_list_hosts",
+    "webmaster_get_host",
+    "webmaster_get_verification",
+    "webmaster_get_summary",
+    "webmaster_get_diagnostics",
+    "webmaster_get_query_history",
+    "webmaster_list_popular_queries",
+    "webmaster_get_indexing_history",
+    "webmaster_list_indexing_samples",
+    "webmaster_list_search_urls",
+    "webmaster_get_search_urls_history",
+    "webmaster_list_sitemaps",
+    "webmaster_get_sitemap",
+    "webmaster_list_user_sitemaps",
+    "webmaster_list_external_links",
+    "webmaster_get_external_links_history",
+    "webmaster_list_broken_links",
+    "webmaster_get_broken_links_history",
+    "webmaster_list_recrawl_queue",
+    "webmaster_get_recrawl_quota",
+    "webmaster_get_recrawl_task",
+    "webmaster_prepare_recrawl",
+    "webmaster_prepare_sitemap",
+    "webmaster_apply_recrawl",
+    "webmaster_apply_sitemap",
+    "webmaster_reconcile_action"
+  ],
+  "webmaster_actions_source_sha256": "c8dec7ea34e74db143e5afc0d911eebd2d6a3b47a6067b19dbfa365e774f7f1a"
+}
