@@ -1,0 +1,15 @@
+{"command": ["uv", "run", "pytest", "-q", "-k", "webmaster or yandex_package or tool_cost_registry"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-webmaster-services-extraction"}
+........................................................................ [ 66%]
+.....................................                                    [100%]
+============================== warnings summary ===============================
+tests/test_yandex_package.py::test_yandex_package_keeps_all_original_contracts
+  D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\tests\test_yandex_package.py:21: FastMCPDeprecationWarning: Accessing `Tool.inputSchema` is deprecated; MCP SDK v2 renamed this field to `input_schema`. Update your code to read `.input_schema` instead.
+    "inputSchema": tool.inputSchema,
+
+tests/test_yandex_package.py::test_yandex_package_keeps_all_original_contracts
+  D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\tests\test_yandex_package.py:22: FastMCPDeprecationWarning: Accessing `Tool.outputSchema` is deprecated; MCP SDK v2 renamed this field to `output_schema`. Update your code to read `.output_schema` instead.
+    "outputSchema": tool.outputSchema,
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+109 passed, 615 deselected, 2 warnings in 8.72s
+{"exit_code": 0, "seconds": 17.953}

@@ -1,0 +1,501 @@
+{
+  "gateway_revision": "49aa2eb2e5cb24a511249636f36f87acc3f86eed",
+  "method": "authenticated runtime discovery; no provider API calls",
+  "group": "core",
+  "tools": {
+    "yandex_wordstat_get_top": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "phrase": {
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "num_phrases": {
+            "default": 10,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "phrase",
+          "regions"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Get Yandex Wordstat top requests with raw provenance and normalized output."
+    },
+    "yandex_serp_prepare": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "region": {
+            "default": "225",
+            "type": "string"
+          },
+          "response_format": {
+            "default": "FORMAT_XML",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Prepare an asynchronous Yandex SERP request without a live provider call."
+    },
+    "yandex_serp_submit": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "approval_id": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          },
+          "region": {
+            "default": "225",
+            "type": "string"
+          },
+          "response_format": {
+            "default": "FORMAT_XML",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "approval_id",
+          "idempotency_key"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Queue an approved asynchronous Yandex SERP request."
+    },
+    "yandex_serp_status": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Return durable status for an asynchronous Yandex SERP job."
+    },
+    "yandex_serp_get_result": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Return raw provenance metadata and normalized Yandex SERP output."
+    },
+    "direct_list_campaigns": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "selection_criteria": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "List Direct campaigns through the strict read allowlist."
+    },
+    "direct_get_campaign": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "campaign_id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Get one Direct campaign by numeric id."
+    },
+    "direct_get_inventory": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "service",
+          "params"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Run a provider-native get against the explicit Direct inventory allowlist."
+    },
+    "direct_get_statistics": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          },
+          "campaign_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "field_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "report_type": {
+            "default": "CUSTOM_REPORT",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read campaign statistics; returns completed TSV rows or safe offline queue status."
+    },
+    "direct_keyword_forecast": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "phrases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "region_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "phrases",
+          "region_ids"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Forecast search-volume presence by device for phrases and regions."
+    },
+    "direct_prepare_changes": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Draft a Direct change set and open an unaccepted, expiring approval.\n\nThe draft carries a diff hash and an approval_id. A human must accept the\napproval before `direct_apply_changes` can execute it."
+    },
+    "direct_apply_changes": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "campaigns": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "approval_id": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "method",
+          "campaigns",
+          "approval_id",
+          "idempotency_key"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Execute one accepted, allowlisted Direct write (Campaigns.update) with readback.\n\nFail-closed: needs the runtime flag, an accepted approval whose hash\nmatches these exact changes, and a bounded allowlisted service/method.\nThe approval is consumed exactly once (idempotency); after the write the\naffected campaigns are re-read to confirm the applied state."
+    },
+    "direct_write": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "service",
+          "method",
+          "items"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Autonomously apply a Direct write across campaigns/adgroups/ads/keywords/bids.\n\nAllowlisted service/method only (add/update/delete/suspend/resume/archive/\nmoderate, bids set/setAuto). Idempotent, with a post-write readback of the\naffected objects. campaigns:update also has an approval-gated path\n(direct_apply_changes) for a stricter human gate."
+    },
+    "metrika_list_counters": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "List Metrika counters through a server-side read-only credential."
+    },
+    "metrika_list_goals": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "counter_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "counter_id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "List goals for one positive Metrika counter id."
+    },
+    "metrika_get_statistics": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "params": {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "params"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Run a bounded read-only Metrika reporting request."
+    },
+    "metrika_apply_goal": {
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "type": "string"
+          },
+          "counter_id": {
+            "type": "integer"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "operation",
+          "counter_id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Autonomously create, update or delete a Metrika goal (idempotent, readback)."
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{"command": ["uv", "run", "pytest", "-q", "tests/test_yandex_package.py", "-k", "action_error"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-webmaster-services-extraction"}
+.F                                                                       [100%]
+================================== FAILURES ===================================
+_ test_webmaster_action_error_reaches_central_governor_before_outer_translation[True] _
+
+legacy = True
+
+    @pytest.mark.parametrize("legacy", [False, True])
+    async def test_webmaster_action_error_reaches_central_governor_before_outer_translation(legacy):
+        from zai_yandex import transport as service
+    
+        from mcp_platform.providers.registry import ProviderRegistry
+        from mcp_platform.providers.yandex_package import GatewayRuntime
+        from mcp_platform.settings import Settings
+        from mcp_platform.store import InMemoryStore
+        from mcp_platform.webmaster_actions import WebmasterActions
+    
+        calls = []
+    
+        class Http:
+            async def request(self, method, url, **kwargs):
+                calls.append(url)
+                raise base.ProviderRateLimited("synthetic quota", retry_after_seconds=60)
+    
+        settings = Settings(environment="test", provider_queue_wait_seconds=0)
+        store = InMemoryStore()
+        principal = await store.create_principal("webmaster-depth")
+        await store.set_provider("yandex_webmaster", True)
+        adapter = YandexWebmasterAdapter("https://api.webmaster.yandex.net/v4", "synthetic", http=Http())
+        registry = ProviderRegistry(settings, store, yandex_webmaster_override=adapter)
+        actions = (
+            WebmasterActions(settings, store, registry)
+            if legacy
+            else GatewayRuntime(registry, settings, store).webmaster_actions
+        )
+        error = base.ProviderRateLimited if legacy else service.ProviderRateLimited
+        with pytest.raises(error, match="synthetic quota"):
+            await actions.prepare(principal, "recrawl", "https:example.test:443", "https://example.test/a")
+        assert len(calls) == 1
+>       with pytest.raises(error, match="cooldown"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'cooldown'
+E         Actual message: 'synthetic quota'
+
+tests\test_yandex_package.py:94: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_yandex_package.py::test_webmaster_action_error_reaches_central_governor_before_outer_translation[True]
+1 failed, 1 passed, 3 deselected in 1.22s
+{"exit_code": 1, "seconds": 8.109}

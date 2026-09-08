@@ -1,0 +1,7 @@
+{"command": ["D:\\ZAI\\Infra\\mcp-platform-webmaster-services-extraction\\.venv\\Scripts\\python.exe", "D:\\ZAI\\.tasks\\work\\mcp-services-extraction\\freeze_yandex_contract.py", "D:\\ZAI\\.tasks\\verifications\\mcp-services-extraction-evidence\\yandex-webmaster-original-contract.json", "webmaster"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-webmaster-services-extraction"}
+D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py:45: FastMCPDeprecationWarning: Accessing `Tool.inputSchema` is deprecated; MCP SDK v2 renamed this field to `input_schema`. Update your code to read `.input_schema` instead.
+  tools = {tool.name: {"inputSchema": tool.inputSchema, "outputSchema": tool.outputSchema,
+D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py:45: FastMCPDeprecationWarning: Accessing `Tool.outputSchema` is deprecated; MCP SDK v2 renamed this field to `output_schema`. Update your code to read `.output_schema` instead.
+  tools = {tool.name: {"inputSchema": tool.inputSchema, "outputSchema": tool.outputSchema,
+Froze 27 original webmaster schemas/descriptions
+{"exit_code": 0, "seconds": 5.969}

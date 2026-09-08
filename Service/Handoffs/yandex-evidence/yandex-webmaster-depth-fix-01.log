@@ -1,0 +1,4 @@
+{"command": ["uv", "run", "pytest", "-q", "tests/test_yandex_package.py", "-k", "action_error"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-webmaster-services-extraction"}
+..                                                                       [100%]
+2 passed, 3 deselected in 0.14s
+{"exit_code": 0, "seconds": 6.797}

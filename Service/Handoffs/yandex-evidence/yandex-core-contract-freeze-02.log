@@ -1,0 +1,23 @@
+{"command": ["D:\\ZAI\\Infra\\mcp-platform-services-extraction\\.venv\\Scripts\\python.exe", "D:\\ZAI\\.tasks\\work\\mcp-services-extraction\\freeze_yandex_contract.py", "D:\\ZAI\\.tasks\\verifications\\mcp-services-extraction-evidence\\yandex-core-original-contract.json", "core"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-services-extraction"}
+Traceback (most recent call last):
+  File "D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py", line 49, in <module>
+    asyncio.run(main())
+  File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py", line 30, in main
+    issued = await TokenService(store, settings.token_pepper()).issue(principal, "contract-freeze", scopes)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ZAI\Infra\mcp-platform-services-extraction\src\mcp_platform\auth\service.py", line 35, in issue
+    checked_scopes = validate_scopes(scopes)
+                     ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ZAI\Infra\mcp-platform-services-extraction\src\mcp_platform\auth\scopes.py", line 201, in validate_scopes
+    raise ValueError(f"unknown scopes: {', '.join(sorted(unknown))}")
+ValueError: unknown scopes: yandex_webmaster:read, yandex_webmaster:write
+{"exit_code": 1, "seconds": 4.859}

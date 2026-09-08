@@ -1,0 +1,4 @@
+{"command": ["uv", "run", "pytest", "-q", "tests/test_state_jobs.py", "-k", "queued_job_rechecks_budget"], "cwd": "D:\\ZAI\\MCP\\Yandex"}
+..                                                                       [100%]
+2 passed, 16 deselected in 0.83s
+{"exit_code": 0, "seconds": 6.375}

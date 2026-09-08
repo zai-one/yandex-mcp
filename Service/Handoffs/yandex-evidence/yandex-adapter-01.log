@@ -1,0 +1,26 @@
+{"command": ["uv", "run", "python", "scripts/verify.py"], "cwd": "D:\\ZAI\\MCP\\Yandex"}
+F841 Local variable `settings` is assigned to but never used
+  --> src\zai_yandex\webmaster_tools.py:42:5
+   |
+41 | def register_webmaster_tools(server: Any, runtime: Any) -> None:
+42 |     settings, store, registry = runtime.settings, runtime.store, runtime.registry
+   |     ^^^^^^^^
+43 |     actions = runtime.webmaster_actions
+44 |     require_scopes = runtime.require_scopes
+   |
+help: Remove assignment to unused variable `settings`
+
+F841 Local variable `store` is assigned to but never used
+  --> src\zai_yandex\webmaster_tools.py:42:15
+   |
+41 | def register_webmaster_tools(server: Any, runtime: Any) -> None:
+42 |     settings, store, registry = runtime.settings, runtime.store, runtime.registry
+   |               ^^^^^
+43 |     actions = runtime.webmaster_actions
+44 |     require_scopes = runtime.require_scopes
+   |
+help: Remove assignment to unused variable `store`
+
+Found 2 errors.
+No fixes available (2 hidden fixes can be enabled with the `--unsafe-fixes` option).
+{"exit_code": 1, "seconds": 0.891}

@@ -1,0 +1,1 @@
+{"command": [".venv\\Scripts\\python.exe", "D:\\ZAI\\.tasks\\work\\mcp-services-extraction\\freeze_yandex_contract.py", "D:\\ZAI\\.tasks\\verifications\\mcp-services-extraction-evidence\\yandex-core-original-contract.json", "core"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-services-extraction"}

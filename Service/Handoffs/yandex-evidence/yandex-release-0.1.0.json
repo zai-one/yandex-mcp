@@ -1,0 +1,11 @@
+{
+  "package": "zai-yandex-mcp",
+  "version": "0.1.0",
+  "wheel": "zai_yandex_mcp-0.1.0-py3-none-any.whl",
+  "source_revision": "a500b0e61e083e7368a624bdacc75471260dd170",
+  "sha256": "3b021c5d7b0bc531ae084425323d44b8cb0ec816e3e39bc3ad57bfa24721a8ba",
+  "uv_lock_sha256": "bb35efc59ce94b7e9e67b5de2b85c546587dd2e2c2b63f720c816d5cbc481ac6",
+  "verification": "clean non-editable wheel; hashed frozen dependencies; real stdio and HTTP",
+  "production": "not deployed",
+  "container": "not built; Docker unavailable"
+}

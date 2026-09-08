@@ -1,0 +1,99 @@
+{"command": ["python", "D:\\ZAI\\.tasks\\work\\mcp-services-extraction\\verify_service_clone.py", "--source", "D:\\ZAI\\MCP\\Yandex", "--manifest", "D:\\ZAI\\.tasks\\verifications\\mcp-services-extraction-evidence\\yandex-release-0.1.0.json", "--destination-name", "yandex-service-clean-clone-lf", "--extra", "standalone"], "cwd": "D:\\ZAI\\MCP\\Yandex"}
+Cloning into 'D:\ZAI\.tasks\work\mcp-services-extraction\yandex-service-clean-clone-lf'...
+done.
+HEAD is now at a500b0e Implement standalone Yandex MCP runtime, durable approvals, budgets and Search worker
+Using CPython 3.12.13 interpreter at: D:\ZAI\Infra\mcp-platform\.venv\Scripts\python.exe
+Creating virtual environment at: .venv
+Activate with: .venv\Scripts\activate
+   Building zai-yandex-mcp @ file:///D:/ZAI/.tasks/work/mcp-services-extraction/yandex-service-clean-clone-lf
+      Built zai-yandex-mcp @ file:///D:/ZAI/.tasks/work/mcp-services-extraction/yandex-service-clean-clone-lf
+Prepared 1 package in 2.95s
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 75 packages in 4.28s
+ + aiofile==3.12.3
+ + annotated-types==0.8.0
+ + anyio==4.15.1
+ + attrs==26.1.0
+ + authlib==1.8.0
+ + beartype==0.22.9
+ + cachetools==7.1.8
+ + caio==0.12.4
+ + certifi==2026.7.22
+ + cffi==2.1.1
+ + click==8.5.0
+ + colorama==0.4.6
+ + cryptography==50.0.1
+ + cyclopts==4.25.1
+ + dnspython==2.8.0
+ + docstring-parser==0.18.0
+ + email-validator==2.3.0
+ + exceptiongroup==1.3.1
+ + fastmcp==3.4.4
+ + fastmcp-slim==3.4.4
+ + griffelib==2.3.0
+ + h11==0.16.0
+ + httpcore==1.0.9
+ + httpx==0.28.1
+ + httpx-sse==0.4.3
+ + idna==3.19
+ + iniconfig==2.3.0
+ + jaraco-classes==3.4.0
+ + jaraco-context==6.1.2
+ + jaraco-functools==4.6.0
+ + joserfc==1.7.5
+ + jsonref==1.1.0
+ + jsonschema==4.26.0
+ + jsonschema-path==0.5.0
+ + jsonschema-specifications==2025.9.1
+ + keyring==25.7.0
+ + markdown-it-py==4.2.0
+ + mcp==1.30.0
+ + mdurl==0.1.2
+ + more-itertools==11.1.0
+ + openapi-pydantic==0.5.1
+ + opentelemetry-api==1.44.0
+ + packaging==26.3
+ + pathable==0.6.0
+ + platformdirs==4.11.7
+ + pluggy==1.6.0
+ + py-key-value-aio==0.4.5
+ + pycparser==3.0
+ + pydantic==2.13.5
+ + pydantic-core==2.46.5
+ + pydantic-settings==2.15.0
+ + pygments==2.21.0
+ + pyjwt==2.13.0
+ + pyperclip==1.11.0
+ + pytest==9.1.1
+ + pytest-asyncio==1.4.0
+ + python-dotenv==1.2.3
+ + python-multipart==0.0.32
+ + pywin32==312
+ + pywin32-ctypes==0.2.3
+ + pyyaml==6.0.3
+ + referencing==0.37.0
+ + rich==15.0.0
+ + rich-rst==2.1.0
+ + rpds-py==2026.6.3
+ + ruff==0.15.21
+ + sse-starlette==3.4.11
+ + starlette==1.6.0
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.4
+ + uncalled-for==0.4.0
+ + uvicorn==0.52.4
+ + watchfiles==1.2.0
+ + websockets==17.1
+ + zai-yandex-mcp==0.1.0 (from file:///D:/ZAI/.tasks/work/mcp-services-extraction/yandex-service-clean-clone-lf)
+All checks passed!
+........................................................................ [ 52%]
+................................................................         [100%]
+136 passed in 20.57s
+Building source distribution...
+Building wheel from source distribution...
+Successfully built dist\zai_yandex_mcp-0.1.0.tar.gz
+Successfully built dist\zai_yandex_mcp-0.1.0-py3-none-any.whl
+PASS clean clone, frozen dependencies, service verification, reproducible wheel SHA-256: 3b021c5d7b0bc531ae084425323d44b8cb0ec816e3e39bc3ad57bfa24721a8ba
+{"exit_code": 0, "seconds": 62.016}

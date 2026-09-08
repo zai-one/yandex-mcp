@@ -1,0 +1,3 @@
+{"command": ["D:\\ZAI\\Infra\\mcp-platform-services-extraction\\.venv\\Scripts\\python.exe", "D:\\ZAI\\.tasks\\work\\mcp-services-extraction\\freeze_yandex_contract.py", "D:\\ZAI\\.tasks\\verifications\\mcp-services-extraction-evidence\\yandex-core-original-contract.json", "core"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-services-extraction"}
+Froze 17 original core schemas/descriptions
+{"exit_code": 0, "seconds": 5.437}

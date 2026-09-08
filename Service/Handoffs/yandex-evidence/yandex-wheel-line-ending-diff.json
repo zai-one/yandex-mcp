@@ -1,0 +1,117 @@
+{
+  "cause": "Windows Git checkout line endings",
+  "differences": [
+    {
+      "file": "zai_yandex/__init__.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/__main__.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/admission.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/approvals.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/coalescing.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/config.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/core_tools.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/errors.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/execution.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/jobs.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/models.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/runtime.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/sanitizer.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/server.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/state.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/transport.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/webmaster_actions.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/webmaster_tools.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/worker.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/adapters/direct.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/adapters/metrika.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/adapters/search.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/adapters/webmaster.py",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/_contracts/yandex.json",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/_licenses/webmaster/UPSTREAM.md",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/_licenses/webmaster/webkoth-LICENSE",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex/_licenses/webmaster/weselow-LICENSE",
+      "equal_after_lf_normalization": true
+    },
+    {
+      "file": "zai_yandex_mcp-0.1.0.dist-info/RECORD",
+      "equal_after_lf_normalization": false
+    }
+  ]
+}

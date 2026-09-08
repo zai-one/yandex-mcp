@@ -1,0 +1,6 @@
+{"command": ["uv", "run", "python", "scripts/verify.py"], "cwd": "D:\\ZAI\\MCP\\Yandex"}
+All checks passed!
+........................................................................ [ 77%]
+.....................                                                    [100%]
+93 passed in 4.28s
+{"exit_code": 0, "seconds": 9.5}

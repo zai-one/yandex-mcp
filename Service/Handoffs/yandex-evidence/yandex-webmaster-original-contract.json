@@ -1,0 +1,799 @@
+{
+  "gateway_revision": "4c5352382133d3f4e0fefe3ebd50e0c6250ed098",
+  "method": "authenticated runtime discovery; no provider API calls",
+  "group": "webmaster",
+  "tools": {
+    "webmaster_get_user": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read the OAuth account user identifier; OAuth stays on the server."
+    },
+    "webmaster_list_hosts": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          }
+        }
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one bounded page of sites accessible to the server account."
+    },
+    "webmaster_get_host": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read metadata for an exact Webmaster host identifier."
+    },
+    "webmaster_get_verification": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read ownership verification state without starting verification."
+    },
+    "webmaster_get_summary": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read indexing and site summary; missing metrics remain missing."
+    },
+    "webmaster_get_diagnostics": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read problems with native severity, presence state and state-change time."
+    },
+    "webmaster_get_query_history": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          },
+          "query_indicator": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "TOTAL_SHOWS",
+                    "TOTAL_CLICKS",
+                    "AVG_SHOW_POSITION",
+                    "AVG_CLICK_POSITION"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "device_type_indicator": {
+            "default": "ALL",
+            "enum": [
+              "ALL",
+              "DESKTOP",
+              "MOBILE_AND_TABLET",
+              "MOBILE",
+              "TABLET"
+            ],
+            "type": "string"
+          },
+          "query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "host_id",
+          "date_from",
+          "date_to"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read at most 31 days of aggregate or selected-query indicators."
+    },
+    "webmaster_list_popular_queries": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "query_indicator": {
+            "default": "TOTAL_SHOWS",
+            "enum": [
+              "TOTAL_SHOWS",
+              "TOTAL_CLICKS",
+              "AVG_SHOW_POSITION",
+              "AVG_CLICK_POSITION"
+            ],
+            "type": "string"
+          },
+          "device_type_indicator": {
+            "default": "ALL",
+            "enum": [
+              "ALL",
+              "DESKTOP",
+              "MOBILE_AND_TABLET",
+              "MOBILE",
+              "TABLET"
+            ],
+            "type": "string"
+          },
+          "order_by": {
+            "default": "TOTAL_SHOWS",
+            "enum": [
+              "TOTAL_SHOWS",
+              "TOTAL_CLICKS",
+              "AVG_SHOW_POSITION",
+              "AVG_CLICK_POSITION"
+            ],
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one page of popular queries; explicit periods are at most 31 days."
+    },
+    "webmaster_get_indexing_history": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "date_from",
+          "date_to"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read at most 31 days of indexing history."
+    },
+    "webmaster_list_indexing_samples": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one page of indexing samples with continuation metadata."
+    },
+    "webmaster_list_search_urls": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one page of URLs in search; a sample is not the full index."
+    },
+    "webmaster_get_search_urls_history": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "date_from",
+          "date_to"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read at most 31 days of search URL count history."
+    },
+    "webmaster_list_sitemaps": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one sitemap page using the upstream sitemap identifier cursor."
+    },
+    "webmaster_get_sitemap": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "sitemap_id": {
+            "type": "string"
+          },
+          "user_added": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "host_id",
+          "sitemap_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read detected sitemap details or registration of a submitted sitemap."
+    },
+    "webmaster_list_user_sitemaps": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one page of submitted sitemaps with an exclusive identifier cursor."
+    },
+    "webmaster_list_external_links": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one page of external link samples."
+    },
+    "webmaster_get_external_links_history": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "date_from",
+          "date_to"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read at most 31 days of external link history."
+    },
+    "webmaster_list_broken_links": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one page of broken internal link samples."
+    },
+    "webmaster_get_broken_links_history": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "date_from": {
+            "type": "string"
+          },
+          "date_to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "date_from",
+          "date_to"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read at most 31 days of broken internal link history."
+    },
+    "webmaster_list_recrawl_queue": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read one page of asynchronous recrawl requests."
+    },
+    "webmaster_get_recrawl_quota": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read the daily quota and remaining submissions."
+    },
+    "webmaster_get_recrawl_task": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "task_id"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read IN_PROGRESS/DONE/FAILED; DONE does not prove search indexing."
+    },
+    "webmaster_prepare_recrawl": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Prepare exactly one URL for human approval after ownership, quota and duplicate checks."
+    },
+    "webmaster_prepare_sitemap": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Prepare one sitemap registration for expiring human approval."
+    },
+    "webmaster_apply_recrawl": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "approval_id": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "url",
+          "approval_id",
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Submit one accepted URL exactly once. Uncertain POSTs are reconciled without retransmission."
+    },
+    "webmaster_apply_sitemap": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "host_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "approval_id": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "host_id",
+          "url",
+          "approval_id",
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Submit one accepted sitemap with a durable key and registration readback."
+    },
+    "webmaster_reconcile_action": {
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "recrawl",
+              "sitemap"
+            ],
+            "type": "string"
+          },
+          "host_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "host_id",
+          "url",
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "description": "Read and reconcile this principal's existing action. This tool cannot send a POST."
+    }
+  }
+}

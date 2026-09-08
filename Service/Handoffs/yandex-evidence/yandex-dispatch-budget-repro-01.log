@@ -1,0 +1,52 @@
+{"command": ["uv", "run", "pytest", "-q", "tests/test_state_jobs.py", "-k", "queued_job_rechecks_budget"], "cwd": "D:\\ZAI\\MCP\\Yandex"}
+FF                                                                       [100%]
+================================== FAILURES ===================================
+_ test_queued_job_rechecks_budget_before_later_actual_dispatch[new_month_exhausted] _
+
+tmp_path = WindowsPath('C:/Users/codex/AppData/Local/Temp/pytest-of-codex/pytest-3899/test_queued_job_rechecks_budge0')
+change = 'new_month_exhausted'
+
+    @pytest.mark.parametrize("change", ["new_month_exhausted", "server_cap_disabled"])
+    async def test_queued_job_rechecks_budget_before_later_actual_dispatch(tmp_path, change):
+        settings, recorder = paid_config(tmp_path, account_monthly_cost_limit=1), Recorder()
+        runtime = Runtime(settings, "stdio", recorder.factory)
+        job = await approved_job(runtime.store)
+        if change == "new_month_exhausted":
+            with runtime.store.connect() as db:
+                db.execute("UPDATE cost_reservations SET month='2000-01'")
+            assert await runtime.store.reserve_cost("bob", 1, 2, provider="yandex_search", operation="wordstat_get_top")
+        else:
+            settings = replace(settings, yandex_search_max_cost_per_approval=0)
+        await SearchWorker(Runtime(settings, "stdio", recorder.factory)).run_once()
+>       assert not recorder.calls
+E       AssertionError: assert not [('POST', 'https://searchapi.api.cloud.yandex.net/v2/web/searchAsync', {'query': {'searchType': 'SEARCH_TYPE_RU', 'que...ROUP_MODE_FLAT', 'groupsOnPage': '10', 'docsInGroup': '1'}, 'maxPassages': '2', 'region': '225', ...}, 'alice', False)]
+E        +  where [('POST', 'https://searchapi.api.cloud.yandex.net/v2/web/searchAsync', {'query': {'searchType': 'SEARCH_TYPE_RU', 'que...ROUP_MODE_FLAT', 'groupsOnPage': '10', 'docsInGroup': '1'}, 'maxPassages': '2', 'region': '225', ...}, 'alice', False)] = <conftest.Recorder object at 0x000002CFB6E27E90>.calls
+
+tests\test_state_jobs.py:195: AssertionError
+_ test_queued_job_rechecks_budget_before_later_actual_dispatch[server_cap_disabled] _
+
+tmp_path = WindowsPath('C:/Users/codex/AppData/Local/Temp/pytest-of-codex/pytest-3899/test_queued_job_rechecks_budge1')
+change = 'server_cap_disabled'
+
+    @pytest.mark.parametrize("change", ["new_month_exhausted", "server_cap_disabled"])
+    async def test_queued_job_rechecks_budget_before_later_actual_dispatch(tmp_path, change):
+        settings, recorder = paid_config(tmp_path, account_monthly_cost_limit=1), Recorder()
+        runtime = Runtime(settings, "stdio", recorder.factory)
+        job = await approved_job(runtime.store)
+        if change == "new_month_exhausted":
+            with runtime.store.connect() as db:
+                db.execute("UPDATE cost_reservations SET month='2000-01'")
+            assert await runtime.store.reserve_cost("bob", 1, 2, provider="yandex_search", operation="wordstat_get_top")
+        else:
+            settings = replace(settings, yandex_search_max_cost_per_approval=0)
+        await SearchWorker(Runtime(settings, "stdio", recorder.factory)).run_once()
+>       assert not recorder.calls
+E       AssertionError: assert not [('POST', 'https://searchapi.api.cloud.yandex.net/v2/web/searchAsync', {'query': {'searchType': 'SEARCH_TYPE_RU', 'que...ROUP_MODE_FLAT', 'groupsOnPage': '10', 'docsInGroup': '1'}, 'maxPassages': '2', 'region': '225', ...}, 'alice', False)]
+E        +  where [('POST', 'https://searchapi.api.cloud.yandex.net/v2/web/searchAsync', {'query': {'searchType': 'SEARCH_TYPE_RU', 'que...ROUP_MODE_FLAT', 'groupsOnPage': '10', 'docsInGroup': '1'}, 'maxPassages': '2', 'region': '225', ...}, 'alice', False)] = <conftest.Recorder object at 0x000002CFB7193FB0>.calls
+
+tests\test_state_jobs.py:195: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_state_jobs.py::test_queued_job_rechecks_budget_before_later_actual_dispatch[new_month_exhausted]
+FAILED tests/test_state_jobs.py::test_queued_job_rechecks_budget_before_later_actual_dispatch[server_cap_disabled]
+2 failed, 16 deselected in 2.02s
+{"exit_code": 1, "seconds": 7.843}

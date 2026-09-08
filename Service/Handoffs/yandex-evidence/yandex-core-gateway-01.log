@@ -1,0 +1,4 @@
+{"command": ["uv", "run", "pytest", "-q", "-k", "yandex or direct or metrika or wordstat or paid_job or tool_cost_registry"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-services-extraction"}
+....................................................................     [100%]
+68 passed, 568 deselected in 8.24s
+{"exit_code": 0, "seconds": 14.859}

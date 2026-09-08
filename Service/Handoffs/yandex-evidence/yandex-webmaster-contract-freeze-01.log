@@ -1,0 +1,127 @@
+{"command": ["D:\\ZAI\\Infra\\mcp-platform-webmaster-services-extraction\\.venv\\Scripts\\python.exe", "D:\\ZAI\\.tasks\\work\\mcp-services-extraction\\freeze_yandex_contract.py", "D:\\ZAI\\.tasks\\verifications\\mcp-services-extraction-evidence\\yandex-webmaster-original-contract.json", "webmaster"], "cwd": "D:\\ZAI\\Infra\\mcp-platform-webmaster-services-extraction"}
+  + Exception Group Traceback (most recent call last):
+  |   File "D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py", line 51, in <module>
+  |     asyncio.run(main())
+  |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py", line 195, in run
+  |     return runner.run(main)
+  |            ^^^^^^^^^^^^^^^^
+  |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py", line 118, in run
+  |     return self._loop.run_until_complete(task)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\base_events.py", line 691, in run_until_complete
+  |     return future.result()
+  |            ^^^^^^^^^^^^^^^
+  |   File "D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py", line 40, in main
+  |     async with app.router.lifespan_context(app), Client(transport) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\server\http.py", line 687, in lifespan
+  |     async with streamable_http_app.session_manager.run():
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\mcp\server\streamable_http_manager.py", line 142, in run
+  |     async with self.app.lifespan(self.app) as lifespan_state, anyio.create_task_group() as tg:
+  |                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Exception Group Traceback (most recent call last):
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\exceptiongroup\_catch.py", line 63, in handle_exception
+    |     raise matched
+    | ExceptionGroup:  (1 sub-exception)
+    +-+---------------- 1 ----------------
+      | Traceback (most recent call last):
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\client.py", line 1124, in _session_runner
+      |     await stack.enter_async_context(self._context_manager())
+      |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 659, in enter_async_context
+      |     result = await _enter(cm)
+      |              ^^^^^^^^^^^^^^^^
+      |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+      |     return await anext(self.gen)
+      |            ^^^^^^^^^^^^^^^^^^^^^
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\exceptiongroup\_catch.py", line 65, in handle_exception
+      |     result = handler(matched)
+      |              ^^^^^^^^^^^^^^^^
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\utilities\exceptions.py", line 63, in _exception_handler
+      |     raise leaf
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\client.py", line 825, in _context_manager
+      |     async with connection as session:
+      |                ^^^^^^^^^^
+      |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+      |     return await anext(self.gen)
+      |            ^^^^^^^^^^^^^^^^^^^^^
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\transports\http.py", line 186, in connect_session
+      |     http_client = self.httpx_client_factory(
+      |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |   File "D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py", line 37, in factory
+      |     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://fixture", **kwargs)
+      |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\httpx\_client.py", line 1376, in __init__
+      |     super().__init__(
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\httpx\_client.py", line 208, in __init__
+      |     self._auth = self._build_auth(auth)
+      |                  ^^^^^^^^^^^^^^^^^^^^^^
+      |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\httpx\_client.py", line 455, in _build_auth
+      |     raise TypeError(f'Invalid "auth" argument: {auth!r}')
+      | TypeError: Invalid "auth" argument: <fastmcp.client.auth.bearer.BearerAuth object at 0x0000016FBDB44080>
+      +------------------------------------
+    | 
+    | During handling of the above exception, another exception occurred:
+    | 
+    | Traceback (most recent call last):
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\client.py", line 1124, in _session_runner
+    |     await stack.enter_async_context(self._context_manager())
+    |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 659, in enter_async_context
+    |     result = await _enter(cm)
+    |              ^^^^^^^^^^^^^^^^
+    |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+    |     return await anext(self.gen)
+    |            ^^^^^^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\exceptiongroup\_catch.py", line 65, in handle_exception
+    |     result = handler(matched)
+    |              ^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\utilities\exceptions.py", line 63, in _exception_handler
+    |     raise leaf
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\client.py", line 825, in _context_manager
+    |     async with connection as session:
+    |                ^^^^^^^^^^
+    |   File "C:\Users\codex\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+    |     return await anext(self.gen)
+    |            ^^^^^^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\transports\http.py", line 186, in connect_session
+    |     http_client = self.httpx_client_factory(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py", line 37, in factory
+    |     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://fixture", **kwargs)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\httpx\_client.py", line 1376, in __init__
+    |     super().__init__(
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\httpx\_client.py", line 208, in __init__
+    |     self._auth = self._build_auth(auth)
+    |                  ^^^^^^^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\httpx\_client.py", line 455, in _build_auth
+    |     raise TypeError(f'Invalid "auth" argument: {auth!r}')
+    | TypeError: Invalid "auth" argument: <fastmcp.client.auth.bearer.BearerAuth object at 0x0000016FBDB44080>
+    | 
+    | The above exception was the direct cause of the following exception:
+    | 
+    | Traceback (most recent call last):
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\mcp\server\streamable_http_manager.py", line 150, in run
+    |     yield  # Let the application run
+    |     ^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\server\http.py", line 689, in lifespan
+    |     yield
+    |   File "D:\ZAI\.tasks\work\mcp-services-extraction\freeze_yandex_contract.py", line 40, in main
+    |     async with app.router.lifespan_context(app), Client(transport) as client:
+    |                                                  ^^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\client.py", line 949, in __aenter__
+    |     return await self._connect()
+    |            ^^^^^^^^^^^^^^^^^^^^^
+    |   File "D:\ZAI\Infra\mcp-platform-webmaster-services-extraction\.venv\Lib\site-packages\fastmcp\client\client.py", line 1046, in _connect
+    |     raise failure from exception
+    | RuntimeError: Client failed to connect: Invalid "auth" argument: <fastmcp.client.auth.bearer.BearerAuth object at 0x0000016FBDB44080>
+    +------------------------------------
+{"exit_code": 1, "seconds": 23.454}
