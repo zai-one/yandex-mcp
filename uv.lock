@@ -1354,15 +1354,20 @@ wheels = [
 
 [[package]]
 name = "zai-yandex-mcp"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "fastmcp" },
     { name = "httpx" },
+]
+
+[package.optional-dependencies]
+standalone = [
+    { name = "fastmcp" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "fastmcp" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -1370,12 +1375,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = "==3.4.4" },
+    { name = "fastmcp", marker = "extra == 'standalone'", specifier = "==3.4.4" },
     { name = "httpx", specifier = "==0.28.1" },
 ]
+provides-extras = ["standalone"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "fastmcp", specifier = "==3.4.4" },
     { name = "pytest", specifier = "==9.1.1" },
     { name = "pytest-asyncio", specifier = "==1.4.0" },
     { name = "ruff", specifier = "==0.15.21" },

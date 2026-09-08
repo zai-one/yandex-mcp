@@ -1,6 +1,6 @@
 {
   "source_repository": "git@git.zai.one:zai.one/mcp-platform.git",
-  "runtime_status": "extraction in progress; not a release",
+  "runtime_status": "standalone local release candidate; gateway integration verification in progress; not deployed",
   "files": [
     {
       "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
@@ -334,5 +334,24 @@
     "webmaster_apply_sitemap",
     "webmaster_reconcile_action"
   ],
-  "webmaster_actions_source_sha256": "c8dec7ea34e74db143e5afc0d911eebd2d6a3b47a6067b19dbfa365e774f7f1a"
+  "webmaster_actions_source_sha256": "c8dec7ea34e74db143e5afc0d911eebd2d6a3b47a6067b19dbfa365e774f7f1a",
+  "standalone_policy": {
+    "owner": "Yandex repository; SQLite StateStore and SearchWorker",
+    "runtime_scaffolding_source": "D:/ZAI/MCP/Topvisor, runtime code commit 38373891f269d14b0381fcb8517176429ede8e41",
+    "changes": [
+      "Account/provider/principal policy and per-attempt admission",
+      "Durable exact approvals, writes, paid jobs, budgets and dispatch intent",
+      "Recheck current budgets/month immediately before queued paid dispatch",
+      "Standalone principal subject supports strings; gateway retains UUID records",
+      "Record factories let gateway retain its own approval/job classes",
+      "Standalone FastMCP pinned through optional extra; base adapter package is host-independent"
+    ]
+  },
+  "search_job_execution": {
+    "source_revision": "3cba360d0358a21b572123f2c2222ce47759fda2",
+    "source": "src/mcp_platform/jobs/worker.py",
+    "source_sha256": "d1f756044a38495c2b833aae4bede1d363fa4775d7fdcec2392812ac6622327d",
+    "destination": "src/zai_yandex/execution.py",
+    "scope": "Original Yandex branch only; platform retains shared job state and outer error handling"
+  }
 }

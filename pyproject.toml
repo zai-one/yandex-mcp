@@ -4,20 +4,31 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zai-yandex-mcp"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Standalone governed Yandex MCP service"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
 dependencies = [
-  "fastmcp==3.4.4",
   "httpx==0.28.1",
 ]
 
+[project.optional-dependencies]
+standalone = ["fastmcp==3.4.4"]
+
+[project.scripts]
+yandex-mcp = "zai_yandex.server:main"
+yandex-search-worker = "zai_yandex.worker:main"
+yandex-approval = "zai_yandex.approvals:main"
+
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "ruff==0.15.21"]
+dev = ["fastmcp==3.4.4", "pytest==9.1.1", "pytest-asyncio==1.4.0", "ruff==0.15.21"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zai_yandex"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"third_party/webmaster" = "zai_yandex/_licenses/webmaster"
+"contracts" = "zai_yandex/_contracts"
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"

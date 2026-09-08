@@ -9,7 +9,7 @@ from uuid import UUID
 @dataclass(slots=True)
 class JobRecord:
     job_id: UUID
-    principal_id: UUID
+    principal_id: UUID | str
     provider: str
     operation: str
     payload: dict[str, Any]
@@ -29,7 +29,7 @@ class JobRecord:
 @dataclass(slots=True)
 class ApprovalRecord:
     approval_id: UUID
-    principal_id: UUID
+    principal_id: UUID | str
     provider: str
     operation: str
     request_hash: str

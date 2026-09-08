@@ -9,8 +9,9 @@ from zai_yandex.transport import request_hash
 
 
 class JobService:
-    def __init__(self, store: Any):
+    def __init__(self, store: Any, *, approval_record: Any = ApprovalRecord, job_record: Any = JobRecord):
         self.store = store
+        self.approval_record, self.job_record = approval_record, job_record
 
     async def enqueue_yandex_serp(
         self,
@@ -25,7 +26,7 @@ class JobService:
             raise ValueError("idempotency_key is required and must be at most 128 characters")
         payload = {"query": query, "region": region, "response_format": response_format}
         return await self.store.admit_paid_job(
-            JobRecord(
+            self.job_record(
                 uuid4(),
                 principal_id,
                 "yandex_search",
@@ -59,7 +60,7 @@ class JobService:
             if principal_budget_limit > 0 and within_server_limit and not budget_unlimited
             else 0.0
         )
-        approval = ApprovalRecord(
+        approval = self.approval_record(
             uuid4(),
             principal_id,
             "yandex_search",
