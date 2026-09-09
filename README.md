@@ -2,15 +2,19 @@
 
 # Yandex MCP
 
-Yandex Direct, Metrika, Search, Wordstat and Webmaster.
+MCP server for Yandex Direct, Metrika, Search API, Wordstat and Webmaster. Connect an AI assistant to advertising, website analytics, search results and search-demand data.
 
-Install it on your own computer or server and connect an MCP client. No AI Kit or
-central ZAI platform installation is required. Provider credentials and API access
-are required; provider charges and account restrictions still apply.
+## What you can do
+
+- Work with the supported Direct, Metrika and Webmaster API operations.
+- Submit search jobs through Yandex Cloud Search API and retrieve their results.
+- Get Wordstat query data, trends, regional distribution and the region tree.
 
 ## Quick start
 
 Install Python 3.12+ (below 3.15), [uv](https://docs.astral.sh/uv/getting-started/installation/) and Git.
+
+Each API group needs its own credentials. The wizard starts with Metrika; add Direct, Webmaster and Yandex Cloud credentials for the services you want to use. Cloud Search also needs a folder ID. Follow the [service-specific setup](INSTALL.md#from-a-clone-or-source-zip).
 
 ```sh
 git clone https://github.com/zai-one/yandex-mcp.git
@@ -25,12 +29,9 @@ The last command starts stdio and waits for an MCP client; it is not an interact
 See [INSTALL.md](INSTALL.md) for credentials, client configuration, HTTP and package integration.
 `--check-config` checks local settings only; it never validates a provider account over the network.
 
-## Included in 0.2.0
+## Scope and limits
 
-Wordstat dynamics, regions and region tree use Yandex Cloud Search API credentials and the existing cost gate. OAuth onboarding and Metrika Logs export are future work.
-
-Existing tool names and schemas remain supported. Writes and paid operations retain
-their server policy and approval controls. See [runtime configuration](docs/RUNTIME.md).
+Search jobs need a separate worker. Wordstat requests require explicit enabling and configured cost limits. OAuth login setup and Metrika Logs export are not included. See [runtime configuration](docs/RUNTIME.md).
 
 ## Verification
 
