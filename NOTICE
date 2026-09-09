@@ -1,0 +1,7 @@
+ZAI.ONE-owned wrapper and policy code uses LicenseRef-ZAI-ONE.
+The Yandex Webmaster adapter includes adaptations informed by MIT-licensed
+weselow/Yandex-webmaster-mcp-server; webkoth/yandex-mcp was also consulted.
+The original MIT notices and precise provenance are preserved in
+third_party/webmaster/ (source) and zai_yandex/_licenses/webmaster/ (wheel).
+These MIT rights and dependency licenses remain unchanged.
+No additional donor code was copied for the 0.2.0 Wordstat features.
