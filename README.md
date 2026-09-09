@@ -17,10 +17,12 @@ Try asking your assistant:
 | Your task | What the MCP server provides |
 |---|---|
 | Direct | Campaigns, supported inventory and statistics; controlled changes when enabled. |
-| Metrika | Counters, goals and reporting data. |
+| Metrika | Counters, goals, filtered reports, period comparison and CSV with sampling metadata. |
 | Search API | Asynchronous Yandex search-result jobs with saved results. |
 | Wordstat | Top queries, demand trends, regional distribution and the region tree. |
 | Webmaster | Indexing and site diagnostics, query statistics, sitemap and recrawl workflows. |
+
+[Report examples and local OAuth help](docs/METRIKA_REPORTS.md) explain how to compare periods, export rows and interpret partial results.
 
 ## Quick start
 

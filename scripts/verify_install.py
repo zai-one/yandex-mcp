@@ -23,6 +23,13 @@ def local_only(sock, address):
     return original(sock, address)
 socket.socket.connect = local_only
 package, config = sys.argv[1:]
+# Inject synthetic provider responses into the installed runtime; sockets remain blocked.
+from zai_yandex.runtime import AdmittedHttpClient
+async def fixture_request(self, method, url, **kwargs):
+    await self._admit_attempt(1)
+    return {'data': [{'dimensions': [], 'metrics': [3]}], 'totals': [3],
+            'total_rows': 1, 'total_rows_rounded': False, 'sampled': False, 'sample_share': 1}
+AdmittedHttpClient.request = fixture_request
 sys.argv = [package, '--config', config]
 runpy.run_module(package, run_name='__main__')
 """
@@ -58,6 +65,11 @@ async def check():
         tools = await client.list_tools()
         assert len(tools) >= int(minimum)
         assert all(tool.name for tool in tools)
+        result = (await client.call_tool('metrika_report', {
+            'counter_id': '7', 'date1': '2026-08-01', 'date2': '2026-08-02', 'metrics': ['ym:s:visits']
+        })).data
+        assert result['periods']['current']['rows_complete']
+        assert result['periods']['current']['totals']['ym:s:visits'] == 3
         print(json.dumps({'version': expected_version, 'tools': sorted(tool.name for tool in tools)}))
 asyncio.run(check())
 """
@@ -157,14 +169,16 @@ def main():
             env[prefix + "_SECRET_FILE"] = private(cwd / "synthetic.env", secret)
         config = cwd / "mcp.local.json"
         config.write_text(json.dumps({"env": env}), encoding="utf-8")
-        setup_command = next(name for name in project['scripts'] if name.endswith('-setup'))
-        executable = environment / ('Scripts' if os.name == 'nt' else 'bin') / (
-            setup_command + ('.exe' if os.name == 'nt' else '')
+        setup_command = next(name for name in project["scripts"] if name.endswith("-setup"))
+        executable = (
+            environment
+            / ("Scripts" if os.name == "nt" else "bin")
+            / (setup_command + (".exe" if os.name == "nt" else ""))
         )
-        snippet = json.loads(run([str(executable), '--directory', str(cwd), '--client-only'], cwd=cwd))
-        entry = next(iter(snippet['mcpServers'].values()))
-        assert Path(entry['command']).resolve() == python.resolve()
-        assert entry['args'] == ['-m', PACKAGE, '--config', str(config.resolve())]
+        snippet = json.loads(run([str(executable), "--directory", str(cwd), "--client-only"], cwd=cwd))
+        entry = next(iter(snippet["mcpServers"].values()))
+        assert Path(entry["command"]).resolve() == python.resolve()
+        assert entry["args"] == ["-m", PACKAGE, "--config", str(config.resolve())]
         minimum = {
             "Keysso": 1,
             "Topvisor": 18,
@@ -192,7 +206,13 @@ def main():
         )
         print(
             json.dumps(
-                {"clean_install": True, "installed_setup": True, "stdio": True, "external_sockets": "blocked"}
+                {
+                    "clean_install": True,
+                    "installed_setup": True,
+                    "fixture_tool_call": "metrika_report",
+                    "stdio": True,
+                    "external_sockets": "blocked",
+                }
             )
         )
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zai-yandex-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "Standalone governed Yandex MCP service"
 readme = "README.md"
 license = "LicenseRef-ZAI-ONE"
@@ -18,6 +18,7 @@ dependencies = [
 standalone = ["fastmcp==3.4.4"]
 
 [project.scripts]
+yandex-mcp-oauth = "zai_yandex.oauth_help:main"
 yandex-mcp-setup = "zai_yandex.setup:main"
 yandex-mcp = "zai_yandex.server:main"
 yandex-search-worker = "zai_yandex.worker:main"

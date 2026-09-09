@@ -42,6 +42,7 @@ async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):
         }
         assert {name: listed[name] for name in CONTRACT} == CONTRACT
         assert set(listed) - set(CONTRACT) == {
+            "metrika_report",
             "yandex_wordstat_dynamics",
             "yandex_wordstat_regions",
             "yandex_wordstat_regions_tree",
@@ -234,6 +235,7 @@ async def test_real_stdio_process_discovers_without_platform_or_credentials(tmp_
     env = {"YANDEX_STATE_PATH": str(tmp_path / "stdio.sqlite")}
     async with Client(StdioTransport(sys.executable, ["-m", "zai_yandex"], env=env)) as client:
         assert {tool.name for tool in await client.list_tools()} == set(CONTRACT) | {
+            "metrika_report",
             "yandex_wordstat_dynamics",
             "yandex_wordstat_regions",
             "yandex_wordstat_regions_tree",

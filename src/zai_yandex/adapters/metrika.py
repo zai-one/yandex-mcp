@@ -7,7 +7,7 @@ from zai_yandex.coalescing import AsyncSingleFlight
 from zai_yandex.transport import JsonHttpClient, ProviderError, request_hash
 
 ALLOWED_STAT_PARAMS = frozenset(
-    {"ids", "date1", "date2", "metrics", "dimensions", "accuracy", "limit", "offset"}
+    {"ids", "date1", "date2", "metrics", "dimensions", "accuracy", "limit", "offset", "filters", "sort"}
 )
 
 # Guarded Metrika Management API write allowlist for goals. A new writable
@@ -94,6 +94,16 @@ class YandexMetrikaAdapter:
         end = date.fromisoformat(str(params["date2"]))
         if end < start:
             raise ValueError("date2 must not precede date1")
+        for key, maximum in [("filters", 10000), ("sort", 2000)]:
+            if key in params:
+                value = params[key]
+                if (
+                    not isinstance(value, str)
+                    or not value.strip()
+                    or len(value) > maximum
+                    or any(ord(c) < 32 or ord(c) == 127 for c in value)
+                ):
+                    raise ValueError("invalid Metrika " + key)
         return dict(params)
 
     @staticmethod

@@ -64,7 +64,7 @@ async def test_metrika_rejects_unbounded_or_invalid_input() -> None:
                 "date1": "2026-07-01",
                 "date2": "2026-07-17",
                 "metrics": "ym:s:visits",
-                "filters": "unsafe",
+                "unrecognized_parameter": "unsafe",
             }
         )
     with pytest.raises(ValueError, match="date2"):

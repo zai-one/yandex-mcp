@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
+
+- Metrika filters/sort and `metrika_report`: period comparison, bounded pages, provider totals, sampling and CSV.
+- Local `yandex-mcp-oauth` help prints the official authorization route for your own application.
 
 - Installable setup wizard and JSON/TOML client snippets that work outside the checkout.
 - English and Russian agency information, integration contact and package installation guide.

@@ -128,3 +128,5 @@ wheel, installs it into a fresh environment and discovers tools over real stdio
 from an unrelated directory using synthetic settings. It makes no provider calls.
 CI runs on Linux and Windows with Python 3.12, 3.13 and 3.14. Live provider account
 validation remains an operator step after installation.
+
+For local OAuth assistance and filtered report examples, see [Metrika reports](docs/METRIKA_REPORTS.md).
