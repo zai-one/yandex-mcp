@@ -2,17 +2,29 @@
 
 # Yandex MCP
 
-MCP server for Yandex Direct, Metrika, Search API, Wordstat and Webmaster. Connect an AI assistant to advertising, website analytics, search results and search-demand data.
+**Bring Yandex advertising, analytics and search data into one conversation.**
+
+Review Direct campaigns, examine Metrika statistics, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects five API groups; configure the services relevant to your work and add others as you need them.
+
+[Quick start](#quick-start) · [Connect your assistant](#connect-your-assistant) · [Issues](https://github.com/zai-one/yandex-mcp/issues)
+
+Try asking your assistant:
+
+> Show my Metrika counters. For the counter I choose, compare visits and goal conversions over two equal periods and highlight the largest changes.
 
 ## What you can do
 
-- Work with the supported Direct, Metrika and Webmaster API operations.
-- Submit search jobs through Yandex Cloud Search API and retrieve their results.
-- Get Wordstat query data, trends, regional distribution and the region tree.
+| Your task | What the MCP server provides |
+|---|---|
+| Direct | Campaigns, supported inventory and statistics; controlled changes when enabled. |
+| Metrika | Counters, goals and reporting data. |
+| Search API | Asynchronous Yandex search-result jobs with saved results. |
+| Wordstat | Top queries, demand trends, regional distribution and the region tree. |
+| Webmaster | Indexing and site diagnostics, query statistics, sitemap and recrawl workflows. |
 
 ## Quick start
 
-Install Python 3.12+ (below 3.15), [uv](https://docs.astral.sh/uv/getting-started/installation/) and Git.
+Install **Python 3.12–3.14** and [uv](https://docs.astral.sh/uv/getting-started/installation/). Clone with Git or [download the ZIP](https://github.com/zai-one/yandex-mcp/archive/refs/heads/main.zip). With a ZIP, open the extracted directory and skip the first two commands.
 
 Each API group needs its own credentials. The wizard starts with Metrika; add Direct, Webmaster and Yandex Cloud credentials for the services you want to use. Cloud Search also needs a folder ID. Follow the [service-specific setup](INSTALL.md#from-a-clone-or-source-zip).
 
@@ -22,18 +34,53 @@ cd yandex-mcp
 uv sync --frozen --extra standalone
 uv run --frozen --extra standalone python scripts/configure.py
 uv run --frozen --extra standalone yandex-mcp --config mcp.local.json --check-config
-uv run --frozen --extra standalone yandex-mcp --config mcp.local.json
 ```
 
-The last command starts stdio and waits for an MCP client; it is not an interactive chat.
-See [INSTALL.md](INSTALL.md) for credentials, client configuration, HTTP and package integration.
-`--check-config` checks local settings only; it never validates a provider account over the network.
+The wizard creates a local configuration and stores secrets in private files. It refuses to overwrite an existing setup. `--check-config` validates local settings; the first request below checks your account connection.
 
-## Scope and limits
+## Connect your assistant
 
-Search jobs need a separate worker. Wordstat requests require explicit enabling and configured cost limits. OAuth login setup and Metrika Logs export are not included. See [runtime configuration](docs/RUNTIME.md).
+Add this configuration to an MCP client that uses `mcpServers`, such as Claude Desktop or Cursor. Replace `/ABSOLUTE/PATH/` with your absolute path; Windows JSON paths can use forward slashes, such as `D:/Tools/`.
 
-## Verification
+```json
+{
+  "mcpServers": {
+    "yandex": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/ABSOLUTE/PATH/yandex-mcp",
+        "run",
+        "--frozen",
+        "--extra",
+        "standalone",
+        "yandex-mcp",
+        "--config",
+        "/ABSOLUTE/PATH/yandex-mcp/mcp.local.json"
+      ]
+    }
+  }
+}
+```
+
+The client starts the MCP server for you. Refresh its tool list, then make your first request. For clients with a different config format, reuse the same `command` and `args`; `uv` must be available to the client process.
+
+### First request
+
+> List my Metrika counters and the goals of the counter I select.
+
+The default setup starts with Metrika. Once its token is accepted, the assistant can list accessible counters and read their goals. Other API groups use separately configured credentials.
+
+If tools do not appear, check the absolute path, whether the client can find `uv`, and the `--check-config` result. For access errors, check account credentials and permissions. [Installation and troubleshooting](INSTALL.md).
+
+## Access and limits
+
+Search API jobs need a separate worker and a Cloud folder ID. Wordstat uses Cloud credentials and explicit cost limits. Write operations depend on service permissions and server policy. Interactive OAuth setup and Metrika Logs export are not included.
+
+Authenticated HTTP is available for a server deployment. See [HTTP setup](INSTALL.md#http), [configuration and permissions](docs/RUNTIME.md) and [Python package integration](INSTALL.md#python-package-and-platform-integration).
+
+<details>
+<summary>For developers: project checks</summary>
 
 ```sh
 uv sync --frozen --all-groups --extra standalone
@@ -42,6 +89,8 @@ uv run --frozen --extra standalone python scripts/verify_install.py
 ```
 
 Tests use synthetic fixtures. A passing test run does not establish live provider connectivity.
+
+</details>
 
 ## Use and feedback
 
