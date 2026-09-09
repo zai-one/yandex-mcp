@@ -1,130 +1,50 @@
+🇬🇧 English · [🇷🇺 Русский](README.ru.md)
+
 # Yandex MCP
 
-Самостоятельный MCP-проект для Direct, Метрики, Search, Wordstat и Webmaster.
-Содержит 44 исходных инструмента, настоящие API-адаптеры, stdio/Streamable HTTP,
-постоянный журнал операций и worker асинхронного Search. AI Kit и `mcp_platform`
-для самостоятельного запуска не требуются. Версия 0.1.0 — локальный кандидат;
-публикация, контейнерный запуск и production переключение не выполнены.
+Yandex Direct, Metrika, Search, Wordstat and Webmaster.
 
-Исходные ревизии и хеши файлов находятся в `SOURCE_PROVENANCE.json`.
-`contracts/yandex.json` содержит схемы и описания из авторизованного discovery
-двух исходных веток: основной Yandex и Webmaster. Новые публичные инструменты
-в процессе выделения не добавлялись.
+Install it on your own computer or server and connect an MCP client. No AI Kit or
+central ZAI platform installation is required. Provider credentials and API access
+are required; provider charges and account restrictions still apply.
 
-## Установка и запуск
+## Quick start
 
-Python 3.12–3.14. Из чистого клона:
+Install Python 3.12+ (below 3.15), [uv](https://docs.astral.sh/uv/getting-started/installation/) and Git.
 
 ```sh
+git clone https://github.com/zai-one/yandex-mcp.git
+cd yandex-mcp
 uv sync --frozen --extra standalone
-uv run python scripts/verify.py
-uv build
-uv run python -m zai_yandex --transport stdio
+uv run --frozen --extra standalone python scripts/configure.py
+uv run --frozen --extra standalone yandex-mcp --config mcp.local.json --check-config
+uv run --frozen --extra standalone yandex-mcp --config mcp.local.json
 ```
 
-Для установки локального wheel используйте `pip install
-'./dist/zai_yandex_mcp-0.1.0-py3-none-any.whl[standalone]'`.
-Публичного registry или GitHub remote этот проект пока не имеет.
+The last command starts stdio and waits for an MCP client; it is not an interactive chat.
+See [INSTALL.md](INSTALL.md) for credentials, client configuration, HTTP and package integration.
+`--check-config` checks local settings only; it never validates a provider account over the network.
 
-Базовый пакет содержит адаптеры и регистрацию инструментов. Extra `standalone`
-закрепляет FastMCP 3.4.4 для собственного сервера. Платформа устанавливает базовый
-wheel и сохраняет свой FastMCP: 3.4.4 в основном кандидате, 4.0.0 в исходной ветке
-Webmaster. Это позволяет подключать один артефакт к обоим хостам. Кандидаты
-подключения проверяются отдельно; состояние см. в верификаторе извлечения.
+## Included in 0.2.0
 
-Секреты задаются файлами через переменные из `.env.example`; dotenv автоматически
-не загружается. Файл конфигурации окружения читает ваш launcher. На POSIX файлы
-секретов должны быть доступны только владельцу; на Windows настройте ACL
-рабочего каталога, файлов ключей и SQLite для оператора сервиса. Значения ключей
-не передаются клиентом через MCP и не печатаются в диагностике.
+Wordstat dynamics, regions and region tree use Yandex Cloud Search API credentials and the existing cost gate. OAuth onboarding and Metrika Logs export are future work.
 
-У каждой API-группы отдельная credential. Отсутствующая credential отключает
-вызовы соответствующего API; discovery и подготовка локальных согласований
-остаются доступны. Default для записей, Wordstat и платного бюджета — выключен.
+Existing tool names and schemas remain supported. Writes and paid operations retain
+their server policy and approval controls. See [runtime configuration](docs/RUNTIME.md).
 
-Для HTTP укажите `YANDEX_MCP_PUBLIC_KEY_FILE` (RSA public key), issuer/audience:
+## Verification
 
 ```sh
-uv run python -m zai_yandex --transport http --host 127.0.0.1 --port 8814
+uv sync --frozen --all-groups --extra standalone
+uv run --frozen --extra standalone python scripts/verify.py
+uv run --frozen --extra standalone python scripts/verify_install.py
 ```
 
-Endpoint `/mcp` требует RS256 JWT: `sub`, будущий `exp`, совпадающие `iss`, `aud`
-и `account_id`; scopes имеют исходные имена `yandex_direct:read/write`,
-`yandex_metrika:read/write`, `yandex_search:read/execute`,
-`yandex_webmaster:read/write`. Клиентские claims не увеличивают бюджет.
-Stdio доверяет локальному оператору, указанному в `YANDEX_LOCAL_PRINCIPAL`.
+Tests use synthetic fixtures. A passing test run does not establish live provider connectivity.
 
-## Согласования, записи и задания
+## Use and feedback
 
-Prepare создаёт непринятое согласование на точный hash и владельца с TTL 30 минут.
-Принятие доступно только локальному оператору, отдельной командой; это не MCP tool:
-
-```sh
-uv run python -m zai_yandex.approvals --state-path state/yandex.sqlite \
-  --account default --principal local-operator --approval-id UUID \
-  --request-hash SHA256 --accept
-```
-
-После этого вызывается соответствующий исходный apply/submit tool с теми же
-аргументами и ключом идемпотентности. Для платного Search CLI и сервер используют
-одинаковую конфигурацию бюджета. Direct `direct_write` и Метрика сохраняют
-исходный автономный путь с явным серверным флагом и журналом; строгий Direct
-`direct_apply_changes` требует согласование и расходует его один раз. У строгого
-пути повтор не возвращает кэш: использованное согласование будет отклонено.
-
-Журнал записей разделён по account, principal, provider и idempotency key.
-Неоднозначный ответ или прерывание сохраняет pending после перезапуска.
-Повторная запись автоматически не отправляется. Webmaster умеет сверять
-результат чтением через `webmaster_reconcile_action`, в том числе после отключения
-флага записи. Отсутствие результата в выдаче не доказывает, что запись не произошла.
-
-Для завершения асинхронного Search запустите worker того же пакета с теми же
-`YANDEX_STATE_PATH`, account и настройками Search:
-
-```sh
-uv run python -m zai_yandex.worker
-# Один проход для диагностики локальной очереди:
-uv run python -m zai_yandex.worker --once
-```
-
-Сервер без worker сохраняет задания в очереди. Worker атомарно получает владение
-заданием и записывает намерение отправки до платного POST. После падения процесса
-неопределённый submit получает `submission_outcome_unknown`; стоимость остаётся
-зарезервированной для ручной сверки, автоматического повторного POST нет.
-Полученный `operation_id` сохраняется до polling и переживает перезапуск.
-Статус `completed` сохраняет исходную семантику: результат polling собран;
-ошибка провайдера, если она есть, остаётся в `result.raw_provenance.error`.
-
-Стоимость учитывается в условных единицах исходной модели, не в рублях. Подготовка
-одного SERP оценивается в 1 единицу. Нужны положительные server/account/principal
-лимиты. Резерв, расходование approval и создание job проходят в одной транзакции.
-Перед отправкой queued job бюджет проверяется снова; резерв прошлого месяца
-атомарно переносится в текущий месяц при наличии доступного бюджета. Снижение
-лимита блокирует новые отправки, но разрешает polling уже оплаченного задания.
-Wordstat отдельно резервирует настроенную стоимость каждого вызова. Резерв
-возвращается при заведомом отказе до отправки или явном 429; timeout/5xx сохраняют
-его для сверки. База, approval и cost ledger не имеют автоматического удаления.
-
-## Ограничения и подключение к платформе
-
-Каждая фактическая HTTP-попытка, повтор чтения и readback проходят SQLite admission
-по account/provider и principal. Настроенный RPM ограничивается исходным потолком
-провайдера; concurrency также ограничена. Общий deadline операции — 75 секунд,
-lease — 90; HTTP timeout — 60. Отмена ожидаемого запроса освобождает lease после
-завершения отмены. Upstream-код после отправки может продолжить работу, поэтому
-write/job ledger отдельно защищает от неопределённых повторов.
-
-Один account ID должен соответствовать одному набору учётных данных/платёжному
-аккаунту. При нескольких локальных процессах используются один файл SQLite и
-одинаковая политика. Независимые базы с теми же credentials не координируют квоты.
-
-Платформа остаётся владельцем своих auth/scopes, approvals, quotas, jobs и audit.
-Внутри платформы используется базовый wheel с отдельным binding; standalone
-SQLite и worker там не запускаются. Код подключается по точной версии и SHA256,
-без копирования адаптеров. Возврат версии не отменяет уже созданные задания или
-записи: при будущем переключении нужно сохранить доступ к их владельцу и журналу.
-
-Тесты используют синтетические ответы и MockTransport. Живые API, платные запросы,
-реальные Direct/Метрика/Webmaster записи и deployment в этой проверке не запускаются.
-Лицензии и атрибуция Webmaster upstream находятся в `third_party/webmaster` и
-включаются в wheel. Публичная лицензия всего проекта пока не назначена.
+You may install and use this project for your own accounts under [LicenseRef-ZAI-ONE](LICENSE).
+This is not an open-source license. Third-party notices remain in [NOTICE](NOTICE).
+If it helps, give the repository a ⭐. Missing something or found a bug? [Open an issue](https://github.com/zai-one/yandex-mcp/issues/new/choose).
+I'm working on this project; accepted improvements are implemented here. Support is not guaranteed.

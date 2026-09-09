@@ -40,7 +40,12 @@ async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):
             }
             for tool in await client.list_tools()
         }
-        assert listed == CONTRACT
+        assert {name: listed[name] for name in CONTRACT} == CONTRACT
+        assert set(listed) - set(CONTRACT) == {
+            "yandex_wordstat_dynamics",
+            "yandex_wordstat_regions",
+            "yandex_wordstat_regions_tree",
+        }
         direct = (await client.call_tool("direct_list_campaigns", {})).data
         assert direct["result"]["Campaigns"][0]["Id"] == 7
         assert SECRET not in json.dumps(direct)
@@ -228,7 +233,11 @@ async def test_cancel_and_deadline_leave_no_detached_upstream(tmp_path, monkeypa
 async def test_real_stdio_process_discovers_without_platform_or_credentials(tmp_path):
     env = {"YANDEX_STATE_PATH": str(tmp_path / "stdio.sqlite")}
     async with Client(StdioTransport(sys.executable, ["-m", "zai_yandex"], env=env)) as client:
-        assert {tool.name for tool in await client.list_tools()} == set(CONTRACT)
+        assert {tool.name for tool in await client.list_tools()} == set(CONTRACT) | {
+            "yandex_wordstat_dynamics",
+            "yandex_wordstat_regions",
+            "yandex_wordstat_regions_tree",
+        }
         draft = (await client.call_tool("yandex_serp_prepare", {"query": "fixture"})).data
         assert draft["live_call"] is False and draft["can_accept"] is False
 

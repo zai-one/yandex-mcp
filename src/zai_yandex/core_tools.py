@@ -35,6 +35,12 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         phrase: str, regions: list[str], num_phrases: int = 10
     ) -> dict[str, Any]:
         """Get Yandex Wordstat top requests with raw provenance and normalized output."""
+        return await _wordstat_call(
+            "wordstat_get_top",
+            lambda: registry.yandex_search().wordstat_get_top(phrase, regions, num_phrases),
+        )
+
+    async def _wordstat_call(operation, factory):
         if not settings.yandex_wordstat_live_enabled:
             raise PermissionError("live Wordstat is disabled pending a separate approved runtime switch")
         access = current_access()
@@ -50,18 +56,17 @@ def register_core_tools(server: Any, runtime: Any) -> None:
             access.monthly_cost_limit,
             unlimited=access.monthly_cost_unlimited,
             provider="yandex_search",
-            operation="wordstat_get_top",
+            operation=operation,
         ):
             raise PermissionError("Wordstat budget gate denied the live request")
-        adapter = registry.yandex_search()
         try:
             return cast(
                 dict[str, Any],
                 sanitize_provider_response(
                     await _provider_call(
                         "yandex_search",
-                        "wordstat_get_top",
-                        lambda: adapter.wordstat_get_top(phrase, regions, num_phrases),
+                        operation,
+                        factory,
                     ),
                     limits=DURABLE_SANITIZER_LIMITS,
                 ),
@@ -78,13 +83,58 @@ def register_core_tools(server: Any, runtime: Any) -> None:
                 access.principal_id,
                 cost,
                 provider="yandex_search",
-                operation="wordstat_get_top",
+                operation=operation,
             )
             raise safe_provider_error("yandex_search", exc) from None
         except ProviderError as exc:
             # Timeout/5xx/transport after a real attempt: the provider may have
             # charged, keep the reservation for manual reconciliation.
             raise safe_provider_error("yandex_search", exc) from None
+
+    async def _wordstat_report(operation, arguments):
+        from zai_yandex.wordstat import request_body
+
+        request_body(operation, arguments)  # Validate before reserving any budget.
+        return await _wordstat_call(
+            "wordstat_" + operation,
+            lambda: registry.yandex_search().wordstat_report(operation, arguments),
+        )
+
+    @server.tool(auth=require_scopes("yandex_search:execute"))
+    async def yandex_wordstat_dynamics(
+        phrase: str,
+        from_date: str,
+        to_date: str,
+        period: str = "PERIOD_MONTHLY",
+        regions: list[str] | None = None,
+        devices: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Get Wordstat demand over time using UTC dates YYYY-MM-DD and the server budget gate."""
+        return await _wordstat_report(
+            "dynamics",
+            dict(
+                phrase=phrase,
+                from_date=from_date,
+                to_date=to_date,
+                period=period,
+                regions=regions,
+                devices=devices,
+            ),
+        )
+
+    @server.tool(auth=require_scopes("yandex_search:execute"))
+    async def yandex_wordstat_regions(
+        phrase: str,
+        region: str = "REGION_ALL",
+        devices: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Get Wordstat demand by region for the last 30 days through the server budget gate."""
+        return await _wordstat_report("regions", dict(phrase=phrase, region=region, devices=devices))
+
+    @server.tool(auth=require_scopes("yandex_search:execute"))
+    async def yandex_wordstat_regions_tree() -> dict[str, Any]:
+        """Get the Wordstat region tree through Cloud credentials and the server budget gate."""
+        return await _wordstat_report("getRegionsTree", {})
 
     @server.tool(auth=require_scopes("yandex_search:execute"))
     async def yandex_serp_prepare(

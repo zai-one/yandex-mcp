@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import UUID
 
 from zai_yandex.config import ServiceConfig
+from zai_yandex.onboarding import load_config
 from zai_yandex.state import StateStore
 
 
@@ -20,10 +21,12 @@ def main() -> None:
     parser.add_argument("--principal", required=True)
     parser.add_argument("--request-hash", required=True)
     parser.add_argument("--accept", action="store_true", required=True)
+    parser.add_argument("--config", help="Operator JSON settings")
     args = parser.parse_args()
     if not args.state_path.is_file():
         parser.exit(2, "existing state file required\n")
     try:
+        load_config(args.config)
         config = replace(ServiceConfig.from_env(), state_path=args.state_path, account_id=args.account)
         accepted = StateStore(config).accept(
             args.approval_id, principal=args.principal, request_hash=args.request_hash

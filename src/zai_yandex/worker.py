@@ -10,6 +10,7 @@ from typing import Any
 
 from zai_yandex.adapters.search import split_operation
 from zai_yandex.config import ServiceConfig
+from zai_yandex.onboarding import load_config
 from zai_yandex.runtime import Runtime
 from zai_yandex.state import BudgetDenied
 from zai_yandex.transport import (
@@ -147,8 +148,10 @@ async def run(once: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--config", help="Operator JSON settings")
     args = parser.parse_args()
     try:
+        load_config(args.config)
         asyncio.run(run(args.once))
     except (ValueError, OSError) as exc:
         parser.exit(2, f"configuration/state error: {type(exc).__name__}; check local configuration\n")

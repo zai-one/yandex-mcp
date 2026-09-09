@@ -58,6 +58,26 @@ class YandexSearchAdapter:
             },
         }
 
+    async def wordstat_report(self, operation: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        from zai_yandex.wordstat import request_body
+
+        payload = {**request_body(operation, arguments), "folderId": self.folder_id}
+        raw = await self.http.request(
+            "POST", f"{self.base_url}/wordstat/{operation}", headers=self._headers(), payload=payload
+        )
+        key = "regions" if operation == "getRegionsTree" else "results"
+        if not isinstance(raw, dict) or not isinstance(raw.get(key), list):
+            raise ProviderError("invalid Wordstat report response")
+        return {
+            "raw": raw,
+            "normalized": {key: raw[key]},
+            "provenance": {
+                "provider": "yandex_cloud_wordstat",
+                "operation": operation,
+                "parameters": arguments,
+            },
+        }
+
     async def submit_serp(
         self, query: str, region: str, response_format: str = "FORMAT_XML"
     ) -> dict[str, Any]:

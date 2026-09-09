@@ -14,3 +14,11 @@ build/
 *.sqlite*
 state/
 secrets/
+
+mcp.local.json
+*.token
+*.session*
+.coverage*
+
+# Private extraction receipts stay local.
+Service/
