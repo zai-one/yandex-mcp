@@ -111,7 +111,7 @@ The local configuration check never generates a signing key or an access token.
 
 ```sh
 uv build
-python -m pip install "dist/zai_yandex_mcp-0.2.0-py3-none-any.whl[standalone]"
+python -m pip install "dist/zai_yandex_mcp-0.3.0-py3-none-any.whl[standalone]"
 yandex-mcp --config /ABSOLUTE/PATH/mcp.local.json
 ```
 
