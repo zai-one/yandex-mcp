@@ -24,6 +24,8 @@ Try asking your assistant:
 
 ## Quick start
 
+Prefer a ready package? [Install the release and generate your client configuration](INSTALL.md#install-a-release-package). No source checkout is required.
+
 Install **Python 3.12–3.14** and [uv](https://docs.astral.sh/uv/getting-started/installation/). Clone with Git or [download the ZIP](https://github.com/zai-one/yandex-mcp/archive/refs/heads/main.zip). With a ZIP, open the extracted directory and skip the first two commands.
 
 Each API group needs its own credentials. The wizard starts with Metrika; add Direct, Webmaster and Yandex Cloud credentials for the services you want to use. Cloud Search also needs a folder ID. Follow the [service-specific setup](INSTALL.md#from-a-clone-or-source-zip).
@@ -92,11 +94,9 @@ Tests use synthetic fixtures. A passing test run does not establish live provide
 
 </details>
 
-## Talk about your integration
+## Built by ZAI.ONE
 
-Want to connect this MCP to your team’s workflows? [Get in touch on Telegram](https://t.me/zai_one) to discuss your setup and integration.
-
-A project by [ZAI.ONE](https://zai.one).
+[ZAI.ONE](https://zai.one) is a digital agency working on websites, SEO, advertising and analytics. We also build tools that connect AI assistants to everyday work. [Talk to us on Telegram](https://t.me/zai_one) about setup, automation or an integration for your team.
 
 ## Use and feedback
 

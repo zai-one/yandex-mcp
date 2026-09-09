@@ -18,6 +18,7 @@ dependencies = [
 standalone = ["fastmcp==3.4.4"]
 
 [project.scripts]
+yandex-mcp-setup = "zai_yandex.setup:main"
 yandex-mcp = "zai_yandex.server:main"
 yandex-search-worker = "zai_yandex.worker:main"
 yandex-approval = "zai_yandex.approvals:main"
