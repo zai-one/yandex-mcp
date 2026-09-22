@@ -5,6 +5,7 @@
     "YANDEX_SEARCH_API_KEY_FILE": "",
     "YANDEX_SEARCH_FOLDER_ID": "",
     "YANDEX_WEBMASTER_TOKEN_FILE": "",
+    "YANDEX_AUDIENCE_TOKEN_FILE": "",
     "YANDEX_STATE_PATH": "state/yandex.sqlite"
   }
 }

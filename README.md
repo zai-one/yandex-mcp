@@ -4,7 +4,7 @@
 
 **Bring Yandex advertising, analytics and search data into one conversation.**
 
-Review Direct campaigns, examine Metrika statistics, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects five API groups; configure the services relevant to your work and add others as you need them.
+Review Direct campaigns, examine Metrika statistics, build bounded Audience segments, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects six API groups; configure the services relevant to your work and add others as you need them.
 
 [Quick start](#quick-start) · [Connect your assistant](#connect-your-assistant) · [Issues](https://github.com/zai-one/yandex-mcp/issues)
 
@@ -21,6 +21,7 @@ Try asking your assistant:
 | Search API | Asynchronous Yandex search-result jobs with saved results. |
 | Wordstat | Top queries, demand trends, regional distribution and the region tree. |
 | Webmaster | Indexing and site diagnostics, query statistics, sitemap and recrawl workflows. |
+| Audience | Segments and pixels; guarded circle, polygon, pixel and pixel-viewer creates when explicitly enabled. |
 
 [Report examples and local OAuth help](docs/METRIKA_REPORTS.md) explain how to compare periods, export rows and interpret partial results.
 
@@ -30,7 +31,7 @@ Prefer a ready package? [Install the release and generate your client configurat
 
 Install **Python 3.12–3.14** and [uv](https://docs.astral.sh/uv/getting-started/installation/). Clone with Git or [download the ZIP](https://github.com/zai-one/yandex-mcp/archive/refs/heads/main.zip). With a ZIP, open the extracted directory and skip the first two commands.
 
-Each API group needs its own credentials. The wizard starts with Metrika; add Direct, Webmaster and Yandex Cloud credentials for the services you want to use. Cloud Search also needs a folder ID. Follow the [service-specific setup](INSTALL.md#from-a-clone-or-source-zip).
+Each API group needs its own credentials. The wizard starts with Metrika; add Direct, Audience, Webmaster and Yandex Cloud credentials for the services you want to use. Cloud Search also needs a folder ID. Follow the [service-specific setup](INSTALL.md#from-a-clone-or-source-zip). Audience safety and status semantics are documented in [Yandex Audience](docs/AUDIENCE.md).
 
 ```sh
 git clone https://github.com/zai-one/yandex-mcp.git
