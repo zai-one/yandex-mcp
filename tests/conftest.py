@@ -18,6 +18,12 @@ HOST = "https:example.test:443"
 URL = "https://example.test/page"
 
 
+@pytest.fixture(autouse=True)
+def _no_update_check_network(monkeypatch):
+    # Tests never contact GitHub; update-check tests re-enable it with mocked HTTP.
+    monkeypatch.setenv("YANDEX_DISABLE_UPDATE_CHECK", "1")
+
+
 @pytest.fixture(scope="session")
 def pair():
     return RSAKeyPair.generate()

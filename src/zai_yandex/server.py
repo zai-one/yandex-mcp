@@ -12,11 +12,13 @@ from fastmcp.server.auth.providers.jwt import JWTVerifier
 
 from zai_yandex import __version__
 from zai_yandex.audience_tools import register_audience_tools
-from zai_yandex.config import ServiceConfig
+from zai_yandex.config import SCOPES, ServiceConfig
 from zai_yandex.core_tools import register_core_tools
 from zai_yandex.metrika_reports import register_reports
 from zai_yandex.onboarding import check_config, load_config
 from zai_yandex.runtime import Runtime
+from zai_yandex.tool_annotations import annotations_for
+from zai_yandex.update_check import check_for_update, refresh_in_background, startup_hint
 from zai_yandex.webmaster_tools import register_webmaster_tools
 
 
@@ -36,9 +38,38 @@ class ToolRegistrar:
                     function.__name__, dict(bound.arguments), lambda: function(*args, **kwargs)
                 )
 
+            options.setdefault("annotations", annotations_for(function.__name__))
             return self.server.tool(**options)(wrapped)
 
         return decorate
+
+
+SERVER_INSTRUCTIONS = (
+    "Yandex Direct, Metrika, Webmaster, Wordstat/Search and Audience for configured accounts. "
+    "Writes are gated by scopes, prepare/confirm steps and idempotency keys."
+)
+
+
+def update_cache_path(config: ServiceConfig) -> Any:
+    return config.state_path.parent / "update-check.json"
+
+
+def register_update_tool(server: FastMCP, config: ServiceConfig, transport: str) -> None:
+    """Register yandex_check_update outside the provider ledger: it never calls a Yandex API."""
+
+    def authenticated(context: Any) -> bool:
+        if transport == "stdio":
+            return bool(config.local_scopes)
+        return bool(context.token and set(context.token.scopes) & SCOPES)
+
+    @server.tool(auth=authenticated, annotations=annotations_for("yandex_check_update"))
+    async def yandex_check_update(force: bool = False) -> dict[str, Any]:
+        """Check whether a newer Yandex MCP release exists on GitHub. Suggests, never installs.
+
+        Uses the public GitHub API with a short timeout and a 24h cache; never calls Yandex.
+        Set YANDEX_DISABLE_UPDATE_CHECK=1 to turn it off.
+        """
+        return await check_for_update(update_cache_path(config), force=force)
 
 
 def create_server(
@@ -55,13 +86,21 @@ def create_server(
         if transport == "http"
         else None
     )
-    server = FastMCP("Yandex MCP", version=__version__, auth=auth, mask_error_details=True)
+    hint = startup_hint(update_cache_path(config))
+    server = FastMCP(
+        "Yandex MCP",
+        version=__version__,
+        auth=auth,
+        mask_error_details=True,
+        instructions=SERVER_INSTRUCTIONS + (f" {hint}" if hint else ""),
+    )
     runtime = Runtime(config, transport, http_factory)
     registrar = ToolRegistrar(server, runtime)
     register_core_tools(registrar, runtime)
     register_reports(registrar, runtime)
     register_webmaster_tools(registrar, runtime)
     register_audience_tools(registrar, runtime)
+    register_update_tool(server, config, transport)
     return server
 
 
@@ -83,6 +122,8 @@ def main() -> None:
             print(json.dumps(result, sort_keys=True))
             parser.exit(0 if result["ready"] else 2)
         server = create_server(config, transport=args.transport)
+        # Refresh the cached update hint for the next start; never blocks startup.
+        refresh_in_background(update_cache_path(config))
     except (ValueError, OSError) as exc:
         parser.exit(2, f"configuration error: {type(exc).__name__}; check credential and policy files\n")
     if args.transport == "http":

@@ -28,6 +28,10 @@ QUERY_INDICATORS = ("TOTAL_SHOWS", "TOTAL_CLICKS", "AVG_SHOW_POSITION", "AVG_CLI
 DEVICE_INDICATORS = ("ALL", "DESKTOP", "MOBILE_AND_TABLET", "MOBILE", "TABLET")
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9:_-]{0,199}\Z")
 _HOST = re.compile(r"(https?):([a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?):([0-9]{1,5})\Z")
+SEARCH_EVENTS = ("APPEARED_IN_SEARCH", "REMOVED_FROM_SEARCH")
+# Upstream documents SQI history for "the last year"; one extra day covers leap years.
+SQI_MAX_DAYS = 366
+SQI_MAX_POINTS = 400
 
 
 class YandexWebmasterAdapter:
@@ -474,6 +478,70 @@ class YandexWebmasterAdapter:
 
     async def search_urls_history(self, host_id: str, date_from: str, date_to: str) -> dict[str, Any]:
         return await self._history(host_id, "search-urls/in-search/history", date_from, date_to)
+
+    async def search_events_history(self, host_id: str, date_from: str, date_to: str) -> dict[str, Any]:
+        """Pages that appeared in or were removed from search (Webmaster API v4.1)."""
+        return await self._history(
+            host_id, "search-urls/events/history", date_from, date_to, expected=SEARCH_EVENTS
+        )
+
+    async def search_events_samples(self, host_id: str, offset: int = 0, limit: int = 100) -> dict[str, Any]:
+        return await self._list(host_id, "search-urls/events/samples", "samples", offset, limit)
+
+    @staticmethod
+    def validate_sqi_period(date_from: str | None, date_to: str | None) -> dict[str, str]:
+        if (date_from is None) != (date_to is None):
+            raise ValueError("provide both date_from and date_to")
+        if date_from is None or date_to is None:
+            end = datetime.now(UTC).date()
+            date_from, date_to = (end - timedelta(days=SQI_MAX_DAYS - 1)).isoformat(), end.isoformat()
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_from) or not re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}", date_to
+        ):
+            raise ValueError("dates must use YYYY-MM-DD")
+        start, end_date = date.fromisoformat(date_from), date.fromisoformat(date_to)
+        if not 0 <= (end_date - start).days < SQI_MAX_DAYS:
+            raise ValueError(f"SQI history period must cover 1 to {SQI_MAX_DAYS} inclusive calendar days")
+        return {"date_from": date_from, "date_to": date_to}
+
+    async def sqi_history(
+        self, host_id: str, date_from: str | None = None, date_to: str | None = None
+    ) -> dict[str, Any]:
+        """SQI (ИКС) points; SQI changes rarely, so no daily coverage is implied."""
+        period = self.validate_sqi_period(date_from, date_to)
+        raw = await self._get(f"{await self._host_path(host_id)}/sqi-history", period)
+        source = raw.get("points")
+        valid = isinstance(source, list)
+        points: list[dict[str, Any]] = []
+        for row in source if valid else []:
+            day = row.get("date") if isinstance(row, dict) else None
+            if not isinstance(day, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day[:10]):
+                valid = False
+                continue
+            if period["date_from"] <= day[:10] <= period["date_to"]:
+                points.append(row)
+        truncated = len(points) > SQI_MAX_POINTS
+        points = points[-SQI_MAX_POINTS:]
+        availability = "partial" if not valid or truncated else ("available" if points else "empty")
+        result = self._envelope({**raw, "points": points}, period=period, availability=availability)
+        result["date_filter"] = "server_and_local"
+        result["truncated"] = truncated
+        return result
+
+    async def important_urls(self, host_id: str, offset: int = 0, limit: int = 100) -> dict[str, Any]:
+        """Monitored important pages; upstream returns one list, paged locally here."""
+        self._page_args(offset, limit)
+        raw = await self._get(f"{await self._host_path(host_id)}/important-urls")
+        return self._page(raw, "urls", offset, limit, local=True)
+
+    async def important_url_history(
+        self, host_id: str, url: str, offset: int = 0, limit: int = 100
+    ) -> dict[str, Any]:
+        """Change history of one monitored page of the exact host."""
+        self.validate_url_for_host(url, host_id)
+        self._page_args(offset, limit)
+        raw = await self._get(f"{await self._host_path(host_id)}/important-urls/history", {"url": url})
+        return self._page(raw, "history", offset, limit, local=True)
 
     async def sitemaps(
         self,
