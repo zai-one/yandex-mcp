@@ -17,6 +17,7 @@ from zai_yandex.core_tools import register_core_tools
 from zai_yandex.metrika_reports import register_reports
 from zai_yandex.onboarding import check_config, load_config
 from zai_yandex.runtime import Runtime
+from zai_yandex.tool_annotations import annotations_for
 from zai_yandex.webmaster_tools import register_webmaster_tools
 
 
@@ -36,6 +37,7 @@ class ToolRegistrar:
                     function.__name__, dict(bound.arguments), lambda: function(*args, **kwargs)
                 )
 
+            options.setdefault("annotations", annotations_for(function.__name__))
             return self.server.tool(**options)(wrapped)
 
         return decorate
