@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any, cast
+from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
 from zai_yandex.adapters.direct import (
@@ -247,6 +247,101 @@ def register_core_tools(server: Any, runtime: Any) -> None:
             validate=lambda: build_statistics_request(
                 campaign_ids, date_from, date_to, field_names, report_type
             ),
+        )
+
+    @server.tool(auth=require_scopes("yandex_direct:read"))
+    async def direct_get_goal_statistics(
+        date_from: str,
+        date_to: str,
+        goals: list[int | str],
+        attribution_models: list[Literal["FCCD", "LC", "LSCCD", "AUTO"]] | None = None,
+        campaign_ids: list[int] | None = None,
+        field_names: list[str] | None = None,
+        report_type: str = "CAMPAIGN_PERFORMANCE_REPORT",
+        row_limit: int | None = None,
+    ) -> dict[str, Any]:
+        """Read Direct Reports conversions per Metrika goal (1-10 goal ids, optional attribution models).
+
+        Goal columns come back per goal and model as <Field>_<GoalId>_<Model>, for example
+        Conversions_123_LC. Default fields: Date, CampaignId, CampaignName, Clicks, Cost, Conversions,
+        CostPerConversion, Revenue. row_limit caps report rows (1..1000000). Returns completed TSV rows
+        or a queued/waiting status with retry_after_seconds.
+        """
+        fields = field_names or [
+            "Date",
+            "CampaignId",
+            "CampaignName",
+            "Clicks",
+            "Cost",
+            "Conversions",
+            "CostPerConversion",
+            "Revenue",
+        ]
+        options = {"goals": goals, "attribution_models": attribution_models, "row_limit": row_limit}
+        adapter = registry.yandex_direct()
+        return await _provider_read(
+            "yandex_direct",
+            "goal_statistics",
+            {
+                "campaign_ids": campaign_ids,
+                "date_from": date_from,
+                "date_to": date_to,
+                "field_names": fields,
+                "report_type": report_type,
+                **options,
+            },
+            lambda: adapter.statistics(campaign_ids, date_from, date_to, fields, report_type, **options),
+            validate=lambda: build_statistics_request(
+                campaign_ids, date_from, date_to, fields, report_type, **options
+            ),
+        )
+
+    @server.tool(auth=require_scopes("yandex_direct:read"))
+    async def direct_list_strategies(
+        strategy_ids: list[int] | None = None,
+        archived: Literal["YES", "NO"] | None = None,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """List Direct portfolio (package) strategies via Strategies.get (API v501), one bounded page.
+
+        Returns common fields Id, Name, Type, StatusArchived, AttributionModel, CounterIds and
+        PriorityGoals. For type-specific settings use direct_get_inventory with service "strategies".
+        """
+        if strategy_ids is not None and (
+            not strategy_ids
+            or len(strategy_ids) > 10_000
+            or len(set(strategy_ids)) != len(strategy_ids)
+            or any(isinstance(item, bool) or not isinstance(item, int) or item <= 0 for item in strategy_ids)
+        ):
+            raise ValueError("strategy_ids must contain between 1 and 10000 unique positive ids")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10_000:
+            raise ValueError("limit must be between 1 and 10000")
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("offset must be a non-negative integer")
+        selection: dict[str, Any] = {}
+        if strategy_ids is not None:
+            selection["Ids"] = strategy_ids
+        if archived is not None:
+            selection["IsArchived"] = archived
+        return await _direct_read(
+            "strategies",
+            {
+                "method": "get",
+                "params": {
+                    "SelectionCriteria": selection,
+                    "FieldNames": [
+                        "Id",
+                        "Name",
+                        "Type",
+                        "StatusArchived",
+                        "AttributionModel",
+                        "CounterIds",
+                        "PriorityGoals",
+                    ],
+                    "Page": {"Limit": limit, "Offset": offset},
+                },
+            },
         )
 
     @server.tool(auth=require_scopes("yandex_direct:read"))

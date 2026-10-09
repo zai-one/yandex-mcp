@@ -50,6 +50,8 @@ ADDED_TOOLS = {
     "webmaster_get_sqi_history",
     "webmaster_list_important_urls",
     "webmaster_get_important_url_history",
+    "direct_get_goal_statistics",
+    "direct_list_strategies",
 }
 
 
