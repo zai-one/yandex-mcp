@@ -16,14 +16,14 @@ Try asking your assistant:
 
 | Your task | What the MCP server provides |
 |---|---|
-| Direct | Campaigns, supported inventory and statistics; controlled changes when enabled. |
+| Direct | Campaigns, supported inventory, portfolio strategies and statistics, including per-goal conversions and revenue; controlled changes when enabled. |
 | Metrika | Counters, goals, filtered reports, period comparison and CSV with sampling metadata. |
 | Search API | Asynchronous Yandex search-result jobs with saved results. |
 | Wordstat | Top queries, demand trends, regional distribution and the region tree. |
-| Webmaster | Indexing and site diagnostics, query statistics, sitemap and recrawl workflows. |
+| Webmaster | Indexing and site diagnostics, SQI history, important pages, search appearance/removal events, query statistics, sitemap and recrawl workflows. |
 | Audience | Segments and pixels; guarded circle, polygon, pixel and pixel-viewer creates when explicitly enabled. |
 
-[Report examples and local OAuth help](docs/METRIKA_REPORTS.md) explain how to compare periods, export rows and interpret partial results.
+[Report examples and local OAuth help](docs/METRIKA_REPORTS.md) explain how to compare periods, export rows and interpret partial results. [API coverage notes](docs/API_COVERAGE.md) list recently added tools with links to the Yandex documentation.
 
 ## Quick start
 

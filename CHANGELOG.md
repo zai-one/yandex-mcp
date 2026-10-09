@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Direct: `direct_get_goal_statistics` (Reports `Goals`, `AttributionModels`, row limit), goal revenue/profit/ROI fields in all supported report types, `direct_list_strategies` (Strategies.get, v501) and `strategies` in the inventory allowlist.
+- Direct error codes 152 and 506 are reported as `provider_rate_limited` and start the provider cooldown.
+- Webmaster v4.1 reads: SQI history, important URLs and their history, search appearance/removal events (history and samples).
+- Every MCP tool publishes reviewed `readOnlyHint`/`destructiveHint`/`idempotentHint`/`openWorldHint` annotations.
+
 ## 0.4.0
 
 - Add a separate Audience credential, read scope and default-off write scope.
