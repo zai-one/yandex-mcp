@@ -81,6 +81,8 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "audience_get_segment",
             "audience_list_pixels",
             "audience_get_pixel",
+            # Public GitHub release lookup; suggests an update, never installs.
+            "yandex_check_update",
         ),
     ),
     (

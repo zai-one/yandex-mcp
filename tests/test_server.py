@@ -52,6 +52,7 @@ ADDED_TOOLS = {
     "webmaster_get_important_url_history",
     "direct_get_goal_statistics",
     "direct_list_strategies",
+    "yandex_check_update",
 }
 
 
@@ -265,7 +266,7 @@ async def test_cancel_and_deadline_leave_no_detached_upstream(tmp_path, monkeypa
 
 
 async def test_real_stdio_process_discovers_without_platform_or_credentials(tmp_path):
-    env = {"YANDEX_STATE_PATH": str(tmp_path / "stdio.sqlite")}
+    env = {"YANDEX_STATE_PATH": str(tmp_path / "stdio.sqlite"), "YANDEX_DISABLE_UPDATE_CHECK": "1"}
     async with Client(StdioTransport(sys.executable, ["-m", "zai_yandex"], env=env)) as client:
         listed = {tool.name for tool in await client.list_tools()}
         assert listed == set(CONTRACT) | ADDED_TOOLS | AUDIENCE_TOOLS
