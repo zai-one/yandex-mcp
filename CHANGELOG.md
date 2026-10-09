@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 (unreleased)
+## 0.4.0
 
 - Add a separate Audience credential, read scope and default-off write scope.
 - Add bounded list/filter reads plus guarded circle, polygon, pixel and pixel-viewer creates.

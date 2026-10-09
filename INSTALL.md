@@ -3,12 +3,12 @@
 ## Install a release package
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and download the
-wheel `zai_yandex_mcp-0.3.0-py3-none-any.whl` plus `SHA256SUMS.txt` from [v0.3.0](https://github.com/zai-one/yandex-mcp/releases/tag/v0.3.0).
+wheel `zai_yandex_mcp-0.4.0-py3-none-any.whl` plus `SHA256SUMS` from [v0.4.0](https://github.com/zai-one/yandex-mcp/releases/tag/v0.4.0).
 Compare the wheel's SHA-256 with the published checksum before installing it.
 The wheel is platform-independent; Python 3.12–3.14 is required.
 
 ```sh
-uv tool install "zai-yandex-mcp[standalone] @ https://github.com/zai-one/yandex-mcp/releases/download/v0.3.0/zai_yandex_mcp-0.3.0-py3-none-any.whl"
+uv tool install "zai-yandex-mcp[standalone] @ https://github.com/zai-one/yandex-mcp/releases/download/v0.4.0/zai_yandex_mcp-0.4.0-py3-none-any.whl"
 yandex-mcp-setup --directory /absolute/path/to/my-yandex-settings
 yandex-mcp --config /absolute/path/to/my-yandex-settings/mcp.local.json --check-config
 ```
@@ -113,7 +113,7 @@ The local configuration check never generates a signing key or an access token.
 
 ```sh
 uv build
-python -m pip install "dist/zai_yandex_mcp-0.3.0-py3-none-any.whl[standalone]"
+python -m pip install "dist/zai_yandex_mcp-0.4.0-py3-none-any.whl[standalone]"
 yandex-mcp --config /ABSOLUTE/PATH/mcp.local.json
 ```
 
