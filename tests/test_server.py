@@ -27,6 +27,18 @@ WRITE = {
     "items": [{"Id": 7, "Name": "Example"}],
     "idempotency_key": "direct-example",
 }
+AUDIENCE_TOOLS = {
+    "audience_list_segments",
+    "audience_get_segment",
+    "audience_list_pixels",
+    "audience_get_pixel",
+    "audience_validate_create",
+    "audience_create_geo_circle",
+    "audience_create_geo_polygon",
+    "audience_create_pixel",
+    "audience_create_pixel_viewers",
+    "audience_reconcile_create",
+}
 
 
 async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):
@@ -41,12 +53,24 @@ async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):
             for tool in await client.list_tools()
         }
         assert {name: listed[name] for name in CONTRACT} == CONTRACT
-        assert set(listed) - set(CONTRACT) == {
+        assert set(listed) - set(CONTRACT) == AUDIENCE_TOOLS | {
             "metrika_report",
             "yandex_wordstat_dynamics",
             "yandex_wordstat_regions",
             "yandex_wordstat_regions_tree",
         }
+        for name in AUDIENCE_TOOLS:
+            properties = listed[name]["inputSchema"].get("properties", {})
+            assert not {"token", "login", "url", "base_url"} & set(properties)
+        for name in {
+            "audience_create_geo_circle",
+            "audience_create_geo_polygon",
+            "audience_create_pixel",
+            "audience_create_pixel_viewers",
+        }:
+            assert {"confirmation_hash", "idempotency_key"} <= set(
+                listed[name]["inputSchema"]["required"]
+            )
         direct = (await client.call_tool("direct_list_campaigns", {})).data
         assert direct["result"]["Campaigns"][0]["Id"] == 7
         assert SECRET not in json.dumps(direct)
@@ -239,7 +263,7 @@ async def test_real_stdio_process_discovers_without_platform_or_credentials(tmp_
             "yandex_wordstat_dynamics",
             "yandex_wordstat_regions",
             "yandex_wordstat_regions_tree",
-        }
+        } | AUDIENCE_TOOLS
         draft = (await client.call_tool("yandex_serp_prepare", {"query": "fixture"})).data
         assert draft["live_call"] is False and draft["can_accept"] is False
 

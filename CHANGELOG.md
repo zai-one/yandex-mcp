@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 (unreleased)
+
+- Add a separate Audience credential, read scope and default-off write scope.
+- Add bounded list/filter reads plus guarded circle, polygon, pixel and pixel-viewer creates.
+- Preserve unknown create outcomes without automatic POST retries; checkpoint successful receipts before exact list readback.
+
 ## 0.3.0
 
 - Metrika filters/sort and `metrika_report`: period comparison, bounded pages, provider totals, sampling and CSV.

@@ -13,11 +13,14 @@ from uuid import UUID, uuid4
 
 from fastmcp.server.dependencies import get_access_token
 
+from zai_yandex.adapters.audience import BASE_URL as AUDIENCE_BASE_URL
+from zai_yandex.adapters.audience import YandexAudienceAdapter
 from zai_yandex.adapters.direct import YandexDirectAdapter
 from zai_yandex.adapters.metrika import YandexMetrikaAdapter
 from zai_yandex.adapters.search import YandexSearchAdapter
 from zai_yandex.adapters.webmaster import YandexWebmasterAdapter
 from zai_yandex.admission import PolicyStore
+from zai_yandex.audience_actions import AudienceActions
 from zai_yandex.coalescing import AsyncSingleFlight
 from zai_yandex.config import LIMITS, ServiceConfig
 from zai_yandex.errors import SafeToolError, safe_provider_error
@@ -121,6 +124,8 @@ class Registry:
                     adapter = YandexWebmasterAdapter(
                         "https://api.webmaster.yandex.net/v4", config.webmaster_token, **kwargs
                     )
+                case "yandex_audience":
+                    adapter = YandexAudienceAdapter(AUDIENCE_BASE_URL, config.audience_token, **kwargs)
                 case _:
                     raise ValueError("unsupported provider")
             state.adapters[provider] = adapter
@@ -137,6 +142,9 @@ class Registry:
 
     def yandex_webmaster(self) -> YandexWebmasterAdapter:
         return self._adapter("yandex_webmaster")
+
+    def yandex_audience(self) -> YandexAudienceAdapter:
+        return self._adapter("yandex_audience")
 
     async def call(self, actor: Any, provider: str, operation: str, factory: Callable[[], Awaitable[T]]) -> T:
         state = self.runtime.state.get()
@@ -185,6 +193,7 @@ class Runtime:
         self.registry = Registry(self)
         self.jobs = JobService(self.store)
         self.webmaster_actions = WebmasterActions(config, self.store, self.registry)
+        self.audience_actions = AudienceActions(config, self.store, self.registry, self.clean)
 
     def require_scopes(self, *scopes: str) -> Callable[[Any], bool]:
         def check(context: Any) -> bool:
@@ -248,6 +257,7 @@ class Runtime:
             ("direct_", "yandex_direct"),
             ("metrika_", "yandex_metrika"),
             ("webmaster_", "yandex_webmaster"),
+            ("audience_", "yandex_audience"),
             ("yandex_", "yandex_search"),
         ):
             if tool.startswith(prefix):

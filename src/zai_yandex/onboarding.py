@@ -59,7 +59,13 @@ def check_config(config: Any, transport: str) -> dict[str, Any]:
     if PREFIX == "YANDEX":
         checks["at_least_one_provider"] = any(
             config.enabled(provider)
-            for provider in ("yandex_direct", "yandex_metrika", "yandex_search", "yandex_webmaster")
+            for provider in (
+                "yandex_direct",
+                "yandex_metrika",
+                "yandex_search",
+                "yandex_webmaster",
+                "yandex_audience",
+            )
         )
     if PREFIX == "ARSENKIN":
         checks["provider_credential"] = bool(config.token)

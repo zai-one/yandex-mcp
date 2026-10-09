@@ -1,7 +1,8 @@
 # Yandex MCP
 
-Самостоятельный MCP-проект для Direct, Метрики, Search, Wordstat и Webmaster.
-Содержит 44 исходных инструмента, настоящие API-адаптеры, stdio/Streamable HTTP,
+Самостоятельный MCP-проект для Direct, Метрики, Audience, Search, Wordstat и Webmaster.
+Содержит 44 сохранённых исходных контракта и 14 дополнительных инструментов,
+настоящие API-адаптеры, stdio/Streamable HTTP,
 постоянный журнал операций и worker асинхронного Search. AI Kit и `mcp_platform`
 для самостоятельного запуска не требуются. В 0.2.0 добавлены три инструмента Wordstat.
 
@@ -47,7 +48,8 @@ uv run python -m zai_yandex --transport http --host 127.0.0.1 --port 8814
 Endpoint `/mcp` требует RS256 JWT: `sub`, будущий `exp`, совпадающие `iss`, `aud`
 и `account_id`; scopes имеют исходные имена `yandex_direct:read/write`,
 `yandex_metrika:read/write`, `yandex_search:read/execute`,
-`yandex_webmaster:read/write`. Клиентские claims не увеличивают бюджет.
+`yandex_webmaster:read/write`, `yandex_audience:read/write`.
+Клиентские claims не увеличивают бюджет.
 Stdio доверяет локальному оператору, указанному в `YANDEX_LOCAL_PRINCIPAL`.
 
 ## Согласования, записи и задания
@@ -70,7 +72,10 @@ uv run python -m zai_yandex.approvals --state-path state/yandex.sqlite \
 
 Журнал записей разделён по account, principal, provider и idempotency key.
 Неоднозначный ответ или прерывание сохраняет pending после перезапуска.
-Повторная запись автоматически не отправляется. Webmaster умеет сверять
+Повторная запись автоматически не отправляется. Audience сохраняет очищенный
+receipt до обязательного list-readback и сверяет точные запрошенные поля; его
+`confirmation_hash` подтверждает целостность, но не заменяет внешнее согласование.
+Webmaster умеет сверять
 результат чтением через `webmaster_reconcile_action`, в том числе после отключения
 флага записи. Отсутствие результата в выдаче не доказывает, что запись не произошла.
 
@@ -121,6 +126,6 @@ SQLite и worker там не запускаются. Код подключает
 записи: при будущем переключении нужно сохранить доступ к их владельцу и журналу.
 
 Тесты используют синтетические ответы и MockTransport. Живые API, платные запросы,
-реальные Direct/Метрика/Webmaster записи и deployment в этой проверке не запускаются.
+реальные Direct/Метрика/Audience/Webmaster записи и deployment в этой проверке не запускаются.
 Лицензии и атрибуция Webmaster upstream находятся в `third_party/webmaster` и
 включаются в wheel. Публичная лицензия всего проекта пока не назначена.

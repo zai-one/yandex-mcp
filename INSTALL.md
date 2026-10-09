@@ -47,8 +47,10 @@ prefix is accepted. Paths ending in `_FILE` or `_STATE_PATH` resolve relative to
 config file. Explicit config values override inherited environment. There is no shell
 expansion or automatic dotenv loading. Credential contents remain in private files.
 
-The wizard configures Metrika first. To enable Direct, Webmaster or Cloud Search,
+The wizard configures Metrika first. To enable Direct, Audience, Webmaster or Cloud Search,
 add their token-file paths from `mcp.example.json`; remove unused entries or leave them empty.
+Audience uses its own `YANDEX_AUDIENCE_TOKEN_FILE`; writes also require the default-off
+`YANDEX_AUDIENCE_WRITE_ENABLED=true`. See [the bounded Audience contract](docs/AUDIENCE.md).
 Search also requires the Cloud folder ID. For Wordstat, explicitly configure
 `YANDEX_WORDSTAT_LIVE_ENABLED=true`, a positive `YANDEX_WORDSTAT_COST_PER_CALL`,
 `YANDEX_WORDSTAT_MAX_COST_PER_CALL`, and principal/account monthly cost limits.

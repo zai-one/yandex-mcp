@@ -11,6 +11,7 @@ from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 
 from zai_yandex import __version__
+from zai_yandex.audience_tools import register_audience_tools
 from zai_yandex.config import ServiceConfig
 from zai_yandex.core_tools import register_core_tools
 from zai_yandex.metrika_reports import register_reports
@@ -60,6 +61,7 @@ def create_server(
     register_core_tools(registrar, runtime)
     register_reports(registrar, runtime)
     register_webmaster_tools(registrar, runtime)
+    register_audience_tools(registrar, runtime)
     return server
 
 

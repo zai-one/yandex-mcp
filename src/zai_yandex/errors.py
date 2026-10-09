@@ -28,6 +28,16 @@ class SafeToolError(ToolError):
         super().__init__(json.dumps(envelope, sort_keys=True, separators=(",", ":")))
 
 
+class BoundedValidationError(ValueError):
+    """Validation failure with a reviewed, non-provider reason code."""
+
+    def __init__(self, reason_code: str) -> None:
+        if not reason_code.replace("_", "").isalnum() or len(reason_code) > 80:
+            raise ValueError("invalid validation reason code")
+        self.reason_code = reason_code
+        super().__init__(reason_code)
+
+
 def safe_provider_error(provider: str, exc: Exception) -> SafeToolError:
     code = "provider_error"
     retryable = False
@@ -70,4 +80,6 @@ def safe_provider_error(provider: str, exc: Exception) -> SafeToolError:
     }
     if retry_after is not None:
         envelope["retry_after_seconds"] = retry_after
+    if isinstance(exc, BoundedValidationError):
+        envelope["reason_code"] = exc.reason_code
     return SafeToolError(envelope)

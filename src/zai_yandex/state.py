@@ -269,6 +269,24 @@ class StateStore:
             self._insert_write(db, principal, provider, key, tool, request_hash)
         return True, None
 
+    async def provider_create_reserve(
+        self, principal: Any, provider: str, key: str, *, tool: str, request_hash: str
+    ) -> tuple[bool, dict[str, Any] | None]:
+        """Reserve one create and anti-join both its key and immutable payload hash."""
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            existing = self._lookup_write(db, principal, provider, key)
+            if existing:
+                return False, existing
+            same_payload = db.execute(
+                "SELECT 1 FROM provider_writes WHERE account=? AND provider=? AND digest=?",
+                (self.account, provider, request_hash),
+            ).fetchone()
+            if same_payload is not None:
+                raise PermissionError("the same create payload is already reserved under another key")
+            self._insert_write(db, principal, provider, key, tool, request_hash)
+        return True, None
+
     async def provider_write_settle(
         self, principal: Any, provider: str, key: str, *, status: str, result: dict[str, Any] | None
     ) -> None:

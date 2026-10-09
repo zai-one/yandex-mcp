@@ -32,6 +32,7 @@ def config(path, **kwargs):
             search_api_key=SECRET,
             search_folder_id="synthetic-folder",
             webmaster_token=SECRET,
+            audience_token=SECRET,
             request_rate_limit=30,
             principal_rate_limit=30,
         ),

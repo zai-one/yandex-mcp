@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 
-PROVIDERS = ("yandex_direct", "yandex_metrika", "yandex_search", "yandex_webmaster")
+PROVIDERS = ("yandex_direct", "yandex_metrika", "yandex_search", "yandex_webmaster", "yandex_audience")
 SCOPES = frozenset(
     f"{provider}:{action}"
     for provider in PROVIDERS
@@ -18,6 +18,7 @@ LIMITS = {
     "yandex_metrika": (30, 3),
     "yandex_search": (10, 2),
     "yandex_webmaster": (20, 2),
+    "yandex_audience": (10, 1),
 }
 
 
@@ -54,6 +55,7 @@ class ServiceConfig:
     search_api_key: str = field(default="", repr=False)
     search_folder_id: str = ""
     webmaster_token: str = field(default="", repr=False)
+    audience_token: str = field(default="", repr=False)
     public_key: str = ""
     issuer: str = "yandex-operator"
     audience: str = "yandex-mcp"
@@ -61,6 +63,7 @@ class ServiceConfig:
     yandex_direct_write_enabled: bool = False
     yandex_metrika_write_enabled: bool = False
     yandex_webmaster_write_enabled: bool = False
+    yandex_audience_write_enabled: bool = False
     yandex_wordstat_live_enabled: bool = False
     yandex_wordstat_cost_per_call: float = 0
     yandex_wordstat_max_cost_per_call: float = 0
@@ -100,7 +103,13 @@ class ServiceConfig:
 
     @property
     def secrets(self) -> tuple[str, ...]:
-        return (self.direct_token, self.metrika_token, self.search_api_key, self.webmaster_token)
+        return (
+            self.direct_token,
+            self.metrika_token,
+            self.search_api_key,
+            self.webmaster_token,
+            self.audience_token,
+        )
 
     def enabled(self, provider: str) -> bool:
         return {
@@ -108,6 +117,7 @@ class ServiceConfig:
             "yandex_metrika": bool(self.metrika_token),
             "yandex_search": bool(self.search_api_key and self.search_folder_id),
             "yandex_webmaster": bool(self.webmaster_token),
+            "yandex_audience": bool(self.audience_token),
         }.get(provider, False)
 
     @classmethod
@@ -123,12 +133,14 @@ class ServiceConfig:
             search_api_key=secret_file("YANDEX_SEARCH_API_KEY_FILE"),
             search_folder_id=os.environ.get("YANDEX_SEARCH_FOLDER_ID", ""),
             webmaster_token=secret_file("YANDEX_WEBMASTER_TOKEN_FILE"),
+            audience_token=secret_file("YANDEX_AUDIENCE_TOKEN_FILE"),
             public_key=Path(public_path).read_text(encoding="utf-8") if public_path else "",
             issuer=os.environ.get("YANDEX_MCP_ISSUER", "yandex-operator"),
             audience=os.environ.get("YANDEX_MCP_AUDIENCE", "yandex-mcp"),
             yandex_direct_write_enabled=flag("YANDEX_DIRECT_WRITE_ENABLED"),
             yandex_metrika_write_enabled=flag("YANDEX_METRIKA_WRITE_ENABLED"),
             yandex_webmaster_write_enabled=flag("YANDEX_WEBMASTER_WRITE_ENABLED"),
+            yandex_audience_write_enabled=flag("YANDEX_AUDIENCE_WRITE_ENABLED"),
             yandex_wordstat_live_enabled=flag("YANDEX_WORDSTAT_LIVE_ENABLED"),
             **{
                 name: float(os.environ.get(name.upper(), "0"))
