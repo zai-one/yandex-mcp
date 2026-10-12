@@ -310,11 +310,11 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         """
         if strategy_ids is not None and (
             not strategy_ids
-            or len(strategy_ids) > 10_000
+            or len(strategy_ids) > 1_000
             or len(set(strategy_ids)) != len(strategy_ids)
             or any(isinstance(item, bool) or not isinstance(item, int) or item <= 0 for item in strategy_ids)
         ):
-            raise ValueError("strategy_ids must contain between 1 and 10000 unique positive ids")
+            raise ValueError("strategy_ids must contain between 1 and 1000 unique positive ids")
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10_000:
             raise ValueError("limit must be between 1 and 10000")
         if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:

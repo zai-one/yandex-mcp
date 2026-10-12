@@ -42,7 +42,7 @@ def disabled() -> bool:
 def parse_version(value: object) -> tuple[int, ...] | None:
     if not isinstance(value, str):
         return None
-    match = _VERSION.match(value.strip())
+    match = _VERSION.fullmatch(value.strip())
     if match is None:
         return None
     parts = tuple(int(part) for part in match.group(1).split("."))
@@ -70,6 +70,9 @@ def update_commands(latest: str | None) -> dict[str, str]:
 def _result(latest: str | None, notes_url: str | None, *, status: str, source: str, **extra: Any):
     current = parse_version(__version__)
     newest = parse_version(latest)
+    if newest is None:
+        # Only a plain version tag may reach commands, payloads or server instructions.
+        latest = None
     available = bool(current and newest and newest > current)
     commands = update_commands(latest if available else None)
     method = "git_checkout" if _is_checkout() else "release_package"

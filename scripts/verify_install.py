@@ -183,7 +183,7 @@ def main():
             "Keysso": 1,
             "Topvisor": 18,
             "Roistat": 22,
-            "Yandex": 58,
+            "Yandex": 66,
             "Arsenkin": 12,
             "Telegram": 7,
             "Passbolt": 3,

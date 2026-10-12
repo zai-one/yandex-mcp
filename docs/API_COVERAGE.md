@@ -1,13 +1,13 @@
 # API coverage notes
 
-Tools added after 0.4.0. All are read-only and use the existing scopes, rate
+Tools added in 0.5.0. All are read-only and use the existing scopes, rate
 limits, sanitizer and error envelopes. Each maps to one documented endpoint.
 
 ## Direct
 
 | Tool | Upstream | Notes |
 |---|---|---|
-| `direct_get_goal_statistics` | [Reports: `Goals`, `AttributionModels`, `Page`](https://yandex.ru/dev/direct/doc/ru/reports/spec) | 1–10 Metrika goal ids; models `FCCD`, `LC`, `LSCCD`, `AUTO`; `row_limit` 1–1 000 000. Goal columns come back as `<Field>_<GoalId>_<Model>`. |
+| `direct_get_goal_statistics` | [Reports: `Goals`, `AttributionModels`, `Page`](https://yandex.ru/dev/direct/doc/ru/spec) | 1–10 Metrika goal ids; models `FCCD`, `LC`, `LSCCD`, `AUTO`; `row_limit` 1–1 000 000. Goal columns come back as `<Field>_<GoalId>_<Model>`. |
 | `direct_list_strategies` | [Strategies.get](https://yandex.ru/dev/direct/doc/ru/strategies/get) | Uses the documented `json/v501/strategies` endpoint; bounded `Page`. Type-specific fields: `direct_get_inventory` with `service="strategies"`. |
 | `direct_get_statistics` (allowlist) | [Report fields](https://yandex.ru/dev/direct/doc/ru/fields-list) | `Revenue`, `Profit`, `GoalsRoi`, `PurchaseRevenue`, `PurchaseProfit`, `PurchaseGoalsRoi`, `ConversionRate`, `CostPerConversion` are allowed for every supported report type. |
 
