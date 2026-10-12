@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.1
 
 - Update check: a cached `latest` or `release_notes_url` is validated on read like a fresh GitHub answer; only plain
   version tags and this repository's release links reach the tool result or the server instructions.
