@@ -39,6 +39,21 @@ AUDIENCE_TOOLS = {
     "audience_create_pixel_viewers",
     "audience_reconcile_create",
 }
+# Read-only tools added after the frozen 44-tool contract baseline.
+ADDED_TOOLS = {
+    "metrika_report",
+    "yandex_wordstat_dynamics",
+    "yandex_wordstat_regions",
+    "yandex_wordstat_regions_tree",
+    "webmaster_get_search_events_history",
+    "webmaster_list_search_events",
+    "webmaster_get_sqi_history",
+    "webmaster_list_important_urls",
+    "webmaster_get_important_url_history",
+    "direct_get_goal_statistics",
+    "direct_list_strategies",
+    "yandex_check_update",
+}
 
 
 async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):
@@ -53,12 +68,7 @@ async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):
             for tool in await client.list_tools()
         }
         assert {name: listed[name] for name in CONTRACT} == CONTRACT
-        assert set(listed) - set(CONTRACT) == AUDIENCE_TOOLS | {
-            "metrika_report",
-            "yandex_wordstat_dynamics",
-            "yandex_wordstat_regions",
-            "yandex_wordstat_regions_tree",
-        }
+        assert set(listed) - set(CONTRACT) == AUDIENCE_TOOLS | ADDED_TOOLS
         for name in AUDIENCE_TOOLS:
             properties = listed[name]["inputSchema"].get("properties", {})
             assert not {"token", "login", "url", "base_url"} & set(properties)
@@ -256,14 +266,10 @@ async def test_cancel_and_deadline_leave_no_detached_upstream(tmp_path, monkeypa
 
 
 async def test_real_stdio_process_discovers_without_platform_or_credentials(tmp_path):
-    env = {"YANDEX_STATE_PATH": str(tmp_path / "stdio.sqlite")}
+    env = {"YANDEX_STATE_PATH": str(tmp_path / "stdio.sqlite"), "YANDEX_DISABLE_UPDATE_CHECK": "1"}
     async with Client(StdioTransport(sys.executable, ["-m", "zai_yandex"], env=env)) as client:
-        assert {tool.name for tool in await client.list_tools()} == set(CONTRACT) | {
-            "metrika_report",
-            "yandex_wordstat_dynamics",
-            "yandex_wordstat_regions",
-            "yandex_wordstat_regions_tree",
-        } | AUDIENCE_TOOLS
+        listed = {tool.name for tool in await client.list_tools()}
+        assert listed == set(CONTRACT) | ADDED_TOOLS | AUDIENCE_TOOLS
         draft = (await client.call_tool("yandex_serp_prepare", {"query": "fixture"})).data
         assert draft["live_call"] is False and draft["can_accept"] is False
 

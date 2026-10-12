@@ -24,6 +24,11 @@ WEBMASTER_READ_TOOLS = (
     "list_indexing_samples",
     "list_search_urls",
     "get_search_urls_history",
+    "get_search_events_history",
+    "list_search_events",
+    "get_sqi_history",
+    "list_important_urls",
+    "get_important_url_history",
     "list_sitemaps",
     "get_sitemap",
     "list_user_sitemaps",
@@ -157,6 +162,41 @@ def register_webmaster_tools(server: Any, runtime: Any) -> None:
     async def webmaster_get_search_urls_history(host_id: str, date_from: str, date_to: str) -> dict[str, Any]:
         """Read at most 31 days of search URL count history."""
         return await read("search_urls_history", host_id=host_id, date_from=date_from, date_to=date_to)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_get_search_events_history(
+        host_id: str, date_from: str, date_to: str
+    ) -> dict[str, Any]:
+        """Read at most 31 days of APPEARED_IN_SEARCH / REMOVED_FROM_SEARCH page counts."""
+        return await read("search_events_history", host_id=host_id, date_from=date_from, date_to=date_to)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_list_search_events(host_id: str, offset: int = 0, limit: int = 100) -> dict[str, Any]:
+        """Read one page (limit 1-100) of pages that appeared in or were removed from search."""
+        return await read("search_events_samples", host_id=host_id, offset=offset, limit=limit)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_get_sqi_history(
+        host_id: str, date_from: str | None = None, date_to: str | None = None
+    ) -> dict[str, Any]:
+        """Read site quality index (SQI/ИКС) history; default and maximum period is 366 days."""
+        return await read("sqi_history", host_id=host_id, date_from=date_from, date_to=date_to)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_list_important_urls(
+        host_id: str, offset: int = 0, limit: int = 100
+    ) -> dict[str, Any]:
+        """Read one page of monitored important URLs with indexing and search status."""
+        return await read("important_urls", host_id=host_id, offset=offset, limit=limit)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_get_important_url_history(
+        host_id: str, url: str, offset: int = 0, limit: int = 100
+    ) -> dict[str, Any]:
+        """Read change history of one monitored URL; the URL must belong to the exact host."""
+        return await read(
+            "important_url_history", host_id=host_id, url=url, offset=offset, limit=limit
+        )
 
     @server.tool(auth=require_scopes("yandex_webmaster:read"))
     async def webmaster_list_sitemaps(

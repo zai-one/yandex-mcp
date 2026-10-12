@@ -16,14 +16,14 @@ Try asking your assistant:
 
 | Your task | What the MCP server provides |
 |---|---|
-| Direct | Campaigns, supported inventory and statistics; controlled changes when enabled. |
+| Direct | Campaigns, supported inventory, portfolio strategies and statistics, including per-goal conversions and revenue; controlled changes when enabled. |
 | Metrika | Counters, goals, filtered reports, period comparison and CSV with sampling metadata. |
 | Search API | Asynchronous Yandex search-result jobs with saved results. |
 | Wordstat | Top queries, demand trends, regional distribution and the region tree. |
-| Webmaster | Indexing and site diagnostics, query statistics, sitemap and recrawl workflows. |
+| Webmaster | Indexing and site diagnostics, SQI history, important pages, search appearance/removal events, query statistics, sitemap and recrawl workflows. |
 | Audience | Segments and pixels; guarded circle, polygon, pixel and pixel-viewer creates when explicitly enabled. |
 
-[Report examples and local OAuth help](docs/METRIKA_REPORTS.md) explain how to compare periods, export rows and interpret partial results.
+[Report examples and local OAuth help](docs/METRIKA_REPORTS.md) explain how to compare periods, export rows and interpret partial results. [API coverage notes](docs/API_COVERAGE.md) list recently added tools with links to the Yandex documentation.
 
 ## Quick start
 
@@ -96,6 +96,17 @@ uv run --frozen --extra standalone python scripts/verify_install.py
 Tests use synthetic fixtures. A passing test run does not establish live provider connectivity.
 
 </details>
+
+## Updates
+
+Ask your assistant to run `yandex_check_update`. It compares the installed version with the
+[latest release](https://github.com/zai-one/yandex-mcp/releases) through the public GitHub API
+(no credentials, no Yandex API calls or quota, 3-second timeout, result cached for 24 hours next to the state file) and
+returns the current and latest versions, the release notes link and the matching update command
+(`git pull --ff-only && uv sync --frozen --extra standalone` for a checkout, `uv tool install --force ...` for a release package).
+When a newer version is already known from the cache, the server mentions it once in its startup
+instructions. Nothing is ever installed automatically. Offline, the check reports `status: unknown`
+and the server keeps working. Set `YANDEX_DISABLE_UPDATE_CHECK=1` to turn it off.
 
 ## Built by ZAI.ONE
 

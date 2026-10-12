@@ -6,11 +6,27 @@ from datetime import date
 from typing import Any
 
 from zai_yandex.coalescing import AsyncSingleFlight
-from zai_yandex.transport import JsonHttpClient, ProviderError, request_hash
+from zai_yandex.transport import JsonHttpClient, ProviderError, ProviderRateLimited, request_hash
 
 INVENTORY_READ_SERVICES = frozenset(
-    {"campaigns", "adgroups", "ads", "keywords", "sitelinks", "vcards", "businesses", "adimages"}
+    {
+        "campaigns",
+        "adgroups",
+        "ads",
+        "keywords",
+        "sitelinks",
+        "vcards",
+        "businesses",
+        "adimages",
+        "strategies",
+    }
 )
+# Services documented only under the v501 JSON endpoint
+# (https://yandex.ru/dev/direct/doc/ru/strategies/strategies).
+V501_SERVICES = frozenset({"strategies"})
+# Documented points/connection limit errors
+# (https://yandex.ru/dev/direct/doc/ru/concepts/errors-list): 152 not enough units, 506 too many connections.
+RATE_LIMIT_ERROR_CODES = frozenset({"152", "506"})
 READ_SERVICES = INVENTORY_READ_SERVICES | {"keywordsresearch"}
 
 # Guarded write allowlist per service. A new writable service/method is inert
@@ -48,6 +64,7 @@ READ_METHODS = {
     "vcards": frozenset({"get"}),
     "businesses": frozenset({"get"}),
     "adimages": frozenset({"get"}),
+    "strategies": frozenset({"get"}),
     "keywordsresearch": frozenset({"hasSearchVolume"}),
 }
 DIRECT_REPORT_TYPES = frozenset(
@@ -58,7 +75,26 @@ DIRECT_REPORT_TYPES = frozenset(
         "SEARCH_QUERY_PERFORMANCE_REPORT",
     }
 )
-DIRECT_REPORT_FIELDS = frozenset(
+# Metrika goal metrics valid in every supported report type
+# (https://yandex.ru/dev/direct/doc/ru/fields-list). With Goals set, the aggregate goal columns are
+# returned per goal and attribution model as <Field>_<GoalId>_<Model>.
+GOAL_REPORT_FIELDS = frozenset(
+    {
+        "ConversionRate",
+        "Conversions",
+        "CostPerConversion",
+        "GoalsRoi",
+        "Profit",
+        "PurchaseGoalsRoi",
+        "PurchaseProfit",
+        "PurchaseRevenue",
+        "Revenue",
+    }
+)
+ATTRIBUTION_MODELS = frozenset({"FCCD", "LC", "LSCCD", "AUTO"})
+MAX_REPORT_GOALS = 10
+MAX_REPORT_ROWS = 1_000_000
+DIRECT_REPORT_FIELDS = GOAL_REPORT_FIELDS | frozenset(
     {
         "AdGroupId",
         "AdGroupName",
@@ -92,7 +128,7 @@ DIRECT_REPORT_FIELDS = frozenset(
         "TargetingLocationName",
     }
 )
-CAMPAIGN_REPORT_FIELDS = frozenset(
+CAMPAIGN_REPORT_FIELDS = GOAL_REPORT_FIELDS | frozenset(
     {
         "Date",
         "CampaignId",
@@ -104,7 +140,7 @@ CAMPAIGN_REPORT_FIELDS = frozenset(
         "Conversions",
     }
 )
-SEARCH_QUERY_REPORT_FIELDS = frozenset(
+SEARCH_QUERY_REPORT_FIELDS = GOAL_REPORT_FIELDS | frozenset(
     {
         "Date",
         "CampaignId",
@@ -119,7 +155,7 @@ SEARCH_QUERY_REPORT_FIELDS = frozenset(
         "Conversions",
     }
 )
-CRITERIA_REPORT_FIELDS = frozenset(
+CRITERIA_REPORT_FIELDS = GOAL_REPORT_FIELDS | frozenset(
     {
         "Date",
         "CampaignId",
@@ -159,12 +195,48 @@ DIRECT_REPORT_FIELDS_BY_TYPE = {
 DEFAULT_DIRECT_REPORT_FIELDS = ("Date", "CampaignId", "Impressions", "Clicks", "Cost")
 
 
+def _goal_ids(goals: list[int | str] | None) -> list[str] | None:
+    if goals is None:
+        return None
+    if not isinstance(goals, list) or not 1 <= len(goals) <= MAX_REPORT_GOALS:
+        raise ValueError(f"goals must contain between 1 and {MAX_REPORT_GOALS} Metrika goal ids")
+    normalized = []
+    for goal in goals:
+        value = str(goal).strip() if isinstance(goal, (int, str)) and not isinstance(goal, bool) else ""
+        if not value.isascii() or not value.isdigit() or len(value) > 19 or int(value) <= 0:
+            raise ValueError("goals must be positive numeric Metrika goal ids")
+        normalized.append(value)
+    if len(set(normalized)) != len(normalized):
+        raise ValueError("goals must be unique")
+    return normalized
+
+
+def _attribution_models(models: list[str] | None, goals: list[str] | None) -> list[str] | None:
+    if models is None:
+        return None
+    if goals is None:
+        raise ValueError("attribution_models require goals")
+    if (
+        not isinstance(models, list)
+        or not models
+        or len(set(models)) != len(models)
+        or not set(models) <= ATTRIBUTION_MODELS
+    ):
+        allowed = ", ".join(sorted(ATTRIBUTION_MODELS))
+        raise ValueError(f"attribution_models must be unique values of {allowed}")
+    return list(models)
+
+
 def build_statistics_request(
     campaign_ids: list[int] | None,
     date_from: str,
     date_to: str,
     field_names: list[str] | None,
     report_type: str,
+    *,
+    goals: list[int | str] | None = None,
+    attribution_models: list[str] | None = None,
+    row_limit: int | None = None,
 ) -> dict[str, Any]:
     if campaign_ids is not None and (
         not campaign_ids
@@ -191,6 +263,12 @@ def build_statistics_request(
     unsupported_fields = sorted(set(fields) - DIRECT_REPORT_FIELDS_BY_TYPE[normalized_report_type])
     if unsupported_fields:
         raise ValueError(f"unsupported {normalized_report_type} fields: " + ", ".join(unsupported_fields))
+    goal_ids = _goal_ids(goals)
+    models = _attribution_models(attribution_models, goal_ids)
+    if row_limit is not None and (
+        isinstance(row_limit, bool) or not isinstance(row_limit, int) or not 1 <= row_limit <= MAX_REPORT_ROWS
+    ):
+        raise ValueError(f"row_limit must be between 1 and {MAX_REPORT_ROWS}")
     selection_criteria: dict[str, Any] = {"DateFrom": date_from, "DateTo": date_to}
     if campaign_ids is not None:
         selection_criteria["Filter"] = [
@@ -200,11 +278,23 @@ def build_statistics_request(
                 "Values": [str(value) for value in campaign_ids],
             }
         ]
+    name_parts: list[Any] = [campaign_ids, date_from, date_to, fields, normalized_report_type]
+    extra: dict[str, Any] = {}
+    if goal_ids is not None:
+        extra["Goals"] = goal_ids
+    if models is not None:
+        extra["AttributionModels"] = models
+    if row_limit is not None:
+        extra["Page"] = {"Limit": row_limit}
+    if extra:
+        # Offline report names must be unique per definition; legacy names stay unchanged.
+        name_parts.append(extra)
     return {
         "SelectionCriteria": selection_criteria,
+        **{key: extra[key] for key in ("Goals", "AttributionModels") if key in extra},
         "FieldNames": fields,
-        "ReportName": "mcp-"
-        + request_hash([campaign_ids, date_from, date_to, fields, normalized_report_type])[:24],
+        **({"Page": extra["Page"]} if "Page" in extra else {}),
+        "ReportName": "mcp-" + request_hash(name_parts)[:24],
         "ReportType": normalized_report_type,
         "DateRangeType": "CUSTOM_DATE",
         "Format": "TSV",
@@ -238,6 +328,21 @@ class YandexDirectAdapter:
             raise ProviderError("Direct method is not in the v1 read allowlist")
         return normalized, dict(params)
 
+    def service_url(self, service: str) -> str:
+        if service in V501_SERVICES and self.base_url.endswith("/v5"):
+            return f"{self.base_url[: -len('/v5')]}/v501/{service}"
+        return f"{self.base_url}/{service}"
+
+    @staticmethod
+    def raise_for_error(response: dict[str, Any]) -> None:
+        error = response.get("error")
+        if not isinstance(error, dict):
+            return
+        code = str(error.get("error_code", "?"))
+        if code in RATE_LIMIT_ERROR_CODES:
+            raise ProviderRateLimited(f"Yandex Direct limit error {code}")
+        raise ProviderError(f"Yandex Direct error {code}")
+
     async def read(self, service: str, params: dict[str, Any]) -> dict[str, Any]:
         normalized, values = self.validate_read(service, params)
         if not self.token:
@@ -247,12 +352,9 @@ class YandexDirectAdapter:
             headers["Client-Login"] = self.client_login
         response = await self.coalescer.run(
             request_hash({"provider": "yandex_direct", "service": normalized, "params": values}),
-            lambda: self.http.request(
-                "POST", f"{self.base_url}/{normalized}", headers=headers, payload=values
-            ),
+            lambda: self.http.request("POST", self.service_url(normalized), headers=headers, payload=values),
         )
-        if isinstance(response.get("error"), dict):
-            raise ProviderError(f"Yandex Direct error {response['error'].get('error_code', '?')}")
+        self.raise_for_error(response)
         return response
 
     @staticmethod
@@ -316,8 +418,7 @@ class YandexDirectAdapter:
                 "params": self._apply_params(normalized, normalized_method, validated),
             },
         )
-        if isinstance(response.get("error"), dict):
-            raise ProviderError(f"Yandex Direct error {response['error'].get('error_code', '?')}")
+        self.raise_for_error(response)
         return response
 
     async def readback(self, service: str, ids: list[int]) -> dict[str, Any]:
@@ -365,8 +466,21 @@ class YandexDirectAdapter:
         date_to: str,
         field_names: list[str] | None = None,
         report_type: str = "CUSTOM_REPORT",
+        *,
+        goals: list[int | str] | None = None,
+        attribution_models: list[str] | None = None,
+        row_limit: int | None = None,
     ) -> dict[str, Any]:
-        params = build_statistics_request(campaign_ids, date_from, date_to, field_names, report_type)
+        params = build_statistics_request(
+            campaign_ids,
+            date_from,
+            date_to,
+            field_names,
+            report_type,
+            goals=goals,
+            attribution_models=attribution_models,
+            row_limit=row_limit,
+        )
         if not self.token:
             raise ProviderError("Yandex Direct token is not configured")
         headers = {
