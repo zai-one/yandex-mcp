@@ -15,13 +15,33 @@ ROOT = Path(__file__).resolve().parents[1]
 NAME = "Yandex"
 PACKAGE = "zai_yandex"
 CHILD = """
-import runpy, socket, sys
+import os, runpy, socket, sys
+LOCAL = {'127.0.0.1', '::1', 'localhost'}
 original = socket.socket.connect
 def local_only(sock, address):
-    if not isinstance(address, tuple) or address[0] not in {'127.0.0.1', '::1', 'localhost'}:
+    if not isinstance(address, tuple) or address[0] not in LOCAL:
         raise RuntimeError('external network disabled in clean-install gate')
     return original(sock, address)
 socket.socket.connect = local_only
+original_getaddrinfo = socket.getaddrinfo
+def local_dns(host, *args, **kwargs):
+    # Background threads swallow errors, so an external lookup stops the server outright.
+    if (host.decode() if isinstance(host, bytes) else host) not in LOCAL:
+        sys.stderr.write('external DNS lookup in clean-install gate\\n')
+        sys.stderr.flush()
+        os._exit(97)
+    return original_getaddrinfo(host, *args, **kwargs)
+socket.getaddrinfo = local_dns
+# The update check must be off in this gate; a refresh thread would race the lookup guard above.
+import threading
+original_start = threading.Thread.start
+def no_update_thread(thread):
+    if thread.name == 'update-check':
+        sys.stderr.write('update check enabled in clean-install gate\\n')
+        sys.stderr.flush()
+        os._exit(97)
+    return original_start(thread)
+threading.Thread.start = no_update_thread
 package, config = sys.argv[1:]
 # Inject synthetic provider responses into the installed runtime; sockets remain blocked.
 from zai_yandex.runtime import AdmittedHttpClient
@@ -57,6 +77,10 @@ snippet = json.loads(configured.with_name('mcp-client.json').read_text(encoding=
 entry = snippet['mcpServers'][setup.SERVICE]
 assert entry['command'] == sys.executable
 assert entry['args'] == ['-m', package, '--config', str(configured)]
+# The wizard keeps the update check on; the gate turns it off so the server never contacts GitHub.
+settings = json.loads(configured.read_text(encoding='utf-8'))
+settings['env'].update({k: v for k, v in original_env.items() if k.endswith('_DISABLE_UPDATE_CHECK')})
+configured.write_text(json.dumps(settings), encoding='utf-8')
 config = str(configured)
 async def check():
     transport = StdioTransport(command=sys.executable, args=['-c', child, package, config],
@@ -212,6 +236,7 @@ def main():
                     "fixture_tool_call": "metrika_report",
                     "stdio": True,
                     "external_sockets": "blocked",
+                    "update_check": "disabled",
                 }
             )
         )

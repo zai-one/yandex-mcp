@@ -67,6 +67,7 @@ def register_update_tool(server: FastMCP, config: ServiceConfig, transport: str)
         """Check whether a newer Yandex MCP release exists on GitHub. Suggests, never installs.
 
         Uses the public GitHub API with a short timeout and a 24h cache; never calls Yandex.
+        After a failed check it waits 30 minutes; force=true is honoured at most once a minute.
         Set YANDEX_DISABLE_UPDATE_CHECK=1 to turn it off.
         """
         return await check_for_update(update_cache_path(config), force=force)

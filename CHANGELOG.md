@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Update check: a cached `latest` or `release_notes_url` is validated on read like a fresh GitHub answer; only plain
+  version tags and this repository's release links reach the tool result or the server instructions.
+- Update check: every attempt is recorded; after a failed fetch no new request is made for 30 minutes (the last good
+  result is returned with `status: unknown`), and `force=true` is honoured at most once a minute. The startup refresh
+  follows the same rules. Future timestamps in the cache file are ignored.
+- The clean-install gate turns the update check off for the installed server and fails if it starts or makes an
+  external DNS lookup.
+- `docs/RUNTIME.md` and `.env.example` document `YANDEX_DISABLE_UPDATE_CHECK` and the startup request to
+  `api.github.com`.
+
 ## 0.5.0
 
 - Direct: `direct_get_goal_statistics` (Reports `Goals`, `AttributionModels`, row limit), goal revenue/profit/ROI fields in all supported report types, `direct_list_strategies` (Strategies.get, v501) and `strategies` in the inventory allowlist.
