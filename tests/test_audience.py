@@ -38,7 +38,9 @@ def _state_files_bytes(path) -> bytes:
 
 async def _validated(client: Client, operation: str, payload: dict) -> dict:
     return (
-        await client.call_tool("audience_validate_create", {"operation": operation, "payload": payload})
+        await client.call_tool(
+            "audience_validate_create", {"operation": operation, "payload": payload}
+        )
     ).data
 
 

@@ -194,7 +194,9 @@ def register_webmaster_tools(server: Any, runtime: Any) -> None:
         host_id: str, url: str, offset: int = 0, limit: int = 100
     ) -> dict[str, Any]:
         """Read change history of one monitored URL; the URL must belong to the exact host."""
-        return await read("important_url_history", host_id=host_id, url=url, offset=offset, limit=limit)
+        return await read(
+            "important_url_history", host_id=host_id, url=url, offset=offset, limit=limit
+        )
 
     @server.tool(auth=require_scopes("yandex_webmaster:read"))
     async def webmaster_list_sitemaps(
