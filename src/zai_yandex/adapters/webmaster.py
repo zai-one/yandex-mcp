@@ -646,3 +646,64 @@ class YandexWebmasterAdapter:
         if isinstance(sitemap_id, str) and _ID.fullmatch(sitemap_id):
             result["sitemap_id"] = sitemap_id
         return result
+
+    # --- Coverage expansion (docs: https://yandex.ru/dev/webmaster/doc/ru/reference/<page>) ---
+    async def owners(self, host_id: str) -> dict[str, Any]:
+        """host-owners-get: GET .../hosts/{host-id}/owners."""
+        return await self._detail(host_id, "owners")
+
+    async def feeds(self, host_id: str) -> dict[str, Any]:
+        """feeds-list: GET .../hosts/{host-id}/feeds/list."""
+        return await self._detail(host_id, "feeds/list")
+
+    async def feed_info(self, host_id: str, url: str) -> dict[str, Any]:
+        """feeds-info: GET .../hosts/{host-id}/feeds/info?url=."""
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")) or len(url) > 2048:
+            raise ValueError("url must be an absolute http(s) feed URL")
+        return self._envelope(await self._get(f"{await self._host_path(host_id)}/feeds/info", {"url": url}))
+
+    async def feeds_host_problems(self, host_id: str) -> dict[str, Any]:
+        """feeds-host-problems: GET .../hosts/{host-id}/feeds/host-problems."""
+        return await self._detail(host_id, "feeds/host-problems")
+
+    async def regions(self, host_id: str, filter_text: str | None = None, limit: int = 100) -> dict[str, Any]:
+        """regions-directory: GET .../hosts/{host-id}/pro/regions?filter=&limit=."""
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 1000:
+            raise ValueError("limit must be between 1 and 1000")
+        params: dict[str, Any] = {"limit": limit}
+        if filter_text:
+            params["filter"] = str(filter_text)[:100]
+        return self._envelope(await self._get(f"{await self._host_path(host_id)}/pro/regions", params))
+
+    async def query_analytics(
+        self,
+        host_id: str,
+        offset: int = 0,
+        limit: int = 20,
+        device_type_indicator: str = "ALL",
+        text_indicator: str = "QUERY",
+        region_ids: list[int] | None = None,
+        filters: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """host-query-analytics: POST .../hosts/{host-id}/query-analytics/list (read; no state change)."""
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("offset must be >= 0")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("limit must be between 1 and 500")
+        if device_type_indicator not in DEVICE_INDICATORS:
+            raise ValueError("unsupported device_type_indicator")
+        if text_indicator not in {"QUERY", "URL"}:
+            raise ValueError("text_indicator must be QUERY or URL")
+        body: dict[str, Any] = {
+            "offset": offset,
+            "limit": limit,
+            "device_type_indicator": device_type_indicator,
+            "text_indicator": text_indicator,
+        }
+        if region_ids:
+            body["region_ids"] = [int(value) for value in region_ids][:100]
+        if filters:
+            body["filters"] = filters
+        path = f"{await self._host_path(host_id)}/query-analytics/list"
+        raw = await self._request("POST", f"{self.base_url}{path}", headers=self._headers(), payload=body)
+        return self._envelope(raw, pagination={"offset": offset, "limit": limit})

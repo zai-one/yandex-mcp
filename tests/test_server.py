@@ -15,6 +15,7 @@ from fastmcp.client.transports import StdioTransport
 from fastmcp.exceptions import ToolError
 
 from zai_yandex.config import ServiceConfig
+from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
 from zai_yandex.runtime import Runtime
 from zai_yandex.server import create_server
 from zai_yandex.state import StateStore
@@ -40,32 +41,36 @@ AUDIENCE_TOOLS = {
     "audience_reconcile_create",
 }
 # Tools added after the frozen 44-tool contract baseline.
-ADDED_TOOLS = {
-    "metrika_report",
-    "yandex_wordstat_dynamics",
-    "yandex_wordstat_regions",
-    "yandex_wordstat_regions_tree",
-    "webmaster_get_search_events_history",
-    "webmaster_list_search_events",
-    "webmaster_get_sqi_history",
-    "webmaster_list_important_urls",
-    "webmaster_get_important_url_history",
-    "direct_get_goal_statistics",
-    "direct_list_strategies",
-    "yandex_check_update",
-    "direct_list_agency_clients",
-    "metrika_logs_evaluate",
-    "metrika_logs_list",
-    "metrika_logs_get",
-    "metrika_logs_download_part",
-    # Quota-spending Logs API writes behind YANDEX_METRIKA_LOGS_ENABLED + metrika write scope.
-    "metrika_logs_create",
-    "metrika_logs_cleanup",
-    "metrika_validate_offline_conversions",
-    "metrika_list_offline_conversion_uploads",
-    "metrika_get_offline_conversion_upload",
-    "metrika_upload_offline_conversions",
-}
+ADDED_TOOLS = (
+    set(DIRECT_EXTRA_TOOLS)
+    | set(WEBMASTER_EXTRA_TOOLS)
+    | {
+        "metrika_report",
+        "yandex_wordstat_dynamics",
+        "yandex_wordstat_regions",
+        "yandex_wordstat_regions_tree",
+        "webmaster_get_search_events_history",
+        "webmaster_list_search_events",
+        "webmaster_get_sqi_history",
+        "webmaster_list_important_urls",
+        "webmaster_get_important_url_history",
+        "direct_get_goal_statistics",
+        "direct_list_strategies",
+        "yandex_check_update",
+        "direct_list_agency_clients",
+        "metrika_logs_evaluate",
+        "metrika_logs_list",
+        "metrika_logs_get",
+        "metrika_logs_download_part",
+        # Quota-spending Logs API writes behind YANDEX_METRIKA_LOGS_ENABLED + metrika write scope.
+        "metrika_logs_create",
+        "metrika_logs_cleanup",
+        "metrika_validate_offline_conversions",
+        "metrika_list_offline_conversion_uploads",
+        "metrika_get_offline_conversion_upload",
+        "metrika_upload_offline_conversions",
+    }
+)
 
 
 async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):

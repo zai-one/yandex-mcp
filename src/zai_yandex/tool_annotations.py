@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from mcp.types import ToolAnnotations
 
+from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
+
 # Provider reads: no provider or local business state changes.
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True)
 # Provider reads that spend the server-side cost budget on every call.
@@ -58,6 +60,8 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "webmaster_get_diagnostics",
             "webmaster_get_query_history",
             "webmaster_list_popular_queries",
+            *DIRECT_EXTRA_TOOLS,
+            *WEBMASTER_EXTRA_TOOLS,
             "webmaster_get_indexing_history",
             "webmaster_list_indexing_samples",
             "webmaster_list_search_urls",

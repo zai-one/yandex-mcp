@@ -27,7 +27,25 @@ V501_SERVICES = frozenset({"strategies"})
 # Documented points/connection limit errors
 # (https://yandex.ru/dev/direct/doc/ru/concepts/errors-list): 152 not enough units, 506 too many connections.
 RATE_LIMIT_ERROR_CODES = frozenset({"152", "506"})
-READ_SERVICES = INVENTORY_READ_SERVICES | {"keywordsresearch", "agencyclients"}
+# Extra documented read services (https://yandex.ru/dev/direct/doc/ru/<service>/get).
+EXTRA_READ_METHODS: dict[str, frozenset[str]] = {
+    "adextensions": frozenset({"get"}),
+    "advideos": frozenset({"get"}),
+    "audiencetargets": frozenset({"get"}),
+    "bidmodifiers": frozenset({"get"}),
+    "keywordbids": frozenset({"get"}),
+    "clients": frozenset({"get"}),
+    "creatives": frozenset({"get"}),
+    "dictionaries": frozenset({"get"}),
+    "feeds": frozenset({"get"}),
+    "leads": frozenset({"get"}),
+    "negativekeywordsharedsets": frozenset({"get"}),
+    "retargetinglists": frozenset({"get"}),
+    "turbopages": frozenset({"get"}),
+    # https://yandex.ru/dev/direct/doc/ru/changes/changes
+    "changes": frozenset({"check", "checkCampaigns", "checkDictionaries"}),
+}
+READ_SERVICES = INVENTORY_READ_SERVICES | {"keywordsresearch", "agencyclients"} | set(EXTRA_READ_METHODS)
 
 # Guarded write allowlist per service. A new writable service/method is inert
 # until it is added here on review. campaigns:update keeps the approval-gated
@@ -68,6 +86,7 @@ READ_METHODS = {
     "adimages": frozenset({"get"}),
     "strategies": frozenset({"get"}),
     "keywordsresearch": frozenset({"hasSearchVolume"}),
+    **EXTRA_READ_METHODS,
 }
 DIRECT_REPORT_TYPES = frozenset(
     {
