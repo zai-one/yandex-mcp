@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Direct Sandbox: `YANDEX_DIRECT_SANDBOX=true` (or per profile `direct_sandbox`) routes Direct JSON v5 calls to `https://api-sandbox.direct.yandex.com/json/v5`; router notes sandbox mode.
+
 - Multi-account / agency profiles: `YANDEX_ACCOUNTS_FILE` (named profiles with own token files and/or Direct Client-Login, optional default). Every tool gains an optional `account` argument only when profiles are configured; `yandex_list_accounts` (local, no secrets). Backward compatible: without the file the surface is unchanged. The write ledger, idempotency keys and approvals are partitioned by the resolved account, so a write or approval never replays or applies across accounts; writes with no resolved account keep their previous ledger keys.
 
 - Opt-in toolsets `direct_extra` (14 reads: `direct_get_client`, `direct_get_dictionaries`, `direct_check_changes`, `direct_get_bid_modifiers`, `direct_get_keyword_bids`, `direct_list_audience_targets`, `direct_list_retargeting_lists`, `direct_list_feeds`, `direct_list_creatives`, `direct_list_ad_extensions`, `direct_list_turbo_pages`, `direct_list_leads`, `direct_list_ad_videos`, `direct_list_negative_keyword_sets`) and `webmaster_extra` (6 reads: `webmaster_get_owners`, `webmaster_list_feeds`, `webmaster_get_feed`, `webmaster_get_feed_problems`, `webmaster_list_regions`, `webmaster_query_analytics`). Every endpoint links its official doc page; not in `default`, so the default tool list is unchanged.

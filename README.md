@@ -147,6 +147,10 @@ Every tool then gets an optional `account` argument (one of the names) and `yand
 
 Writes are isolated per account: idempotency keys, the write ledger and approvals belong to the account resolved for the call (Direct, Metrika, Webmaster, Audience), so a key or an approval from one account never replays or applies on another. Writes without a resolved account keep their previous ledger keys.
 
+## Direct sandbox
+
+`YANDEX_DIRECT_SANDBOX=true` sends every Direct call to the official [Sandbox](https://yandex.ru/dev/direct/doc/ru/concepts/sandbox) (`api-sandbox.direct.yandex.com`, test data, same token; enable it once in Direct > API settings > Sandbox). Rehearse writes there first; write flags and approvals still apply. Per account: `"direct_sandbox": true` in `YANDEX_ACCOUNTS_FILE`.
+
 ## Skills, prompts and guides
 
 Self-contained skills in [`skills/`](skills/) (each with its own `references/` and `templates/`): `yandex-direct-audit`, `metrika-compare-periods`, `webmaster-seo-health`, `wordstat-demand-research`, `direct-safe-change`. Copy a folder into `~/.claude/skills/`, `.agents/skills/` or `.cursor/skills/`, or install the plugin. MCP prompts: `campaign_audit`, `weekly_report`, `seo_audit`, `budget_scaling`; resources `yandex://playbook`, `yandex://guide/{api-units|audit-checklist|strategies|metrics-dimensions|diagnostics-codes|wordstat-operators|prepare-apply|errors}`.

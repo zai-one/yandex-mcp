@@ -64,7 +64,10 @@ def guide(topic: str) -> str:
 
 
 def build_instructions(
-    surface: Surface, update_hint: str | None = None, accounts: tuple[str, ...] = ()
+    surface: Surface,
+    update_hint: str | None = None,
+    accounts: tuple[str, ...] = (),
+    direct_sandbox: bool = False,
 ) -> str:
     active = "all" if surface.toolsets == ALL_TOOLSETS else ",".join(surface.toolsets)
     mode = "read-only" if surface.read_only else "read+write"
@@ -83,6 +86,10 @@ def build_instructions(
         "wordstat-demand-research, direct-safe-change, metrika-offline-conversions; or yandex://playbook.\n"
         "Errors: retry only if retryable; follow hint."
     )
+    if direct_sandbox:
+        router += (
+            "\nDirect SANDBOX: test data only (api-sandbox), safe to rehearse writes; say so in answers."
+        )
     if accounts:
         router += f"\nAccounts: {len(accounts)} profiles; yandex_list_accounts, then account=<name> per call."
     return f"{router}\n{update_hint}" if update_hint else router

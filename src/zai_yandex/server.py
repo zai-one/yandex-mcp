@@ -164,7 +164,9 @@ def create_server(
         version=__version__,
         auth=auth,
         mask_error_details=True,
-        instructions=build_instructions(surface, hint, accounts=config.account_names),
+        instructions=build_instructions(
+            surface, hint, accounts=config.account_names, direct_sandbox=config.direct_sandbox
+        ),
     )
     runtime = Runtime(config, transport, http_factory)
     registrar = ToolRegistrar(server, runtime, surface)
