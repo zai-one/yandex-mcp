@@ -130,7 +130,7 @@ Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (o
 
 ## Toolsets and read-only mode
 
-Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (account, direct_read, direct_reports, metrika, webmaster, wordstat, audience) - about 30% fewer tool tokens. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics).
+Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics).
 
 | Variable | Effect |
 |---|---|
@@ -176,7 +176,7 @@ Self-contained skills in [`skills/`](skills/) (each with its own `references/` a
 
 ## Access and limits
 
-Search API jobs need a separate worker and a Cloud folder ID. Wordstat uses Cloud credentials and explicit cost limits. Write operations depend on service permissions and server policy. OAuth self-setup: `yandex_auth_start` / `yandex_auth_finish` (device-code flow, hot reload, no restart; see `yandex://guide/oauth`) or `yandex-mcp-oauth --device`.
+Search API jobs need a separate worker and a Cloud folder ID. Wordstat uses Cloud credentials and explicit cost limits. Write operations depend on service permissions and server policy. OAuth self-setup: `yandex_auth_start` / `yandex_auth_finish` (device-code flow, hot reload, no restart; local stdio only, never on an HTTP server; see `yandex://guide/oauth`) or `yandex-mcp-oauth --device`.
 
 Authenticated HTTP is available for a server deployment. See [HTTP setup](INSTALL.md#http), [configuration and permissions](docs/RUNTIME.md) and [Python package integration](INSTALL.md#python-package-and-platform-integration).
 

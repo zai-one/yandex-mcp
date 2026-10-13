@@ -2,11 +2,17 @@
 
 Registered outside the provider ledger (like yandex_check_update): calls oauth.yandex.ru
 only, never a marketing API. Tokens are written to 0600 files and never returned.
+
+start/finish replace the server's own credentials, so they exist only on the local stdio
+transport, where the caller is the owner of the process and its files. An HTTP server is
+shared: there the operator provisions token files (``yandex-mcp-oauth --device``) and only
+the read-only ``yandex_auth_status`` is offered, to callers holding a Yandex scope.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 import uuid
 from typing import Any
@@ -14,16 +20,20 @@ from typing import Any
 from mcp.types import ClientCapabilities, ElicitationCapability, UrlElicitationCapability
 
 from zai_yandex.agent_layer import TOOL_DESCRIPTIONS
-from zai_yandex.config import ServiceConfig
+from zai_yandex.config import SCOPES, ServiceConfig
 from zai_yandex.oauth_device import (
     PENDING,
+    SERVICE_TO_ENV,
+    SERVICE_TO_FIELD,
     PendingAuth,
     PollStatus,
     apply_tokens_to_config,
     auth_status_public,
+    link_account_token_files,
     persist_tokens,
     poll_device_token,
     public_start_payload,
+    public_token_locations,
     request_device_codes,
     resolve_client_credentials,
     validate_services,
@@ -38,11 +48,15 @@ except ImportError:  # pragma: no cover
     get_context = None  # type: ignore[assignment]
 
 
+# Tools that replace server credentials: local stdio only, never on a shared HTTP server.
+CREDENTIAL_TOOLS = ("yandex_auth_start", "yandex_auth_finish")
+
+
 def _authenticated(config: ServiceConfig, transport: str):
     def check(context: Any) -> bool:
         if transport == "stdio":
             return bool(config.local_scopes)
-        return bool(context.token and set(context.token.scopes))
+        return bool(context.token and set(context.token.scopes) & SCOPES)
 
     return check
 
@@ -69,6 +83,21 @@ def _require_account(config: ServiceConfig, account: str | None) -> None:
     if not config.accounts:
         raise ValueError("no named accounts configured")
     config.profile(account)
+
+
+def _restart_hint(
+    locations: dict[str, str], persistent: dict[str, bool], account: str | None
+) -> dict[str, str]:
+    missing = sorted(service for service, kept in persistent.items() if not kept)
+    if not missing:
+        return {}
+    if account:
+        where = ", ".join(f'"{SERVICE_TO_FIELD[s]}_file": "<state dir>/{locations[s]}"' for s in missing)
+        hint = f"Active now; to keep after a restart add to {account} in YANDEX_ACCOUNTS_FILE: {where}"
+    else:
+        where = ", ".join(f"{SERVICE_TO_ENV[s]}=<state dir>/{locations[s]}" for s in missing)
+        hint = f"Active now; to keep after a restart set {where}"
+    return {"restart_hint": hint}
 
 
 async def _maybe_elicit_url(verification_url: str, user_code: str) -> str:
@@ -114,13 +143,14 @@ def register_auth_tools(
     runtime: Any | None = None,
     http_factory: Any | None = None,
 ) -> None:
-    """Register yandex_auth_* when the account toolset exposes them."""
+    """Register yandex_auth_* when the account toolset exposes them (start/finish: stdio only)."""
     if surface is not None and not any(
         surface.exposes(name) for name in ("yandex_auth_start", "yandex_auth_finish", "yandex_auth_status")
     ):
         return
 
     auth = _authenticated(config, transport)
+    local = transport == "stdio"
 
     if surface is None or surface.exposes("yandex_auth_status"):
 
@@ -141,7 +171,7 @@ def register_auth_tools(
                 status["pending_expires_in"] = max(0, int(pending.expires_at - time.time()))
             return status
 
-    if surface is None or surface.exposes("yandex_auth_start"):
+    if local and (surface is None or surface.exposes("yandex_auth_start")):
 
         @server.tool(
             auth=auth,
@@ -181,7 +211,7 @@ def register_auth_tools(
             PENDING.put(principal, pending)
             return public_start_payload(pending, elicitation=elicitation)
 
-    if surface is None or surface.exposes("yandex_auth_finish"):
+    if local and (surface is None or surface.exposes("yandex_auth_finish")):
 
         @server.tool(
             auth=auth,
@@ -227,6 +257,13 @@ def register_auth_tools(
                         account=pending.account,
                         client_id=pending.client_id,
                     )
+                    if pending.account:
+                        # Unlinked files are reported via kept_after_restart / restart_hint.
+                        with contextlib.suppress(OSError, ValueError):
+                            link_account_token_files(pending.account, paths, pending.services)
+                    locations, persistent = public_token_locations(
+                        paths, pending.services, state_path=live.state_path, account=pending.account
+                    )
                     new_config = apply_tokens_to_config(
                         live, result.tokens, pending.services, account=pending.account
                     )
@@ -243,7 +280,10 @@ def register_auth_tools(
                         "status": "authorized",
                         "services": list(pending.services),
                         "account": pending.account,
-                        "files": paths,
+                        # Locations relative to the state directory or the setting that names them.
+                        "files": locations,
+                        "kept_after_restart": persistent,
+                        **_restart_hint(locations, persistent, pending.account),
                         "refresh_token_saved": "refresh" in paths,
                         "hot_reloaded": runtime is not None,
                         "token_returned": False,

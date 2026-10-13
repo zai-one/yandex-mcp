@@ -9,18 +9,25 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import config
+from conftest import config, connection, token
 from fastmcp import Client
+from fastmcp.client.auth import BearerAuth
+from fastmcp.exceptions import ToolError
 
 from zai_yandex.config import AccountProfile, load_accounts
 from zai_yandex.oauth_device import (
     PENDING,
+    SERVICE_TO_ENV,
     PollStatus,
     TokenBundle,
     apply_tokens_to_config,
     auth_status_public,
+    backup_path,
+    link_account_token_files,
     persist_tokens,
     poll_device_token,
+    public_token_locations,
+    replace_private_file,
     request_device_codes,
     validate_client_id,
     write_private_file,
@@ -168,6 +175,13 @@ def test_redaction_hides_device_and_access_tokens():
     assert cleaned["device_code"] == "***redacted***"
 
 
+@pytest.fixture(autouse=True)
+def _no_configured_token_files(monkeypatch):
+    # Never let a developer's real token file settings leak into these tests.
+    for name in (*SERVICE_TO_ENV.values(), "YANDEX_ACCOUNTS_FILE", "YANDEX_OAUTH_CLIENT_ID"):
+        monkeypatch.delenv(name, raising=False)
+
+
 async def test_auth_tools_flow_pending_then_success(tmp_path, monkeypatch):
     settings = config(tmp_path, metrika_token="", direct_token="")
     server = create_server(settings, transport="stdio")
@@ -232,7 +246,12 @@ async def test_auth_tools_flow_pending_then_success(tmp_path, monkeypatch):
         assert done["status"] == "authorized"
         assert done["token_returned"] is False
         assert ACCESS not in json.dumps(done)
-        metrika_path = done["files"]["metrika"]
+        # No absolute server paths: the location is relative to the state directory.
+        assert done["files"]["metrika"] == "secrets/metrika.token"
+        assert str(tmp_path) not in json.dumps(done)
+        assert done["kept_after_restart"] == {"metrika": False}
+        assert "YANDEX_METRIKA_TOKEN_FILE" in done["restart_hint"]
+        metrika_path = settings.state_path.parent / done["files"]["metrika"]
         with open(metrika_path, encoding="utf-8") as handle:  # noqa: ASYNC230
             assert handle.read() == ACCESS
         if os.name != "nt":
@@ -289,6 +308,7 @@ async def test_per_account_token_persistence(tmp_path, monkeypatch):
         json.dumps({"accounts": {"shop": {"metrika_token_file": "shop.token"}}, "default": "shop"}),
         encoding="utf-8",
     )
+    monkeypatch.setenv("YANDEX_ACCOUNTS_FILE", str(accounts))
     profiles, default = load_accounts(str(accounts))
     settings = config(tmp_path, accounts=profiles, default_account=default, metrika_token="")
     server = create_server(settings, transport="stdio")
@@ -340,11 +360,85 @@ async def test_per_account_token_persistence(tmp_path, monkeypatch):
         ).data
         assert done["status"] == "authorized"
         assert done["account"] == "shop"
-        # Written under secrets/shop.metrika.token (account-scoped path)
-        with open(done["files"]["metrika"], encoding="utf-8") as handle:  # noqa: ASYNC230
-            assert handle.read() == ACCESS
+        # The account's configured metrika_token_file is replaced; the old token is kept as .bak.
+        assert done["files"]["metrika"] == "YANDEX_ACCOUNTS_FILE:shop.metrika_token_file"
+        assert done["kept_after_restart"] == {"metrika": True} and "restart_hint" not in done
+        assert token_file.read_text(encoding="utf-8") == ACCESS
+        assert (tmp_path / "shop.token.bak").read_text(encoding="utf-8") == "old"
         status = (await client.call_tool("yandex_auth_status", {"account": "shop"})).data
         assert status["services"]["metrika"] is True
+    # A restart loads the new token from the accounts file.
+    assert load_accounts(str(accounts))[0][0].metrika_token == ACCESS
+
+
+async def test_new_account_token_file_is_linked_into_accounts_file(tmp_path, monkeypatch):
+    accounts = tmp_path / "accounts.json"
+    accounts.write_text(json.dumps({"accounts": {"shop": {"direct_client_login": "shop"}}}), encoding="utf-8")
+    monkeypatch.setenv("YANDEX_ACCOUNTS_FILE", str(accounts))
+    profiles, default = load_accounts(str(accounts))
+    settings = config(tmp_path, accounts=profiles, default_account=default)
+    paths = persist_tokens(
+        TokenBundle(access_token=ACCESS), ("metrika",), state_path=settings.state_path, account="shop"
+    )
+    assert link_account_token_files("shop", paths, ("metrika",)) == {"metrika"}
+    spec = json.loads(accounts.read_text(encoding="utf-8"))["accounts"]["shop"]
+    assert spec == {"direct_client_login": "shop", "metrika_token_file": "secrets/shop.metrika.token"}
+    assert load_accounts(str(accounts))[0][0].metrika_token == ACCESS
+    locations, kept = public_token_locations(
+        paths, ("metrika",), state_path=settings.state_path, account="shop"
+    )
+    assert kept == {"metrika": True} and str(tmp_path) not in json.dumps(locations)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX modes")
+def test_token_write_only_tightens_directories_it_creates(tmp_path):
+    shared = tmp_path / "home"
+    shared.mkdir(mode=0o755)
+    os.chmod(shared, 0o755)
+    write_private_file(shared / "direct.token", "value")
+    assert shared.stat().st_mode & 0o777 == 0o755
+    nested = shared / "new" / "secrets"
+    write_private_file(nested / "x.token", "value")
+    assert nested.stat().st_mode & 0o777 == 0o700
+    assert nested.parent.stat().st_mode & 0o777 == 0o700
+    assert shared.stat().st_mode & 0o777 == 0o755
+
+
+def test_replacing_a_token_keeps_one_private_backup(tmp_path):
+    path = tmp_path / "metrika.token"
+    write_private_file(path, "first")
+    replace_private_file(path, "second")
+    replace_private_file(path, "second")  # Same value: the backup keeps the previous token.
+    assert path.read_text(encoding="utf-8") == "second"
+    assert backup_path(path).read_text(encoding="utf-8") == "first"
+    if os.name != "nt":
+        assert backup_path(path).stat().st_mode & 0o777 == 0o600
+
+
+async def test_http_never_offers_credential_replacement(tmp_path, pair, monkeypatch):
+    """Any HTTP principal, whatever its scopes or account, cannot run the device flow."""
+
+    async def fake_request(*args, **kwargs):
+        raise AssertionError("device flow must not start over HTTP")
+
+    monkeypatch.setattr("zai_yandex.auth_tools.request_device_codes", fake_request)
+    monkeypatch.setattr("zai_yandex.auth_tools.poll_device_token", fake_request)
+    server = create_server(config(tmp_path, public_key=pair.public_key), transport="http")
+    for bearer in (
+        token(pair, scopes=["yandex_metrika:read"], actor="mallory", account="other-account"),
+        token(pair),  # Every Yandex scope and the bound account: still not over HTTP.
+    ):
+        async with connection(server, BearerAuth(bearer)) as client:
+            names = {tool.name for tool in await client.list_tools()}
+            assert "yandex_auth_status" in names
+            assert not names & {"yandex_auth_start", "yandex_auth_finish"}
+            with pytest.raises(ToolError):
+                await client.call_tool("yandex_auth_start", {"client_id": CLIENT_ID})
+            with pytest.raises(ToolError):
+                await client.call_tool("yandex_auth_finish", {"wait": False})
+    async with connection(server, BearerAuth(token(pair, scopes=["unrelated:scope"]))) as client:
+        assert "yandex_auth_status" not in {tool.name for tool in await client.list_tools()}
+    assert not (tmp_path / "secrets").exists()
 
 
 def test_write_private_file_mode(tmp_path):

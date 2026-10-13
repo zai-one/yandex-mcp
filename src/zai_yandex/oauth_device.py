@@ -10,6 +10,7 @@ Tokens are never returned to callers — only written to 0600 files and hot-relo
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import re
 import secrets
@@ -273,13 +274,26 @@ async def refresh_access_token(
             await client.aclose()
 
 
+def _make_private_dirs(directory: Path) -> None:
+    """Create missing directories as 0700; never touch the mode of one that already exists."""
+    missing = []
+    current = directory
+    while not current.exists():
+        missing.append(current)
+        if current.parent == current:
+            break
+        current = current.parent
+    directory.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        for created in missing:
+            with contextlib.suppress(OSError):
+                created.chmod(0o700)
+
+
 def write_private_file(path: Path, value: str) -> Path:
     """Write or replace a credential file as owner-private (0600). Never follow symlinks."""
     path = path.expanduser()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if os.name != "nt":
-        with contextlib.suppress(OSError):
-            path.parent.chmod(0o700)
+    _make_private_dirs(path.parent)
     # Atomic replace: write temp then rename; keep 0600.
     tmp = path.with_name(path.name + f".tmp-{secrets.token_hex(4)}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
@@ -300,8 +314,51 @@ def write_private_file(path: Path, value: str) -> Path:
     return path
 
 
+def backup_path(path: Path) -> Path:
+    return path.with_name(path.name + ".bak")
+
+
+def replace_private_file(path: Path, value: str) -> Path:
+    """Like write_private_file, but keep the previous different value as an owner-private .bak."""
+    path = path.expanduser()
+    if path.is_file() and not path.is_symlink():
+        previous = path.read_text(encoding="utf-8")
+        if previous.strip() and previous.strip() != value.strip():
+            write_private_file(backup_path(path), previous)
+    return write_private_file(path, value)
+
+
 def secrets_dir(state_path: Path) -> Path:
     return state_path.parent / "secrets"
+
+
+def accounts_file(env: Any = None) -> Path | None:
+    env = os.environ if env is None else env
+    value = str(env.get("YANDEX_ACCOUNTS_FILE", "")).strip()
+    return Path(value).expanduser() if value else None
+
+
+def _account_spec(account: str, env: Any = None) -> tuple[Path, dict[str, Any], dict[str, Any]] | None:
+    path = accounts_file(env)
+    if path is None or not path.is_file():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    accounts = data.get("accounts") if isinstance(data, dict) else None
+    spec = accounts.get(account) if isinstance(accounts, dict) else None
+    return (path, data, spec) if isinstance(spec, dict) else None
+
+
+def account_token_file(account: str, service: str, env: Any = None) -> Path | None:
+    """The account's configured ``<service>_token_file`` in YANDEX_ACCOUNTS_FILE, if any."""
+    found = _account_spec(account, env)
+    if found is None:
+        return None
+    path, _data, spec = found
+    value = spec.get(f"{SERVICE_TO_FIELD[service]}_file")
+    if not value:
+        return None
+    configured = Path(str(value)).expanduser()
+    return (configured if configured.is_absolute() else path.parent / configured).resolve()
 
 
 def token_path_for(
@@ -311,14 +368,50 @@ def token_path_for(
     account: str | None = None,
     env: dict[str, str] | None = None,
 ) -> Path:
-    """Resolve where to persist a service token (env path wins for the base account)."""
-    env = env or os.environ
+    """Resolve where to persist a service token; a configured file always wins.
+
+    Base account: ``YANDEX_<SERVICE>_TOKEN_FILE``. Named account: its
+    ``<service>_token_file`` in YANDEX_ACCOUNTS_FILE. Otherwise a new file under
+    ``secrets/`` next to the state file.
+    """
+    env = os.environ if env is None else env
     if not account:
         configured = env.get(SERVICE_TO_ENV[service], "").strip()
         if configured:
             return Path(configured).expanduser()
         return secrets_dir(state_path) / f"{service}.token"
-    return secrets_dir(state_path) / f"{account}.{service}.token"
+    return account_token_file(account, service, env) or secrets_dir(state_path) / f"{account}.{service}.token"
+
+
+def link_account_token_files(
+    account: str, written: dict[str, str], services: tuple[str, ...], env: Any = None
+) -> set[str]:
+    """Reference new per-account token files from YANDEX_ACCOUNTS_FILE so they survive a restart.
+
+    Only fills keys the account does not set yet. Returns the services now loaded on restart.
+    """
+    found = _account_spec(account, env)
+    if found is None:
+        return set()
+    path, data, spec = found
+    linked, changed = set(), False
+    for service in services:
+        key = f"{SERVICE_TO_FIELD[service]}_file"
+        if not spec.get(key):
+            target = Path(written[service]).resolve()
+            try:
+                spec[key] = target.relative_to(path.parent.resolve()).as_posix()
+            except ValueError:
+                spec[key] = str(target)
+            changed = True
+        linked.add(service)
+    if changed:
+        tmp = path.with_name(path.name + f".tmp-{secrets.token_hex(4)}")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        with contextlib.suppress(OSError):
+            os.chmod(tmp, path.stat().st_mode & 0o777)
+        os.replace(tmp, path)
+    return linked
 
 
 def refresh_path(state_path: Path, account: str | None = None) -> Path:
@@ -339,21 +432,54 @@ def persist_tokens(
     client_id: str = "",
     env: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """Write access (and refresh) tokens to 0600 files. Returns path map (no secret values)."""
+    """Write access (and refresh) tokens to 0600 files. Returns path map (no secret values).
+
+    A replaced token that differs from the new one is kept as ``<file>.bak`` (0600).
+    """
     written: dict[str, str] = {}
     for service in services:
         path = token_path_for(service, state_path=state_path, account=account, env=env)
-        write_private_file(path, tokens.access_token)
+        replace_private_file(path, tokens.access_token)
         written[service] = str(path)
     if tokens.refresh_token:
         path = refresh_path(state_path, account)
-        write_private_file(path, tokens.refresh_token)
+        replace_private_file(path, tokens.refresh_token)
         written["refresh"] = str(path)
     if client_id:
         path = client_id_path(state_path)
         write_private_file(path, client_id)
         written["client_id"] = str(path)
     return written
+
+
+def public_token_locations(
+    written: dict[str, str],
+    services: tuple[str, ...],
+    *,
+    state_path: Path,
+    account: str | None = None,
+    env: Any = None,
+) -> tuple[dict[str, str], dict[str, bool]]:
+    """Where each token went, without absolute paths, and whether a restart loads it again."""
+    env = os.environ if env is None else env
+    base = state_path.parent
+    locations: dict[str, str] = {}
+    persistent: dict[str, bool] = {}
+    for service in services:
+        path = Path(written[service])
+        if not account and env.get(SERVICE_TO_ENV[service], "").strip():
+            locations[service], persistent[service] = SERVICE_TO_ENV[service], True
+            continue
+        if account and account_token_file(account, service, env) == path.resolve():
+            locations[service] = f"YANDEX_ACCOUNTS_FILE:{account}.{SERVICE_TO_FIELD[service]}_file"
+            persistent[service] = True
+            continue
+        try:
+            locations[service] = path.relative_to(base).as_posix()
+        except ValueError:
+            locations[service] = path.name
+        persistent[service] = False
+    return locations, persistent
 
 
 def load_saved_client_id(state_path: Path) -> str:
