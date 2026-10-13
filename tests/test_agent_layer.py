@@ -60,7 +60,7 @@ def test_toolsets_cover_every_reviewed_tool():
 
 async def test_router_resources_and_prompts(tmp_path):
     server = create_server(config(tmp_path), transport="stdio", surface=build_surface("default"))
-    assert len(server.instructions) <= 1600 and "direct-safe-change" in server.instructions
+    assert len(server.instructions) <= 1700 and "direct-safe-change" in server.instructions
     async with Client(server) as client:
         toolsets = json.loads((await client.read_resource("yandex://toolsets"))[0].text)
         assert (

@@ -21,6 +21,8 @@ WRITE_TOOLS = {
     "metrika_logs_create",
     "metrika_logs_cleanup",
     "metrika_upload_offline_conversions",
+    *(f"{p}_manage_apply" for p in ("metrika", "webmaster", "audience")),
+    "direct_apply_write",
 }
 
 

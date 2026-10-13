@@ -5,6 +5,7 @@ from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
 from zai_yandex.adapters.direct import (
+    APPROVAL_ONLY_WRITES,
     INVENTORY_READ_SERVICES,
     YandexDirectAdapter,
     build_statistics_request,
@@ -436,6 +437,12 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         try:
             adapter = registry.yandex_direct()
             norm_service, norm_method, items = adapter.validate_apply(service, method, campaigns)
+            if (norm_service, norm_method) != ("campaigns", "update"):
+                # The draft hash covers only the items, so this path must not let an approval
+                # for one method execute another (e.g. update -> delete on the same Ids).
+                raise PermissionError(
+                    "direct_apply_changes executes Campaigns.update only; use direct_prepare_write"
+                )
             digest = request_hash(campaigns)
             approval = await store.get_approval(UUID(approval_id))
             if (
@@ -472,6 +479,12 @@ def register_core_tools(server: Any, runtime: Any) -> None:
             )
         except (ProviderError, PermissionError, ValueError) as exc:
             raise safe_provider_error("yandex_direct", exc) from None
+
+    def _autonomous_allowed(service: str, method: str, items: list[dict[str, Any]]) -> Any:
+        validated = YandexDirectAdapter.validate_apply(service, method, items)
+        if validated[0] in APPROVAL_ONLY_WRITES:
+            raise ProviderError("this Direct service needs direct_prepare_write -> direct_apply_write")
+        return validated
 
     def _direct_readback_ids(items: list[dict[str, Any]], result: Any) -> list[int]:
         ids = [int(i["Id"]) for i in items if isinstance(i, dict) and isinstance(i.get("Id"), int)]
@@ -514,7 +527,7 @@ def register_core_tools(server: Any, runtime: Any) -> None:
                 {"service": service, "method": method, "items": items},
                 idempotency_key,
                 enabled=settings.yandex_direct_write_enabled,
-                validate=lambda: adapter.validate_apply(service, method, items),
+                validate=lambda: _autonomous_allowed(service, method, items),
                 apply_fn=lambda: adapter.apply_changes(service, method, items),
                 readback_fn=lambda result: adapter.readback(
                     norm_service, _direct_readback_ids(items, result)

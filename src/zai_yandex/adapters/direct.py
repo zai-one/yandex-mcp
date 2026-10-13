@@ -39,6 +39,7 @@ EXTRA_READ_METHODS: dict[str, frozenset[str]] = {
     "creatives": frozenset({"get"}),
     "dictionaries": frozenset({"get"}),
     "dynamictextadtargets": frozenset({"get"}),  # units + DynamicTextAdTargets service
+    "dynamicfeedadtargets": frozenset({"get"}),  # https://yandex.ru/dev/direct/doc/ru/dynamicfeedadtargets/get
     "feeds": frozenset({"get"}),
     "leads": frozenset({"get"}),
     "negativekeywordsharedsets": frozenset({"get"}),
@@ -57,10 +58,32 @@ READ_SERVICES = INVENTORY_READ_SERVICES | {"keywordsresearch", "agencyclients"} 
 WRITE_METHODS: dict[str, frozenset[str]] = {
     "campaigns": frozenset({"update", "add", "suspend", "resume", "archive", "unarchive", "delete"}),
     "adgroups": frozenset({"add", "update", "delete"}),
-    "ads": frozenset({"add", "update", "delete", "moderate", "suspend", "resume", "archive"}),
+    "ads": frozenset({"add", "update", "delete", "moderate", "suspend", "resume", "archive", "unarchive"}),
     "keywords": frozenset({"add", "update", "delete", "suspend", "resume"}),
     "bids": frozenset({"set", "setAuto"}),
+    # Parity writes, each a documented method (https://yandex.ru/dev/direct/doc/ru/<service>/<method>).
+    "keywordbids": frozenset({"set", "setAuto"}),
+    "bidmodifiers": frozenset({"add", "set", "delete"}),
+    "audiencetargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
+    "retargetinglists": frozenset({"add", "update", "delete"}),
+    "sitelinks": frozenset({"add", "delete"}),
+    "vcards": frozenset({"add", "delete"}),
+    "adimages": frozenset({"add", "delete"}),
+    "adextensions": frozenset({"add", "delete"}),
+    "advideos": frozenset({"add"}),
+    "negativekeywordsharedsets": frozenset({"add", "update", "delete"}),
+    "feeds": frozenset({"add", "update", "delete"}),
+    "dynamictextadtargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
+    "smartadtargets": frozenset({"add", "update", "delete", "suspend", "resume", "setBids"}),
+    "dynamicfeedadtargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
+    "creatives": frozenset({"add"}),
+    # v501 endpoint (service_url); https://yandex.ru/dev/direct/doc/ru/strategies/strategies
+    "strategies": frozenset({"add", "update", "archive", "unarchive"}),
+    # https://yandex.ru/dev/direct/doc/ru/agencyclients/update (agency accounts only; approval-gated)
+    "agencyclients": frozenset({"update"}),
 }
+# Writes that only the approval-gated path (direct_prepare_write -> direct_apply_write) may run.
+APPROVAL_ONLY_WRITES: frozenset[str] = frozenset({"agencyclients", "strategies"})
 # Upstream top-level payload key for object-based writes (add/update/set).
 SERVICE_PAYLOAD_KEY: dict[str, str] = {
     "campaigns": "Campaigns",
@@ -68,12 +91,33 @@ SERVICE_PAYLOAD_KEY: dict[str, str] = {
     "ads": "Ads",
     "keywords": "Keywords",
     "bids": "Bids",
+    "keywordbids": "KeywordBids",
+    "bidmodifiers": "BidModifiers",
+    "audiencetargets": "AudienceTargets",
+    "retargetinglists": "RetargetingLists",
+    "sitelinks": "SitelinksSets",
+    "vcards": "VCards",
+    "adimages": "AdImages",
+    "adextensions": "AdExtensions",
+    "advideos": "AdVideos",
+    "negativekeywordsharedsets": "NegativeKeywordSharedSets",
+    "feeds": "Feeds",
+    "dynamictextadtargets": "Webpages",
+    "smartadtargets": "SmartAdTargets",
+    "dynamicfeedadtargets": "DynamicFeedAdTargets",
+    "creatives": "Creatives",
+    "strategies": "Strategies",
+    "agencyclients": "Clients",
 }
+# Per-method payload key overrides: setBids takes "Bids"; set on bidmodifiers keeps BidModifiers.
+METHOD_PAYLOAD_KEY: dict[str, str] = {"setBids": "Bids"}
 # Methods that target existing objects by id via SelectionCriteria.Ids instead
 # of a full object payload.
 ID_BASED_METHODS: frozenset[str] = frozenset(
     {"suspend", "resume", "archive", "unarchive", "delete", "moderate"}
 )
+# AdImages are addressed by hash, not by integer id (adimages/delete).
+HASH_BASED: frozenset[tuple[str, str]] = frozenset({("adimages", "delete")})
 MAX_APPLY_ITEMS = 100
 
 READ_METHODS = {
@@ -88,7 +132,8 @@ READ_METHODS = {
     "businesses": frozenset({"get"}),
     "adimages": frozenset({"get"}),
     "strategies": frozenset({"get"}),
-    "keywordsresearch": frozenset({"hasSearchVolume"}),
+    # https://yandex.ru/dev/direct/doc/ru/keywordsresearch/deduplicate (local-effect utility, no writes)
+    "keywordsresearch": frozenset({"hasSearchVolume", "deduplicate"}),
     **EXTRA_READ_METHODS,
 }
 DIRECT_REPORT_TYPES = frozenset(
@@ -412,7 +457,10 @@ class YandexDirectAdapter:
         for item in items:
             if not isinstance(item, dict) or not item:
                 raise ProviderError("each Direct apply item must be a non-empty object")
-            if needs_id:
+            if (normalized, normalized_method) in HASH_BASED:
+                if not isinstance(item.get("AdImageHash"), str) or not item["AdImageHash"]:
+                    raise ProviderError("adimages delete requires an AdImageHash per item")
+            elif needs_id:
                 item_id = item.get("Id")
                 if isinstance(item_id, bool) or not isinstance(item_id, int):
                     raise ProviderError("this Direct method requires an integer Id per item")
@@ -420,9 +468,11 @@ class YandexDirectAdapter:
 
     @staticmethod
     def _apply_params(service: str, method: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+        if (service, method) in HASH_BASED:
+            return {"SelectionCriteria": {"AdImageHashes": [item["AdImageHash"] for item in items]}}
         if method in ID_BASED_METHODS:
             return {"SelectionCriteria": {"Ids": [item["Id"] for item in items]}}
-        return {SERVICE_PAYLOAD_KEY[service]: items}
+        return {METHOD_PAYLOAD_KEY.get(method, SERVICE_PAYLOAD_KEY[service]): items}
 
     async def apply_changes(self, service: str, method: str, items: list[dict[str, Any]]) -> dict[str, Any]:
         """Execute one allowlisted Direct write for any writable service."""
@@ -435,7 +485,7 @@ class YandexDirectAdapter:
         # A production mutation is never coalesced or retried blindly.
         response = await self.http.request(
             "POST",
-            f"{self.base_url}/{normalized}",
+            self.service_url(normalized),
             headers=headers,
             payload={
                 "method": normalized_method,

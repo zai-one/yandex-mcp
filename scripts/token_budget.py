@@ -1,6 +1,6 @@
 """Token budget for the agent-facing surface (enforced in CI via tests/test_agent_layer.py).
 
-Checks: router instructions <= 1600 chars, each tool description <= 300 chars, tools/list
+Checks: router instructions <= 1700 chars, each tool description <= 300 chars, tools/list
 JSON per preset <= BUDGET_BYTES, skills frontmatter and file references valid.
 Usage: python scripts/token_budget.py
 """
@@ -15,10 +15,10 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BUDGET_BYTES = {"default": 34_000, "all": 80_000}
+BUDGET_BYTES = {"default": 34_000, "all": 92_000}
 # Estimated tokens an agent pays at startup: instructions + tools/list + every skill frontmatter.
-STARTUP_TOKENS = {"default": 9_500, "all": 21_000}
-INSTRUCTIONS_CHARS = 1600
+STARTUP_TOKENS = {"default": 9_500, "all": 24_500}
+INSTRUCTIONS_CHARS = 1700
 
 
 def estimate_tokens(text: str) -> int:

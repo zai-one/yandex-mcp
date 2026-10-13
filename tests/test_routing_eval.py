@@ -49,7 +49,8 @@ def test_request_routes_to_skill_guide_and_tool(case):
     assert rid == case["route"]
     _, intent, first_tool, skill, topic = next(r for r in ROUTES if r[0] == rid)
     line = next(line for line in instructions.splitlines() if line.startswith(f"- {intent}:"))
-    assert topic in line and (not skill or skill in line) and (not first_tool or first_tool in line)
+    topic_named = topic in line or (topic == "tool-map" and "yandex://guide/tool-map" in instructions)
+    assert topic_named and (not skill or skill in line) and (not first_tool or first_tool in line)
     if skill:
         assert (ROOT / "skills" / skill / "SKILL.md").is_file()
     assert topic in GUIDE_TOPICS

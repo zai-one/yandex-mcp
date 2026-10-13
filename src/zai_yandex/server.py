@@ -17,7 +17,9 @@ from zai_yandex.auth_tools import register_auth_tools
 from zai_yandex.config import ACTIVE_ACCOUNT, SCOPES, ServiceConfig
 from zai_yandex.core_tools import register_core_tools
 from zai_yandex.coverage_tools import register_coverage_tools
+from zai_yandex.defaults import apply_defaults, default_config_file
 from zai_yandex.expansion_tools import register_expansion_tools
+from zai_yandex.management import register_direct_governed_tools, register_management_tools
 from zai_yandex.metrika_reports import register_reports
 from zai_yandex.offline_conversions import register_offline_conversion_tools
 from zai_yandex.onboarding import check_config, load_config
@@ -178,6 +180,8 @@ def create_server(
     register_expansion_tools(registrar, runtime)
     register_offline_conversion_tools(registrar, runtime)
     register_coverage_tools(registrar, runtime)
+    register_management_tools(registrar, runtime)
+    register_direct_governed_tools(registrar, runtime)
     register_update_tool(server, config, transport, surface)
     register_accounts_tool(server, config, transport, surface)
     register_auth_tools(server, config, transport, surface, runtime=runtime)
@@ -190,7 +194,11 @@ def main() -> None:
     parser.add_argument("--transport", choices=["stdio", "http"], default="stdio")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8814)
-    parser.add_argument("--config", help="Operator JSON settings; paths relative to this file")
+    parser.add_argument(
+        "--config",
+        help="Operator JSON settings; paths relative to this file. Optional: defaults to "
+        "YANDEX_MCP_CONFIG or the per-user mcp.local.json; without one, per-user state + OAuth tokens",
+    )
     parser.add_argument("--toolsets", help="Toolsets: comma list, 'default' or 'all' (YANDEX_TOOLSETS)")
     parser.add_argument("--read-only", action="store_true", help="Hide every write tool (YANDEX_READ_ONLY)")
     parser.add_argument(
@@ -198,7 +206,8 @@ def main() -> None:
     )
     args = parser.parse_args()
     try:
-        load_config(args.config)
+        load_config(args.config or default_config_file())
+        apply_defaults()
         config = ServiceConfig.from_env()
         if args.check_config:
             result = check_config(config, args.transport)

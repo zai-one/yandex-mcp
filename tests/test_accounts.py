@@ -9,7 +9,7 @@ from fastmcp import Client
 from fastmcp.exceptions import ToolError
 from test_webmaster_runtime import WebmasterRecorder
 
-from zai_yandex.config import ServiceConfig, load_accounts
+from zai_yandex.config import ACTIVE_ACCOUNT, ServiceConfig, load_accounts
 from zai_yandex.runtime import AdmittedHttpClient
 from zai_yandex.server import create_server
 from zai_yandex.state import StateStore
@@ -132,6 +132,17 @@ async def test_write_ledger_never_replays_across_accounts(tmp_path):
     assert scopes == ["yandex_direct", "yandex_direct|account=client-a", "yandex_direct|account=client-b"]
 
 
+def accept_as(settings, draft, account):
+    """Operator acceptance under an explicit named account (as `approvals --named-account`)."""
+    token = ACTIVE_ACCOUNT.set(account)
+    try:
+        return StateStore(settings).accept(
+            UUID(draft["approval_id"]), principal=settings.principal_id, request_hash=draft["request_hash"]
+        )
+    finally:
+        ACTIVE_ACCOUNT.reset(token)
+
+
 async def test_direct_approval_is_bound_to_its_account(tmp_path):
     settings = two_accounts(tmp_path, yandex_direct_write_enabled=True)
     recorder = Recorder()
@@ -141,9 +152,9 @@ async def test_direct_approval_is_bound_to_its_account(tmp_path):
             await client.call_tool("direct_prepare_changes", {"changes": items, "account": "client-a"})
         ).data
         assert draft["account"] == "client-a"
-        assert StateStore(settings).accept(
-            UUID(draft["approval_id"]), principal=settings.principal_id, request_hash=draft["request_hash"]
-        )
+        assert not accept_as(settings, draft, None)
+        assert not accept_as(settings, draft, "client-b")
+        assert accept_as(settings, draft, "client-a")
         args = {
             "service": "campaigns",
             "method": "update",
@@ -170,9 +181,9 @@ async def test_webmaster_approval_and_key_are_bound_to_their_account(tmp_path):
             )
         ).data
         assert draft["account"] == "client-a"
-        assert StateStore(settings).accept(
-            UUID(draft["approval_id"]), principal=settings.principal_id, request_hash=draft["request_hash"]
-        )
+        assert not accept_as(settings, draft, None)
+        assert not accept_as(settings, draft, "client-b")
+        assert accept_as(settings, draft, "client-a")
         args = {
             "host_id": HOST,
             "url": URL,

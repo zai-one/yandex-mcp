@@ -68,6 +68,7 @@ GUIDE_TOPICS = (
     "accounts",
     "tool-map",
     "oauth",
+    "management",
 )
 
 
@@ -83,7 +84,7 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     # (route id, intent words, first tool, skill or "", guide topic)
     ("direct_audit", "аудит Директа, CPA вырос, сливаем", "direct_list_campaigns", "yandex-direct-audit", "audit-checklist"),
     ("direct_stats", "статистика Директа, расход, потратили, клики, запросы", "direct_get_statistics", "yandex-direct-audit", "api-units"),
-    ("direct_change", "изменить ставки/бюджет, пауза кампании, минус-слова", "direct_prepare_changes", "direct-safe-change", "prepare-apply"),
+    ("direct_change", "изменить ставки/бюджет, пауза кампании, минус-слова, объявления", "direct_prepare_changes", "direct-safe-change", "prepare-apply"),
     ("direct_extra", "ставки фраз, аукцион, быстрые ссылки, картинки, фиды, лиды, Changes", "direct_get_keyword_bids", "", "tool-map"),
     ("agency", "агентство, клиенты, аккаунты, песочница, потестить", "direct_list_agency_clients", "yandex-agency-accounts", "accounts"),
     ("auth", "подключить, OAuth, токен, connect", "yandex_auth_start", "", "oauth"),
@@ -94,6 +95,7 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     ("wordstat", "Wordstat, спрос, частотность, семантика", "yandex_wordstat_get_top", "wordstat-demand-research", "wordstat-operators"),
     ("serp", "выдача, позиции, SERP", "yandex_serp_prepare", "", "tool-map"),
     ("audience", "аудитории, сегменты, пиксель", "audience_list_segments", "", "tool-map"),
+    ("manage", "права, представители, метки, примечания, звонки, затраты, фид, хост", "metrika_manage_read", "yandex-account-admin", "management"),
     ("errors", "ошибка, баллы, лимит", "", "", "errors"),
 )  # fmt: skip
 
@@ -106,13 +108,15 @@ def build_instructions(
 ) -> str:
     mode = "read-only" if surface.read_only else "read+write"
     lines = [
-        f"Yandex MCP: Direct, Metrika, Webmaster, Wordstat, Search, Audience ({mode}; yandex://toolsets).",
-        "Intent -> first tool; skill; yandex://guide/<topic>.",
+        f"Yandex MCP: Direct/Metrika/Webmaster/Wordstat/Search/Audience ({mode}; yandex://toolsets).",
+        "Intent: first tool; skill; yandex://guide/<topic>.",
     ]
     for _, words, tool, skill, topic in ROUTES:
-        lines.append(f"- {words}: " + "; ".join(part for part in (tool, skill, topic) if part))
-    lines.append("Writes: prepare -> user approval -> apply + idempotency_key. Wordstat/SERP are paid.")
-    lines.append("Unsure? yandex://playbook (skills) or yandex://guide/tool-map (all tools, toolsets).")
+        # tool-map is named once on the "Unsure?" line below; repeating it per route only costs tokens.
+        parts = (tool, skill, "" if topic == "tool-map" else topic)
+        lines.append(f"- {words}: " + "; ".join(part for part in parts if part))
+    lines.append("Writes: prepare -> user approval -> apply(idempotency_key). Wordstat/SERP paid.")
+    lines.append("Unsure? yandex://playbook (skills), yandex://guide/tool-map (all tools).")
     if direct_sandbox:
         lines.append("Direct SANDBOX: test data only (api-sandbox); say so in answers.")
     if accounts:

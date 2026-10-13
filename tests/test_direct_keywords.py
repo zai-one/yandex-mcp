@@ -44,7 +44,7 @@ async def test_keywords_research_allows_search_volume_forecast() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("method", ["create", "get", "deduplicate", "add"])
+@pytest.mark.parametrize("method", ["create", "get", "add"])
 async def test_keywords_research_denies_non_forecast_methods_before_network(method: str) -> None:
     http = RecordingHttp()
     adapter = YandexDirectAdapter("https://api.direct.yandex.com/json/v5", "fixture-token", http=http)

@@ -28,6 +28,7 @@ Opt-in Direct reads: client, dictionaries, changes, bids/auction, sitelinks, ima
 - `direct_get_bid_modifiers` - Bid adjustments (mobile, demographics, retargeting, regional...) by campaign/group/id
 - `direct_get_bids` - Bids.get: current Bid/ContextBid plus optional search auction fields for keywords.
 - `direct_list_ad_images` - AdImages.get: uploaded ad images (hash, name, type, subtype, associated).
+- `direct_deduplicate_keywords` - Merge duplicate phrases and add cross-negatives via KeywordsResearch.deduplicate before adding keywords.
 - `direct_list_ad_extensions` - Callout extensions (Id, Type, Status, text).
 - `direct_list_audience_targets` - Audience targets (retargeting/interest) by Ids, AdGroupIds or CampaignIds.
 - `direct_list_retargeting_lists` - Retargeting and audience-selection lists (Id, Type, Name, IsAvailable).
@@ -42,6 +43,7 @@ Opt-in Direct reads: client, dictionaries, changes, bids/auction, sitelinks, ima
 - `direct_list_businesses` - Yandex Business profiles (Id, Name, IsPublished, Rubric)
 - `direct_list_smart_ad_targets` - Smart-banner feed filters (SmartAdTargets) by campaign/group/id.
 - `direct_list_dynamic_text_ad_targets` - Dynamic text ad targeting conditions by campaign/group/id.
+- `direct_list_dynamic_feed_ad_targets` - Dynamic feed ad filters (DynamicFeedAdTargets) by campaign/group/id.
 
 ## direct_reports*
 Direct Reports service: statistics and goal statistics.
@@ -49,10 +51,12 @@ Direct Reports service: statistics and goal statistics.
 - `direct_get_goal_statistics` - Direct Reports statistics broken down by 1-10 Metrika goals and attribution models (FCCD, LC, LSCCD, AUTO).
 
 ## direct_write
-Direct changes: prepare -> human approval -> apply; generic direct_write.
+Direct changes: prepare -> human approval -> apply (any allowlisted service/method); generic direct_write.
 - `direct_prepare_changes` - Draft a Direct change set and open an unaccepted, expiring approval.
 - `direct_apply_changes` - Apply an accepted Direct change set (from `direct_prepare_changes`, approved by the operator) exactly once with approval_id + idempotency_key
 - `direct_write` - Generic idempotent Direct API write (service, method, items) behind the server write flag and audit log.
+- `direct_prepare_write` - Open an approval for one allowlisted Direct write (any service/method
+- `direct_apply_write` - Execute an accepted Direct write once (write flag, approval_id, idempotency_key), then read back.
 
 ## metrika*
 Metrika counters, goals, Reporting API and period comparison.
@@ -164,3 +168,24 @@ Create Audience geo/pixel segments with confirmation_hash; reconcile.
 - `audience_create_pixel` - Run one guarded tracking-pixel create
 - `audience_create_pixel_viewers` - Run one guarded pixel-viewer segment create
 - `audience_reconcile_create` - Reconcile one owned pending create by saved object id without sending another POST.
+
+## metrika_manage
+Opt-in Metrika management: counters, filters, operations, segments, grants, labels, annotations, access filters, delegates; calls/expenses/user params/CRM uploads; bytime/drilldown/comparison reports. Writes: prepare -> approval -> apply -> reconcile.
+- `metrika_manage_read` - Documented Metrika management/report reads by operation name
+- `metrika_manage_prepare` - Open an approval for one allowlisted Metrika write/upload (args: ids, query, body, csv).
+- `metrika_manage_apply` - Execute an accepted Metrika write once (write flag, approval_id, idempotency_key), then read back.
+- `metrika_manage_reconcile` - Settle an uncertain Metrika management write by reading the provider
+
+## webmaster_manage
+Opt-in Webmaster management: add/delete host, start verification, delete/recrawl sitemaps, feeds, indexing archive, in-search and all-queries history. prepare -> approval -> apply.
+- `webmaster_manage_read` - Documented Webmaster management/report reads by operation name
+- `webmaster_manage_prepare` - Open an approval for one allowlisted Webmaster write/upload (args: ids, query, body, csv).
+- `webmaster_manage_apply` - Execute an accepted Webmaster write once (write flag, approval_id, idempotency_key), then read back.
+- `webmaster_manage_reconcile` - Settle an uncertain Webmaster management write by reading the provider
+
+## audience_manage
+Opt-in Audience management: CSV upload + confirm, lookalike/Metrika/AppMetrica segments, update/delete/reprocess, grants, delegates, pixels. prepare -> approval -> apply.
+- `audience_manage_read` - Documented Audience management/report reads by operation name
+- `audience_manage_prepare` - Open an approval for one allowlisted Audience write/upload (args: ids, query, body, csv).
+- `audience_manage_apply` - Execute an accepted Audience write once (write flag, approval_id, idempotency_key), then read back.
+- `audience_manage_reconcile` - Settle an uncertain Audience management write by reading the provider

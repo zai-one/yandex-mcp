@@ -9,6 +9,9 @@ from __future__ import annotations
 from mcp.types import ToolAnnotations
 
 from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
+from zai_yandex.management import MANAGEMENT_TOOLS
+
+_MANAGE = MANAGEMENT_TOOLS.values()
 
 # Provider reads: no provider or local business state changes.
 READ = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True)
@@ -62,6 +65,7 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "webmaster_list_popular_queries",
             *DIRECT_EXTRA_TOOLS,
             *WEBMASTER_EXTRA_TOOLS,
+            *(names[0] for names in _MANAGE),
             "webmaster_get_indexing_history",
             "webmaster_list_indexing_samples",
             "webmaster_list_search_urls",
@@ -120,13 +124,18 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
         PREPARE,
         (
             "direct_prepare_changes",
+            *(names[1] for names in _MANAGE),
+            "direct_prepare_write",
             "webmaster_prepare_recrawl",
             "webmaster_prepare_sitemap",
             "yandex_serp_prepare",
             "yandex_auth_start",
         ),
     ),
-    (RECONCILE, ("webmaster_reconcile_action", "audience_reconcile_create")),
+    (
+        RECONCILE,
+        ("webmaster_reconcile_action", "audience_reconcile_create", *(names[3] for names in _MANAGE)),
+    ),
     (
         ADDITIVE_WRITE,
         (
@@ -148,7 +157,14 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
     ),
     (
         DESTRUCTIVE_WRITE,
-        ("direct_write", "direct_apply_changes", "metrika_apply_goal", "metrika_logs_cleanup"),
+        (
+            "direct_write",
+            "direct_apply_changes",
+            "metrika_apply_goal",
+            "metrika_logs_cleanup",
+            *(names[2] for names in _MANAGE),
+            "direct_apply_write",
+        ),
     ),
 )
 

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
+from zai_yandex.management import MANAGEMENT_TOOLS
 from zai_yandex.tool_annotations import TOOL_ANNOTATIONS
 
 TOOLSETS: dict[str, dict[str, Any]] = {
@@ -51,8 +52,14 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         "tools": ("direct_get_statistics", "direct_get_goal_statistics"),
     },
     "direct_write": {
-        "description": "Direct changes: prepare -> human approval -> apply; generic direct_write.",
-        "tools": ("direct_prepare_changes", "direct_apply_changes", "direct_write"),
+        "description": "Direct changes: prepare -> human approval -> apply (any allowlisted service/method); generic direct_write.",
+        "tools": (
+            "direct_prepare_changes",
+            "direct_apply_changes",
+            "direct_write",
+            "direct_prepare_write",
+            "direct_apply_write",
+        ),
     },
     "metrika": {
         "description": "Metrika counters, goals, Reporting API and period comparison.",
@@ -96,6 +103,7 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             if name.startswith("webmaster_")
             and TOOL_ANNOTATIONS[name].readOnlyHint
             and name not in WEBMASTER_EXTRA_TOOLS
+            and name not in MANAGEMENT_TOOLS["webmaster"]
         ),
     },
     "webmaster_extra": {
@@ -150,6 +158,28 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             "audience_create_pixel_viewers",
             "audience_reconcile_create",
         ),
+    },
+    "metrika_manage": {
+        "description": (
+            "Opt-in Metrika management: counters, filters, operations, segments, grants, labels, "
+            "annotations, access filters, delegates; calls/expenses/user params/CRM uploads; "
+            "bytime/drilldown/comparison reports. Writes: prepare -> approval -> apply -> reconcile."
+        ),
+        "tools": MANAGEMENT_TOOLS["metrika"],
+    },
+    "webmaster_manage": {
+        "description": (
+            "Opt-in Webmaster management: add/delete host, start verification, delete/recrawl sitemaps, "
+            "feeds, indexing archive, in-search and all-queries history. prepare -> approval -> apply."
+        ),
+        "tools": MANAGEMENT_TOOLS["webmaster"],
+    },
+    "audience_manage": {
+        "description": (
+            "Opt-in Audience management: CSV upload + confirm, lookalike/Metrika/AppMetrica segments, "
+            "update/delete/reprocess, grants, delegates, pixels. prepare -> approval -> apply."
+        ),
+        "tools": MANAGEMENT_TOOLS["audience"],
     },
 }
 

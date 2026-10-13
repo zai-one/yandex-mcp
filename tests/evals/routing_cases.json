@@ -138,5 +138,50 @@
     "request": "какие Pro limits в вебмастере на enhanced export по URL",
     "route": "seo",
     "tool": "webmaster_get_pro_limits"
+  },
+  {
+    "request": "выдай права подрядчику, пусть будет представителем",
+    "route": "manage",
+    "tool": "metrika_manage_prepare"
+  },
+  {
+    "request": "добавь представителя, ему нужны права на редактирование",
+    "route": "manage",
+    "tool": "metrika_manage_apply"
+  },
+  {
+    "request": "загрузи звонки из коллтрекинга и затраты на рекламу ВК",
+    "route": "manage",
+    "tool": "metrika_manage_prepare"
+  },
+  {
+    "request": "залей затраты по ВК и звонки за сентябрь",
+    "route": "manage",
+    "tool": "metrika_manage_read"
+  },
+  {
+    "request": "поставь примечание на график и метку на счётчик",
+    "route": "manage",
+    "tool": "metrika_manage_prepare"
+  },
+  {
+    "request": "новый хост добавь и права на него подтверди через DNS",
+    "route": "manage",
+    "tool": "webmaster_manage_prepare"
+  },
+  {
+    "request": "удали старый фид товаров с этого хоста",
+    "route": "manage",
+    "tool": "webmaster_manage_read"
+  },
+  {
+    "request": "поменяй метки у счётчиков, а примечания оставь",
+    "route": "manage",
+    "tool": "metrika_manage_reconcile"
+  },
+  {
+    "request": "поменять ставки на объявления",
+    "route": "direct_change",
+    "tool": "direct_prepare_changes"
   }
 ]
