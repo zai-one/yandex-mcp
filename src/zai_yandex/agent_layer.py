@@ -34,6 +34,10 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "sampling info, JSON or CSV. Use for period-over-period analysis; raw params via "
         "`metrika_get_statistics`. <=12 metrics, 5 dimensions, 93 days. Read-only."
     ),
+    "yandex_list_accounts": (
+        "List configured named accounts (agency clients/profiles): name, Direct Client-Login, which "
+        "services have own tokens, sandbox. Pass account=<name> to any tool; omitted = default. Local."
+    ),
     "yandex_check_update": (
         "Check GitHub for a newer zai-yandex-mcp release and suggest the update command. Suggest-only, "
         "24h cache unless force=true; never calls Yandex."
@@ -59,7 +63,9 @@ def guide(topic: str) -> str:
     return files("zai_yandex").joinpath(f"resources/guide/{topic}.md").read_text(encoding="utf-8")
 
 
-def build_instructions(surface: Surface, update_hint: str | None = None) -> str:
+def build_instructions(
+    surface: Surface, update_hint: str | None = None, accounts: tuple[str, ...] = ()
+) -> str:
     active = "all" if surface.toolsets == ALL_TOOLSETS else ",".join(surface.toolsets)
     mode = "read-only" if surface.read_only else "read+write"
     router = (
@@ -77,6 +83,8 @@ def build_instructions(surface: Surface, update_hint: str | None = None) -> str:
         "wordstat-demand-research, direct-safe-change, metrika-offline-conversions; or yandex://playbook.\n"
         "Errors: retry only if retryable; follow hint."
     )
+    if accounts:
+        router += f"\nAccounts: {len(accounts)} profiles; yandex_list_accounts, then account=<name> per call."
     return f"{router}\n{update_hint}" if update_hint else router
 
 

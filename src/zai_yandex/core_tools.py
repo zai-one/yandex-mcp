@@ -400,8 +400,10 @@ def register_core_tools(server: Any, runtime: Any) -> None:
                 True,
             )
         )
+        account = settings.selected_account()
         return {
             **draft,
+            **({"account": account} if account else {}),
             "approval_id": str(approval_id),
             "request_hash": digest,
             "write_tool_available": settings.yandex_direct_write_enabled,

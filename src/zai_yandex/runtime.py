@@ -92,11 +92,11 @@ class Registry:
         self.runtime = runtime
 
     async def ensure_enabled(self, provider: str) -> None:
-        if not self.runtime.config.enabled(provider):
+        if not self.runtime.config.effective().enabled(provider):
             raise PermissionError("provider credentials are not configured")
 
     def _adapter(self, provider: str) -> Any:
-        state, config = self.runtime.state.get(), self.runtime.config
+        state, config = self.runtime.state.get(), self.runtime.config.effective()
         if state.provider != provider:
             raise PermissionError("provider does not match this execution")
         if provider not in state.adapters:
@@ -143,7 +143,7 @@ class Registry:
         if state.provider != "yandex_metrika":
             raise PermissionError("provider does not match this execution")
         return YandexMetrikaLogsAdapter(
-            "https://api-metrika.yandex.net", self.runtime.config.metrika_token, http=state.http
+            "https://api-metrika.yandex.net", self.runtime.config.effective().metrika_token, http=state.http
         )
 
     def yandex_search(self) -> YandexSearchAdapter:
@@ -379,6 +379,7 @@ class Runtime:
                     "result": result,
                     "readback": readback,
                     "idempotency_key": key,
+                    **({"ledger_scope": scope} if (scope := self.config.ledger_scope(provider)) else {}),
                 },
                 durable=True,
             )

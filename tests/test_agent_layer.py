@@ -24,7 +24,7 @@ async def names(tmp_path, surface):
 async def test_unset_env_keeps_every_tool(tmp_path, monkeypatch):
     for key in ("YANDEX_TOOLSETS", "YANDEX_READ_ONLY", "YANDEX_TOOLS", "YANDEX_DISABLED_TOOLS"):
         monkeypatch.delenv(key, raising=False)
-    assert await names(tmp_path, surface_from_env()) == set(TOOL_ANNOTATIONS)
+    assert await names(tmp_path, surface_from_env()) == set(TOOL_ANNOTATIONS) - {"yandex_list_accounts"}
 
 
 async def test_read_only_hides_every_non_read_tool(tmp_path):

@@ -78,6 +78,16 @@ class StateStore:
             (self.account, identifier, event, origin, time.time()),
         )
 
+    def _scope(self, provider: str) -> str:
+        """Ledger/approval partition: the provider plus the resolved write target, if any.
+
+        A named account (and, for Direct, the sandbox endpoint) is part of the target, so
+        an idempotency key or approval from one target is invisible to another. The base
+        target stays the bare provider name, which keeps pre-existing rows valid.
+        """
+        scope = self.config.ledger_scope(provider)
+        return f"{provider}|{scope}" if scope else provider
+
     async def create_approval(self, approval: ApprovalRecord) -> None:
         if approval.status != "prepared" or approval.provider not in PROVIDERS:
             raise PermissionError("only unaccepted Yandex drafts may be created")
@@ -88,7 +98,7 @@ class StateStore:
                     self.account,
                     str(approval.approval_id),
                     str(approval.principal_id),
-                    approval.provider,
+                    self._scope(approval.provider),
                     approval.operation,
                     approval.request_hash,
                     units(approval.estimated_cost),
@@ -103,7 +113,7 @@ class StateStore:
         return ApprovalRecord(
             UUID(row["id"]),
             row["actor"],
-            row["provider"],
+            row["provider"].split("|", 1)[0],
             row["operation"],
             row["digest"],
             row["cost"] / 1_000_000,
@@ -118,7 +128,9 @@ class StateStore:
             row = db.execute(
                 "SELECT * FROM approvals WHERE account=? AND id=?", (self.account, str(approval_id))
             ).fetchone()
-        return self._approval(row) if row else None
+        if row is None or row["provider"] != self._scope(row["provider"].split("|", 1)[0]):
+            return None  # Unknown, or prepared for another account/endpoint.
+        return self._approval(row)
 
     def _paid_gate(self, row: sqlite3.Row) -> bool:
         return (
@@ -232,7 +244,7 @@ class StateStore:
     ) -> dict[str, Any] | None:
         row = db.execute(
             "SELECT * FROM provider_writes WHERE account=? AND actor=? AND provider=? AND key=?",
-            (self.account, str(principal), provider, key),
+            (self.account, str(principal), self._scope(provider), key),
         ).fetchone()
         if row is None:
             return None
@@ -254,7 +266,7 @@ class StateStore:
             raise ValueError("idempotency key must contain 1..128 characters")
         db.execute(
             "INSERT INTO provider_writes VALUES(?,?,?,?,?,?,'pending',NULL)",
-            (self.account, str(principal), provider, key, tool, digest),
+            (self.account, str(principal), self._scope(provider), key, tool, digest),
         )
         self._event(db, hash_request([str(principal), provider, key]), "write_reserved", tool)
 
@@ -280,7 +292,7 @@ class StateStore:
                 return False, existing
             same_payload = db.execute(
                 "SELECT 1 FROM provider_writes WHERE account=? AND provider=? AND digest=?",
-                (self.account, provider, request_hash),
+                (self.account, self._scope(provider), request_hash),
             ).fetchone()
             if same_payload is not None:
                 raise PermissionError("the same create payload is already reserved under another key")
@@ -296,7 +308,7 @@ class StateStore:
             changed = db.execute(
                 "UPDATE provider_writes SET status=?,result=? WHERE account=? AND actor=? "
                 "AND provider=? AND key=? AND status='pending'",
-                (status, json.dumps(result), self.account, str(principal), provider, key),
+                (status, json.dumps(result), self.account, str(principal), self._scope(provider), key),
             ).rowcount
             if changed:
                 self._event(db, hash_request([str(principal), provider, key]), "write_" + status, provider)
@@ -309,7 +321,14 @@ class StateStore:
                 db.execute(
                     "UPDATE provider_writes SET result=? WHERE account=? AND actor=? "
                     "AND provider=? AND key=? AND digest=? AND status='pending'",
-                    (json.dumps(checkpoint), self.account, str(principal), provider, key, digest),
+                    (
+                        json.dumps(checkpoint),
+                        self.account,
+                        str(principal),
+                        self._scope(provider),
+                        key,
+                        digest,
+                    ),
                 ).rowcount
                 == 1
             )
@@ -324,8 +343,15 @@ class StateStore:
                 return False, existing
             row = db.execute(
                 "SELECT * FROM approvals WHERE account=? AND id=? AND actor=? "
-                "AND provider='yandex_webmaster' AND operation=? AND digest=?",
-                (self.account, str(approval_id), str(principal), operation, request_hash),
+                "AND provider=? AND operation=? AND digest=?",
+                (
+                    self.account,
+                    str(approval_id),
+                    str(principal),
+                    self._scope("yandex_webmaster"),
+                    operation,
+                    request_hash,
+                ),
             ).fetchone()
             if row is None or not self._consume(db, str(approval_id)):
                 raise PermissionError("matching accepted unexpired approval required")
