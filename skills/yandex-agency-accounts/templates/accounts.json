@@ -1,0 +1,8 @@
+{
+  "default": "client-a",
+  "accounts": {
+    "client-a": {"direct_client_login": "client-a-login", "description": "Agency client A"},
+    "shop-b": {"direct_token_file": "shop-b.direct.token", "metrika_token_file": "shop-b.metrika.token"},
+    "sandbox": {"direct_sandbox": true, "description": "Direct Sandbox rehearsal"}
+  }
+}

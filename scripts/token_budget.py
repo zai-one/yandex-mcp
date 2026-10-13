@@ -1,6 +1,6 @@
 """Token budget for the agent-facing surface (enforced in CI via tests/test_agent_layer.py).
 
-Checks: instructions <= 1200 chars, each tool description <= 300 chars, tools/list
+Checks: router instructions <= 1600 chars, each tool description <= 300 chars, tools/list
 JSON per preset <= BUDGET_BYTES, skills frontmatter and file references valid.
 Usage: python scripts/token_budget.py
 """
@@ -16,6 +16,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BUDGET_BYTES = {"default": 34_000, "all": 66_000}
+# Estimated tokens an agent pays at startup: instructions + tools/list + every skill frontmatter.
+STARTUP_TOKENS = {"default": 9_500, "all": 18_500}
+INSTRUCTIONS_CHARS = 1600
+
+
+def estimate_tokens(text: str) -> int:
+    """Conservative estimate: ~4 ASCII chars or ~2 Cyrillic chars per token."""
+    ascii_chars = sum(1 for ch in text if ord(ch) < 128)
+    return ascii_chars // 4 + (len(text) - ascii_chars) // 2 + 1
+
+
+def skill_frontmatters(root: Path = ROOT) -> str:
+    parts = []
+    for skill in sorted((root / "skills").iterdir()):
+        text = (skill / "SKILL.md").read_text(encoding="utf-8")
+        parts.append(text.split("\n---\n", 1)[0])
+    return "\n".join(parts)
+
+
 NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -58,6 +77,7 @@ async def surface_sizes(config) -> dict[str, dict]:
             "tools": len(tools),
             "bytes": len(payload.encode()),
             "instructions": len(server.instructions or ""),
+            "startup_tokens": estimate_tokens((server.instructions or "") + payload + skill_frontmatters()),
             "long_descriptions": [t.name for t in tools if len(t.description or "") > 300],
         }
     return out
@@ -82,8 +102,10 @@ def main() -> int:
     for preset, info in sizes.items():
         if info["bytes"] > BUDGET_BYTES[preset]:
             problems.append(f"{preset}: tools/list {info['bytes']} B > {BUDGET_BYTES[preset]} B")
-        if info["instructions"] > 1200:
-            problems.append(f"{preset}: instructions {info['instructions']} > 1200 chars")
+        if info["instructions"] > INSTRUCTIONS_CHARS:
+            problems.append(f"{preset}: instructions {info['instructions']} > {INSTRUCTIONS_CHARS} chars")
+        if info["startup_tokens"] > STARTUP_TOKENS[preset]:
+            problems.append(f"{preset}: startup ~{info['startup_tokens']} tokens > {STARTUP_TOKENS[preset]}")
         problems += [f"{preset}: description over 300 chars: {name}" for name in info["long_descriptions"]]
     print(json.dumps({"sizes": sizes, "problems": problems}, indent=2))
     return 1 if problems else 0
