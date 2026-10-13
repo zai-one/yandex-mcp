@@ -1,6 +1,6 @@
 {
   "name": "yandex",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Yandex Direct, Metrika, Webmaster, Wordstat MCP plus skills: Direct audit, Metrika period compare, Webmaster SEO health, Wordstat research, safe Direct changes.",
   "author": {"name": "ZAI.ONE", "url": "https://github.com/zai-one"},
   "homepage": "https://github.com/zai-one/yandex-mcp",
@@ -13,7 +13,7 @@
       "command": "uvx",
       "args": [
         "--from",
-        "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.5.1",
+        "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.6.0",
         "yandex-mcp",
         "--config",
         "${YANDEX_MCP_CONFIG}"
