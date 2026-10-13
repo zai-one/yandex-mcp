@@ -5,3 +5,5 @@ The original MIT notices and precise provenance are preserved in
 third_party/webmaster/ (source) and zai_yandex/_licenses/webmaster/ (wheel).
 These MIT rights and dependency licenses remain unchanged.
 No additional donor code was copied for the 0.2.0 Wordstat features.
+
+License history: this project has not been released under MIT. Releases before 2026-10-13 were published under LicenseRef-ZAI-ONE 1.0 and keep those terms; changes from 2026-10-13 onward use LicenseRef-ZAI-ONE 2.0 (see LICENSE).
