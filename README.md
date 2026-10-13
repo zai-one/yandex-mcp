@@ -45,7 +45,15 @@ Try asking your assistant:
 
 ## Quick start
 
-**In one minute** (Python 3.12+ and uv installed, a Metrika OAuth token at hand):
+**Zero config** (uv installed; no clone, no config file, no absolute paths):
+
+```sh
+claude mcp add yandex -- uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@main" yandex-mcp
+```
+
+Then ask: *"Подключи Яндекс Метрику"*. The assistant runs `yandex_auth_start` (OAuth device flow: open the link, enter the code), then `yandex_auth_finish`; the token is stored in a private file under your user profile and used immediately and after restarts. It needs your Yandex OAuth app `client_id` once (pass it in chat or set `YANDEX_OAUTH_CLIENT_ID`; [OAuth guide](src/zai_yandex/resources/guide/oauth.md)). Without `--config` the server reads `YANDEX_MCP_CONFIG` or `mcp.local.json` in the per-user directory if present, and keeps state there (`%APPDATA%\zai-yandex-mcp` on Windows, `~/Library/Application Support/zai-yandex-mcp` on macOS, `~/.config/zai-yandex-mcp` elsewhere; override with `YANDEX_MCP_HOME`). The same `uvx` command works in Cursor, Codex and Claude Desktop.
+
+**Wizard** (Python 3.12+ and uv installed, a Metrika OAuth token at hand):
 
 ```sh
 git clone https://github.com/zai-one/yandex-mcp.git && cd yandex-mcp
@@ -110,7 +118,7 @@ If tools do not appear, check the absolute path, whether the client can find `uv
 ### Other clients
 
 ```bash
-# Claude Code (MCP only)
+# Claude Code (MCP only); --config is optional (see Zero config above)
 claude mcp add yandex -- uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.6.0" yandex-mcp --config /ABSOLUTE/PATH/mcp.local.json
 # Claude Code plugin (MCP + skills) from this repository; set YANDEX_MCP_CONFIG to your mcp.local.json
 /plugin marketplace add zai-one/yandex-mcp
@@ -130,7 +138,7 @@ Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (o
 
 ## Toolsets and read-only mode
 
-Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics).
+Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics). Administration lives in opt-in `metrika_manage`, `webmaster_manage` and `audience_manage` (grants, delegates, counters, filters, segments, labels, annotations, uploads, hosts, feeds, Audience segments; catalogue in `yandex://guide/management`), all writes through prepare -> approval -> apply. Competitor comparison: [docs/COVERAGE_DIFF.md](docs/COVERAGE_DIFF.md).
 
 | Variable | Effect |
 |---|---|

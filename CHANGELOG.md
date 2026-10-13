@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Functional parity with SvechaPVL, skiddgoddamn, webkoth and axisrow (matrix: docs/COVERAGE_DIFF.md), default `tools/list` unchanged (52 tools, 32 KB).
+- Opt-in `metrika_manage`, `webmaster_manage`, `audience_manage`: 114 documented operations (counters, filters, operations, segments, grants, labels, annotations, access filters, delegates; calls/expenses/user params/CRM/chat uploads; bytime/drilldown/comparison reports; hosts, verification, feeds, sitemap recrawl, indexing archive; Audience uploads, lookalikes, grants, pixels) via `*_manage_read|prepare|apply|reconcile`.
+- Direct: `direct_prepare_write` -> `direct_apply_write` for every allowlisted service/method; new writes for keyword bids, bid modifiers, audience targets, retargeting lists, sitelinks, vCards, images, extensions, videos, creatives, feeds, negative keyword sets, dynamic text/feed and smart targets, strategies (v501) and agency clients (approval-only); `direct_deduplicate_keywords`, `direct_list_dynamic_feed_ad_targets`.
+- Security: approvals are verified against the named account/endpoint on accept and consume; `approvals --named-account`; `direct_apply_changes` executes Campaigns.update only.
+- Zero-config start: `--config` optional (`YANDEX_MCP_CONFIG` or the per-user `mcp.local.json`), per-user state directory, OAuth device-flow tokens auto-loaded after restart.
+- Router: management route, `yandex-account-admin` skill, `management` guide; routing eval 28 -> 37 cases; token budget for `all` 92 KB.
+
 ## 0.6.0
 
 ### Added
