@@ -139,9 +139,11 @@ class WebmasterActions:
                 True,
             )
         )
+        account = self.settings.selected_account()
         return {
             "status": "prepared",
             "action": payload,
+            **({"account": account} if account else {}),
             "request_hash": digest,
             "approval_id": str(approval_id),
             "expires_at": expires.isoformat(),

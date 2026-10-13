@@ -44,6 +44,9 @@ ACCOUNT_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 # Per-call account selection (set by the tool registrar for one call only).
 ACTIVE_ACCOUNT: ContextVar[str | None] = ContextVar("yandex_active_account", default=None)
 PROFILE_TOKENS = ("direct_token", "metrika_token", "webmaster_token", "audience_token")
+# Providers whose target a named account can change. Their write ledger and approvals
+# are partitioned by the resolved account so nothing replays or carries across accounts.
+PROFILE_PROVIDERS = frozenset({"yandex_direct", "yandex_metrika", "yandex_webmaster", "yandex_audience"})
 
 
 def _private_file(value: str, base: Path) -> str:
@@ -221,6 +224,22 @@ class ServiceConfig:
             if profile.name == name:
                 return profile
         raise ValueError(f"unknown account; configured: {', '.join(self.account_names) or 'none'}")
+
+    def selected_account(self) -> str | None:
+        """Name of the account resolved for this call (explicit or default); None = base."""
+        profile = self.profile(ACTIVE_ACCOUNT.get())
+        return profile.name if profile else None
+
+    def ledger_scope(self, provider: str) -> str | None:
+        """Write target beyond (account_id, actor, provider), mixed into ledger keys and approvals.
+
+        None for the base target (no named account resolved), so ledger rows and
+        approvals recorded before named accounts existed keep their meaning.
+        """
+        if provider not in PROFILE_PROVIDERS:
+            return None
+        name = self.selected_account()
+        return f"account={name}" if name else None
 
     def effective(self) -> ServiceConfig:
         """Credentials of the account selected for this call (base config when none)."""

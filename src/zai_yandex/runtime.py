@@ -379,6 +379,7 @@ class Runtime:
                     "result": result,
                     "readback": readback,
                     "idempotency_key": key,
+                    **({"ledger_scope": scope} if (scope := self.config.ledger_scope(provider)) else {}),
                 },
                 durable=True,
             )
