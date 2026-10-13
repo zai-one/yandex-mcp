@@ -243,13 +243,17 @@ class ServiceConfig:
     def ledger_scope(self, provider: str) -> str | None:
         """Write target beyond (account_id, actor, provider), mixed into ledger keys and approvals.
 
-        None for the base target (no named account resolved), so ledger rows and
-        approvals recorded before named accounts existed keep their meaning.
+        The resolved named account and, for Direct, the sandbox endpoint. None for the
+        base production target, so ledger rows and approvals recorded before named
+        accounts and the sandbox existed keep their meaning.
         """
         if provider not in PROFILE_PROVIDERS:
             return None
         name = self.selected_account()
-        return f"account={name}" if name else None
+        parts = [f"account={name}"] if name else []
+        if provider == "yandex_direct" and self.effective().direct_sandbox:
+            parts.append("endpoint=sandbox")
+        return ";".join(parts) or None
 
     def effective(self) -> ServiceConfig:
         """Credentials of the account selected for this call (base config when none)."""

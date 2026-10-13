@@ -149,7 +149,7 @@ Writes are isolated per account: idempotency keys, the write ledger and approval
 
 ## Direct sandbox
 
-`YANDEX_DIRECT_SANDBOX=true` sends every Direct call to the official [Sandbox](https://yandex.ru/dev/direct/doc/ru/concepts/sandbox) (`api-sandbox.direct.yandex.com`, test data, same token; enable it once in Direct > API settings > Sandbox). Rehearse writes there first; write flags and approvals still apply. Per account: `"direct_sandbox": true` in `YANDEX_ACCOUNTS_FILE`.
+`YANDEX_DIRECT_SANDBOX=true` sends every Direct call to the official [Sandbox](https://yandex.ru/dev/direct/doc/ru/concepts/sandbox) (`api-sandbox.direct.yandex.com`, test data, same token; enable it once in Direct > API settings > Sandbox). Rehearse writes there first; write flags and approvals still apply. Per account: `"direct_sandbox": true` in `YANDEX_ACCOUNTS_FILE`. Sandbox writes, idempotency keys and approvals are recorded apart from production ones, so a rehearsal is never replayed or applied as a live change.
 
 ## Skills, prompts and guides
 

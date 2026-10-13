@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Direct Sandbox: `YANDEX_DIRECT_SANDBOX=true` (or per profile `direct_sandbox`) routes Direct JSON v5 calls to `https://api-sandbox.direct.yandex.com/json/v5`; router notes sandbox mode.
+- Direct Sandbox: `YANDEX_DIRECT_SANDBOX=true` (or per profile `direct_sandbox`) routes Direct JSON v5 calls to `https://api-sandbox.direct.yandex.com/json/v5`; router notes sandbox mode. The sandbox endpoint is part of the write ledger and approval scope, so a sandbox write or approval never replays or applies in production.
 
 - Multi-account / agency profiles: `YANDEX_ACCOUNTS_FILE` (named profiles with own token files and/or Direct Client-Login, optional default). Every tool gains an optional `account` argument only when profiles are configured; `yandex_list_accounts` (local, no secrets). Backward compatible: without the file the surface is unchanged. The write ledger, idempotency keys and approvals are partitioned by the resolved account, so a write or approval never replays or applies across accounts; writes with no resolved account keep their previous ledger keys.
 
