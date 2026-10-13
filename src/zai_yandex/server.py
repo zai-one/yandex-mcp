@@ -17,6 +17,7 @@ from zai_yandex.config import SCOPES, ServiceConfig
 from zai_yandex.core_tools import register_core_tools
 from zai_yandex.expansion_tools import register_expansion_tools
 from zai_yandex.metrika_reports import register_reports
+from zai_yandex.offline_conversions import register_offline_conversion_tools
 from zai_yandex.onboarding import check_config, load_config
 from zai_yandex.runtime import Runtime
 from zai_yandex.tool_annotations import annotations_for
@@ -52,8 +53,6 @@ class ToolRegistrar:
             return self.server.tool(**options)(wrapped)
 
         return decorate
-
-
 
 
 def update_cache_path(config: ServiceConfig) -> Any:
@@ -121,6 +120,7 @@ def create_server(
     register_webmaster_tools(registrar, runtime)
     register_audience_tools(registrar, runtime)
     register_expansion_tools(registrar, runtime)
+    register_offline_conversion_tools(registrar, runtime)
     register_update_tool(server, config, transport, surface)
     register_agent_layer(server, surface)
     return server

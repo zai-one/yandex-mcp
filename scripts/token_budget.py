@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BUDGET_BYTES = {"default": 34_000, "all": 48_000}
+BUDGET_BYTES = {"default": 34_000, "all": 52_000}
 NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 

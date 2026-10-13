@@ -28,6 +28,20 @@
           "num_phrases": {
             "default": 10,
             "type": "integer"
+          },
+          "devices": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           }
         },
         "required": [
@@ -40,7 +54,7 @@
         "additionalProperties": true,
         "type": "object"
       },
-      "description": "Get Yandex Wordstat top requests with raw provenance and normalized output."
+      "description": "Wordstat top requests + associations; num_phrases 1..2000; devices DEVICE_* list."
     },
     "yandex_serp_prepare": {
       "inputSchema": {

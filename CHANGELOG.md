@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Metrika offline conversions: `metrika_validate_offline_conversions` (local CSV validation, confirmation_hash), `metrika_upload_offline_conversions` (multipart upload; `YANDEX_METRIKA_WRITE_ENABLED`, metrika write scope, hash + idempotency key, never auto-retried), `metrika_list_offline_conversion_uploads`, `metrika_get_offline_conversion_upload`. Toolset `metrika_offline`; upload joins `metrika_write`. Skill `metrika-offline-conversions`, guide `yandex://guide/offline-conversions`.
+- Wordstat `yandex_wordstat_get_top` gains optional `devices` and validates `num_phrases` 1..2000 before reserving budget (Search API v2 GetTop).
 - Metrika Logs API: `metrika_logs_evaluate`, `metrika_logs_list`, `metrika_logs_get`, `metrika_logs_download_part` (bounded TSV preview) and opt-in `metrika_logs_create` / `metrika_logs_cleanup` (`YANDEX_METRIKA_LOGS_ENABLED`, metrika write scope, idempotency ledger). Toolsets `metrika_logs`, `metrika_logs_write`.
 - Direct `direct_list_agency_clients` (AgencyClients.get, compact non-PII fields) for agency accounts.
 

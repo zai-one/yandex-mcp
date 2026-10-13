@@ -39,7 +39,20 @@ TOOLSETS: dict[str, dict[str, Any]] = {
     },
     "metrika": {
         "description": "Metrika counters, goals, Reporting API and period comparison.",
-        "tools": ("metrika_list_counters", "metrika_list_goals", "metrika_get_statistics", "metrika_report"),
+        "tools": (
+            "metrika_list_counters",
+            "metrika_list_goals",
+            "metrika_get_statistics",
+            "metrika_report",
+        ),
+    },
+    "metrika_offline": {
+        "description": "Offline conversions: local CSV validation and upload status (read).",
+        "tools": (
+            "metrika_validate_offline_conversions",
+            "metrika_list_offline_conversion_uploads",
+            "metrika_get_offline_conversion_upload",
+        ),
     },
     "metrika_logs": {
         "description": "Metrika Logs API: evaluate, list, status, preview download (read).",
@@ -54,7 +67,10 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         "description": "Create Logs API exports and clean/cancel them (quota; YANDEX_METRIKA_LOGS_ENABLED).",
         "tools": ("metrika_logs_create", "metrika_logs_cleanup"),
     },
-    "metrika_write": {"description": "Create/update/delete Metrika goals.", "tools": ("metrika_apply_goal",)},
+    "metrika_write": {
+        "description": "Create/update/delete Metrika goals; upload offline conversions.",
+        "tools": ("metrika_apply_goal", "metrika_upload_offline_conversions"),
+    },
     "webmaster": {
         "description": "Webmaster hosts, summary, SQI, diagnostics, queries, indexing, links, sitemaps.",
         "tools": tuple(

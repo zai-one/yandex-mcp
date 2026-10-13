@@ -86,6 +86,8 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "metrika_logs_list",
             "metrika_logs_get",
             "metrika_logs_download_part",
+            "metrika_list_offline_conversion_uploads",
+            "metrika_get_offline_conversion_upload",
             # Public GitHub release lookup; suggests an update, never installs.
             "yandex_check_update",
         ),
@@ -99,7 +101,15 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "yandex_wordstat_regions_tree",
         ),
     ),
-    (LOCAL_READ, ("yandex_serp_status", "yandex_serp_get_result", "audience_validate_create")),
+    (
+        LOCAL_READ,
+        (
+            "yandex_serp_status",
+            "yandex_serp_get_result",
+            "audience_validate_create",
+            "metrika_validate_offline_conversions",
+        ),
+    ),
     (
         PREPARE,
         (
@@ -122,6 +132,8 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "audience_create_pixel_viewers",
             # Spends the per-counter Logs API storage quota; keyed by idempotency key.
             "metrika_logs_create",
+            # Hash-confirmed CSV upload; YANDEX_METRIKA_WRITE_ENABLED.
+            "metrika_upload_offline_conversions",
         ),
     ),
     (

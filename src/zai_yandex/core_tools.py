@@ -32,12 +32,16 @@ def register_core_tools(server: Any, runtime: Any) -> None:
 
     @server.tool(auth=require_scopes("yandex_search:execute"))
     async def yandex_wordstat_get_top(
-        phrase: str, regions: list[str], num_phrases: int = 10
+        phrase: str, regions: list[str], num_phrases: int = 10, devices: list[str] | None = None
     ) -> dict[str, Any]:
-        """Get Yandex Wordstat top requests with raw provenance and normalized output."""
+        """Wordstat top requests + associations; num_phrases 1..2000; devices DEVICE_* list."""
+        from zai_yandex.wordstat import validate_devices, validate_num_phrases
+
+        validate_num_phrases(num_phrases)  # Validate before reserving any budget.
+        validate_devices(devices)
         return await _wordstat_call(
             "wordstat_get_top",
-            lambda: registry.yandex_search().wordstat_get_top(phrase, regions, num_phrases),
+            lambda: registry.yandex_search().wordstat_get_top(phrase, regions, num_phrases, devices),
         )
 
     async def _wordstat_call(operation, factory):

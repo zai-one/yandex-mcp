@@ -20,6 +20,7 @@ WRITE_TOOLS = {
     "audience_create_pixel_viewers",
     "metrika_logs_create",
     "metrika_logs_cleanup",
+    "metrika_upload_offline_conversions",
 }
 
 
