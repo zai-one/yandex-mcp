@@ -34,7 +34,7 @@ Try asking your assistant:
 - Six Yandex API groups in one process; enable only the toolsets you need (`YANDEX_TOOLSETS`, `YANDEX_READ_ONLY`).
 - Writes (Direct changes, Audience creates, Metrika uploads and Logs requests) are off until enabled by an env flag and use confirmation hashes or idempotency keys.
 - Agent layer: router instructions, 4 prompts, `yandex://playbook` and guide resources, self-contained skills, structured errors with `hint`.
-- Compared with other Yandex MCP servers on GitHub: [SvechaPVL/yandex-mcp](https://github.com/SvechaPVL/yandex-mcp) (132 tools) and [skiddgoddamn/yandex-marketing-mcp](https://github.com/skiddgoddamn/yandex-marketing-mcp) (153 tools) expose more endpoints; this server focuses on bounded, typed responses, per-service write gates and CI-tested install.
+- Compared with other Yandex MCP servers on GitHub: [SvechaPVL/yandex-mcp](https://github.com/SvechaPVL/yandex-mcp) (132 tools), [skiddgoddamn/yandex-marketing-mcp](https://github.com/skiddgoddamn/yandex-marketing-mcp) (153 tools) and [webkoth/yandex-mcp](https://github.com/webkoth/yandex-mcp) (125 tools) still expose more *total* endpoints (often one tool per add/update/delete); this server matches them on documented Direct+Webmaster **read** methods that matter, keeps writes behind per-service gates, and ships bounded typed responses with CI on Linux and Windows.
 
 ## Maintained and up to date
 

@@ -33,14 +33,17 @@ EXTRA_READ_METHODS: dict[str, frozenset[str]] = {
     "advideos": frozenset({"get"}),
     "audiencetargets": frozenset({"get"}),
     "bidmodifiers": frozenset({"get"}),
+    "bids": frozenset({"get"}),  # https://yandex.ru/dev/direct/doc/ru/bids/get
     "keywordbids": frozenset({"get"}),
     "clients": frozenset({"get"}),
     "creatives": frozenset({"get"}),
     "dictionaries": frozenset({"get"}),
+    "dynamictextadtargets": frozenset({"get"}),  # units + DynamicTextAdTargets service
     "feeds": frozenset({"get"}),
     "leads": frozenset({"get"}),
     "negativekeywordsharedsets": frozenset({"get"}),
     "retargetinglists": frozenset({"get"}),
+    "smartadtargets": frozenset({"get"}),  # units + best-practice/smart-ads
     "turbopages": frozenset({"get"}),
     # https://yandex.ru/dev/direct/doc/ru/changes/changes
     "changes": frozenset({"check", "checkCampaigns", "checkDictionaries"}),

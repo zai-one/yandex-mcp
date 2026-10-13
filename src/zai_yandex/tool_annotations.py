@@ -142,6 +142,8 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             # Hash-confirmed CSV upload; YANDEX_METRIKA_WRITE_ENABLED.
             "metrika_upload_offline_conversions",
             "yandex_auth_finish",
+            # Enhanced SERP export; YANDEX_WEBMASTER_WRITE_ENABLED + idempotency.
+            "webmaster_start_pro_export",
         ),
     ),
     (

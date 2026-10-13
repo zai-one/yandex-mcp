@@ -73,12 +73,28 @@ clients. Scopes, write flags, approvals and idempotency remain the server-side g
 ## Opt-in coverage toolsets (direct_extra, webmaster_extra)
 
 Direct (JSON v5, `https://api.direct.yandex.com/json/v5/<service>`), each a documented `get`
-(`https://yandex.ru/dev/direct/doc/ru/<service>/get`): clients, dictionaries, bidmodifiers, keywordbids,
-audiencetargets, retargetinglists, feeds, creatives, adextensions, turbopages, leads, advideos,
-negativekeywordsharedsets; Changes `check`, `checkCampaigns`, `checkDictionaries`
+(`https://yandex.ru/dev/direct/doc/ru/<service>/get` unless noted): clients, dictionaries, bidmodifiers,
+keywordbids, **bids** (auction fields opt-in via `include_auction`), audiencetargets, retargetinglists,
+feeds, creatives, adextensions, turbopages, leads, advideos, negativekeywordsharedsets, **sitelinks**,
+**adimages**, **businesses** (no Phone/Address by default), **smartadtargets** (units +
+[smart-ads](https://yandex.ru/dev/direct/doc/ru/best-practice/smart-ads)), **dynamictextadtargets**
+(units table); Changes `check`, `checkCampaigns`, `checkDictionaries`
 (`https://yandex.ru/dev/direct/doc/ru/changes/changes`). Defaults request compact non-PII FieldNames
 (no phones/representatives; lead form `Data` only with `include_data=true`).
 
 Webmaster v4 (`https://yandex.ru/dev/webmaster/doc/ru/reference/<page>`): host-owners-get, feeds-list,
 feeds-info, feeds-host-problems, regions-directory (`pro/regions`), host-query-analytics
-(`POST query-analytics/list`, a read).
+(`POST query-analytics/list`, a read); Pro export reads
+[domain-limits](https://yandex.ru/dev/webmaster/doc/ru/reference/domain-limits),
+[available-dates](https://yandex.ru/dev/webmaster/doc/ru/reference/available-dates),
+[status-retrieval](https://yandex.ru/dev/webmaster/doc/ru/reference/status-retrieval);
+Pro export start
+([initialization-export](https://yandex.ru/dev/webmaster/doc/ru/reference/initialization-export))
+is in `webmaster_write` behind `YANDEX_WEBMASTER_WRITE_ENABLED`; with `use_pro_tariff=true` (paid
+Pro tariff quota) the first call returns an approval, and the export starts only after a human
+accepts it and the same call is repeated with `approval_id`.
+
+Not covered on purpose: a dedicated VCards tool (contact PII; still reachable through
+`direct_get_inventory`), one tool per Metrika management method, one tool per Direct write method
+(writes go through `direct_prepare_changes` / `direct_write`), the Webmaster indexing archive (a
+large binary job) and Wordstat `userInfo` (v1 decommissioned).

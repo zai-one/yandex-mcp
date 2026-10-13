@@ -123,5 +123,20 @@
     "request": "connect my Yandex account and get a token via OAuth",
     "route": "auth",
     "tool": "yandex_auth_start"
+  },
+  {
+    "request": "покажи ставки и аукцион по фразам кампании, какие цены в поиске",
+    "route": "direct_extra",
+    "tool": "direct_get_bids"
+  },
+  {
+    "request": "какие быстрые ссылки и картинки залиты в директ",
+    "route": "direct_extra",
+    "tool": "direct_list_sitelinks"
+  },
+  {
+    "request": "какие Pro limits в вебмастере на enhanced export по URL",
+    "route": "seo",
+    "tool": "webmaster_get_pro_limits"
   }
 ]

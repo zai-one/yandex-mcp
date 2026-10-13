@@ -15,9 +15,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BUDGET_BYTES = {"default": 34_000, "all": 66_000}
+BUDGET_BYTES = {"default": 34_000, "all": 80_000}
 # Estimated tokens an agent pays at startup: instructions + tools/list + every skill frontmatter.
-STARTUP_TOKENS = {"default": 9_500, "all": 18_500}
+STARTUP_TOKENS = {"default": 9_500, "all": 21_000}
 INSTRUCTIONS_CHARS = 1600
 
 
