@@ -69,3 +69,16 @@ clients. Scopes, write flags, approvals and idempotency remain the server-side g
 важные страницы и события появления/исключения страниц в поиске Вебмастера.
 Ссылки на документацию Яндекса приведены в таблицах выше. Все инструменты
 публикуют MCP-аннотации; реальные ограничения по-прежнему задаёт сервер.
+
+## Opt-in coverage toolsets (direct_extra, webmaster_extra)
+
+Direct (JSON v5, `https://api.direct.yandex.com/json/v5/<service>`), each a documented `get`
+(`https://yandex.ru/dev/direct/doc/ru/<service>/get`): clients, dictionaries, bidmodifiers, keywordbids,
+audiencetargets, retargetinglists, feeds, creatives, adextensions, turbopages, leads, advideos,
+negativekeywordsharedsets; Changes `check`, `checkCampaigns`, `checkDictionaries`
+(`https://yandex.ru/dev/direct/doc/ru/changes/changes`). Defaults request compact non-PII FieldNames
+(no phones/representatives; lead form `Data` only with `include_data=true`).
+
+Webmaster v4 (`https://yandex.ru/dev/webmaster/doc/ru/reference/<page>`): host-owners-get, feeds-list,
+feeds-info, feeds-host-problems, regions-directory (`pro/regions`), host-query-analytics
+(`POST query-analytics/list`, a read).

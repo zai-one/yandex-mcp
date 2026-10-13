@@ -6,7 +6,7 @@
 
 **Bring Yandex advertising, analytics and search data into one conversation.**
 
-> MCP server for Yandex Direct, Metrika (incl. Logs API and offline conversions), Webmaster, Wordstat, Search API and Audience: 77 tools in one server, with toolsets, read-only mode and guarded writes.
+> MCP server for Yandex Direct, Metrika (incl. Logs API and offline conversions), Webmaster, Wordstat, Search API and Audience: 97 tools in one server, with toolsets, read-only mode and guarded writes.
 
 Review Direct campaigns, examine Metrika statistics, build bounded Audience segments, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects six API groups; configure the services relevant to your work and add others as you need them.
 
@@ -119,11 +119,11 @@ Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (o
 
 ## Toolsets and read-only mode
 
-Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (account, direct_read, direct_reports, metrika, webmaster, wordstat, audience) - about 30% fewer tool tokens. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`.
+Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (account, direct_read, direct_reports, metrika, webmaster, wordstat, audience) - about 30% fewer tool tokens. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics).
 
 | Variable | Effect |
 |---|---|
-| `YANDEX_TOOLSETS` | `all`, `default` or a comma list of `account`, `direct_read`, `direct_reports`, `direct_write`, `metrika`, `metrika_logs`, `metrika_logs_write`, `metrika_offline`, `metrika_write`, `webmaster`, `webmaster_write`, `wordstat`, `search`, `audience`, `audience_write`. Also `--toolsets`. |
+| `YANDEX_TOOLSETS` | `all`, `default` or a comma list of `account`, `direct_read`, `direct_extra`, `direct_reports`, `direct_write`, `metrika`, `metrika_logs`, `metrika_logs_write`, `metrika_offline`, `metrika_write`, `webmaster`, `webmaster_extra`, `webmaster_write`, `wordstat`, `search`, `audience`, `audience_write`. Also `--toolsets`. |
 | `YANDEX_TOOLS` / `YANDEX_DISABLED_TOOLS` | Add or hide individual tools. |
 | `YANDEX_READ_ONLY=1` | Hide every prepare/apply/write/paid-submit tool (also `--read-only`). |
 

@@ -69,7 +69,7 @@ def build_instructions(surface: Surface, update_hint: str | None = None) -> str:
         "Never guess IDs.\n"
         "Reports: direct_get_statistics, metrika_report (period compare), webmaster_get_summary; raw rows via "
         "metrika_logs_* (evaluate first). Offline conversions: metrika_validate_offline_conversions first. "
-        "Agencies: direct_list_agency_clients.\n"
+        "Agencies: direct_list_agency_clients. Rare reads (bids, modifiers, feeds, Changes, owners, query analytics): toolsets direct_extra/webmaster_extra.\n"
         "Costs: Direct calls spend API units (yandex://guide/api-units); Wordstat and Search submit are paid.\n"
         "Writes: prepare -> show diff/cost -> operator accepts approval -> apply with idempotency_key; "
         "reuse the key on retry.\n"

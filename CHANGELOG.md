@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Opt-in toolsets `direct_extra` (14 reads: `direct_get_client`, `direct_get_dictionaries`, `direct_check_changes`, `direct_get_bid_modifiers`, `direct_get_keyword_bids`, `direct_list_audience_targets`, `direct_list_retargeting_lists`, `direct_list_feeds`, `direct_list_creatives`, `direct_list_ad_extensions`, `direct_list_turbo_pages`, `direct_list_leads`, `direct_list_ad_videos`, `direct_list_negative_keyword_sets`) and `webmaster_extra` (6 reads: `webmaster_get_owners`, `webmaster_list_feeds`, `webmaster_get_feed`, `webmaster_get_feed_problems`, `webmaster_list_regions`, `webmaster_query_analytics`). Every endpoint links its official doc page; not in `default`, so the default tool list is unchanged.
+
 - License: LicenseRef-ZAI-ONE 2.0 (source-available). Free install and use for yourself and your organisation, including commercial work; issues and pull requests welcome; copying code into other projects, redistribution, embedding and competing hosted services need written permission. Earlier releases keep their LicenseRef-ZAI-ONE 1.0 terms (see NOTICE). README first screen: one-line scope, why this MCP, maintenance and update check.
 
 - Metrika offline conversions: `metrika_validate_offline_conversions` (local CSV validation, confirmation_hash), `metrika_upload_offline_conversions` (multipart upload; `YANDEX_METRIKA_WRITE_ENABLED`, metrika write scope, hash + idempotency key, never auto-retried), `metrika_list_offline_conversion_uploads`, `metrika_get_offline_conversion_upload`. Toolset `metrika_offline`; upload joins `metrika_write`. Skill `metrika-offline-conversions`, guide `yandex://guide/offline-conversions`.

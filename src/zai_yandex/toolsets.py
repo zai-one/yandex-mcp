@@ -14,6 +14,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
 from zai_yandex.tool_annotations import TOOL_ANNOTATIONS
 
 TOOLSETS: dict[str, dict[str, Any]] = {
@@ -28,6 +29,10 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             "direct_keyword_forecast",
             "direct_list_agency_clients",
         ),
+    },
+    "direct_extra": {
+        "description": "Opt-in Direct reads: client, dictionaries, changes, bids, bid modifiers, audiences, feeds, creatives, extensions, turbo pages, leads.",
+        "tools": DIRECT_EXTRA_TOOLS,
     },
     "direct_reports": {
         "description": "Direct Reports service: statistics and goal statistics.",
@@ -76,8 +81,14 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         "tools": tuple(
             name
             for name in TOOL_ANNOTATIONS
-            if name.startswith("webmaster_") and TOOL_ANNOTATIONS[name].readOnlyHint
+            if name.startswith("webmaster_")
+            and TOOL_ANNOTATIONS[name].readOnlyHint
+            and name not in WEBMASTER_EXTRA_TOOLS
         ),
+    },
+    "webmaster_extra": {
+        "description": "Opt-in Webmaster reads: owners, feeds, regions, query analytics with filters.",
+        "tools": WEBMASTER_EXTRA_TOOLS,
     },
     "webmaster_write": {
         "description": "Recrawl and sitemap submission: prepare -> apply -> reconcile.",
