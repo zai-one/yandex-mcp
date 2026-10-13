@@ -19,8 +19,17 @@ from zai_yandex.tool_annotations import TOOL_ANNOTATIONS
 
 TOOLSETS: dict[str, dict[str, Any]] = {
     "account": {
-        "description": "Update check and named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set).",
-        "tools": ("yandex_check_update", "yandex_list_accounts"),
+        "description": (
+            "Update check, named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set), "
+            "OAuth self-setup (start/finish write local token files; stdio only)."
+        ),
+        "tools": (
+            "yandex_check_update",
+            "yandex_list_accounts",
+            "yandex_auth_status",
+            "yandex_auth_start",
+            "yandex_auth_finish",
+        ),
     },
     "direct_read": {
         "description": "Direct campaigns, inventory (ads, groups, keywords...), strategies, forecasts.",

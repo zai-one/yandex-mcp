@@ -40,7 +40,7 @@ Try asking your assistant:
 
 - Actively maintained by ZAI.ONE: current version 0.5.1; release notes in [CHANGELOG.md](CHANGELOG.md) and [Releases](https://github.com/zai-one/yandex-mcp/releases).
 - Built-in update check: ask the assistant to run `yandex_check_update` (public GitHub API, no credentials, cached; nothing is installed automatically; `YANDEX_DISABLE_UPDATE_CHECK=1` turns it off).
-- Follows current MCP practice: tool annotations (read-only / destructive hints), toolsets and read-only mode, server `instructions`, prompts and resources, structured errors with recovery hints, secrets kept out of tool output, a token budget for tool descriptions enforced in tests, and a routing eval: 23 messy RU/EN requests must reach the right skill, guide and tool from the short router.
+- Follows current MCP practice: tool annotations (read-only / destructive hints), toolsets and read-only mode, server `instructions`, prompts and resources, structured errors with recovery hints, secrets kept out of tool output, a token budget for tool descriptions enforced in tests, and a routing eval: messy RU/EN requests must reach the right skill, guide and tool from the short router.
 - CI runs the test suite on Linux and Windows for every pull request.
 
 ## Quick start
@@ -130,7 +130,7 @@ Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (o
 
 ## Toolsets and read-only mode
 
-Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (account, direct_read, direct_reports, metrika, webmaster, wordstat, audience) - about 30% fewer tool tokens. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics).
+Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics).
 
 | Variable | Effect |
 |---|---|
@@ -176,7 +176,7 @@ Self-contained skills in [`skills/`](skills/) (each with its own `references/` a
 
 ## Access and limits
 
-Search API jobs need a separate worker and a Cloud folder ID. Wordstat uses Cloud credentials and explicit cost limits. Write operations depend on service permissions and server policy. Interactive OAuth setup and Metrika Logs export are not included.
+Search API jobs need a separate worker and a Cloud folder ID. Wordstat uses Cloud credentials and explicit cost limits. Write operations depend on service permissions and server policy. OAuth self-setup: `yandex_auth_start` / `yandex_auth_finish` (device-code flow, hot reload, no restart; local stdio only, never on an HTTP server; see `yandex://guide/oauth`) or `yandex-mcp-oauth --device`.
 
 Authenticated HTTP is available for a server deployment. See [HTTP setup](INSTALL.md#http), [configuration and permissions](docs/RUNTIME.md) and [Python package integration](INSTALL.md#python-package-and-platform-integration).
 

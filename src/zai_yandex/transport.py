@@ -86,7 +86,9 @@ def request_hash(value: Any) -> str:
 
 
 def redact(value: Any) -> Any:
-    sensitive = {"authorization", "token", "password", "secret", "api_key", "session"}
+    sensitive = {
+        "authorization", "token", "password", "secret", "api_key", "session", "device_code", "refresh"
+    }
     if isinstance(value, dict):
         return {
             key: "***redacted***" if any(marker in key.lower() for marker in sensitive) else redact(item)

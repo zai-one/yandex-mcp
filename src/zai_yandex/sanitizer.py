@@ -18,6 +18,7 @@ _SENSITIVE_KEY_PARTS = frozenset(
         "password",
         "passwd",
         "privatekey",
+        "devicecode",
         "refreshtoken",
         "secret",
         "session",
@@ -34,7 +35,7 @@ _PRESERVED_EXACT_KEYS = frozenset(
 )
 _BEARER_PATTERN = re.compile(r"(?i)(\bbearer\s+)[^\s,;]+")
 _ASSIGNMENT_PATTERN = re.compile(
-    r"(?i)(\b(?:access[_-]?token|api[_-]?key|authorization|client[_-]?secret|password|passwd|private[_-]?key|refresh[_-]?token|secret|session|token)\s*[=:]\s*)([^\s&,;]+)"
+    r"(?i)(\b(?:access[_-]?token|api[_-]?key|authorization|client[_-]?secret|device[_-]?code|password|passwd|private[_-]?key|refresh[_-]?token|secret|session|token)\s*[=:]\s*)([^\s&,;]+)"
 )
 
 

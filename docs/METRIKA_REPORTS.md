@@ -66,6 +66,8 @@ API permissions you need, and set its Redirect URI to
 
 ```sh
 yandex-mcp-oauth --client-id YOUR_32_CHARACTER_APPLICATION_CLIENT_ID
+
+Prefer device-code (no paste): `yandex-mcp-oauth --device --client-id ...` or MCP tools `yandex_auth_start` / `yandex_auth_finish` (see `yandex://guide/oauth`).
 ```
 
 From a source checkout, prefix the command with `uv run --frozen --extra standalone`.

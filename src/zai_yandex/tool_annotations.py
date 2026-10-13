@@ -113,6 +113,7 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "audience_validate_create",
             "metrika_validate_offline_conversions",
             "yandex_list_accounts",
+            "yandex_auth_status",
         ),
     ),
     (
@@ -122,6 +123,7 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "webmaster_prepare_recrawl",
             "webmaster_prepare_sitemap",
             "yandex_serp_prepare",
+            "yandex_auth_start",
         ),
     ),
     (RECONCILE, ("webmaster_reconcile_action", "audience_reconcile_create")),
@@ -139,6 +141,7 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "metrika_logs_create",
             # Hash-confirmed CSV upload; YANDEX_METRIKA_WRITE_ENABLED.
             "metrika_upload_offline_conversions",
+            "yandex_auth_finish",
         ),
     ),
     (

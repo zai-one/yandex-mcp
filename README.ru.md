@@ -129,7 +129,7 @@ uv run --frozen --extra standalone yandex-mcp --config mcp.local.json --check-co
 
 ## Управление доступом и ограничения
 
-Поисковым заданиям нужны отдельный worker и ID каталога Cloud. Wordstat использует доступы Cloud и явно заданные лимиты расходов. Запись зависит от прав сервиса и серверной политики. Интерактивная настройка OAuth и экспорт Metrika Logs не включены.
+Поисковым заданиям нужны отдельный worker и ID каталога Cloud. Wordstat использует доступы Cloud и явно заданные лимиты расходов. Запись зависит от прав сервиса и серверной политики. OAuth: `yandex_auth_start` / `yandex_auth_finish` (device-code, hot reload без перезапуска; только локальный stdio, на HTTP-сервере недоступны; `yandex://guide/oauth`) или `yandex-mcp-oauth --device`.
 
 Для работы по сети предусмотрен HTTP с проверкой токенов. [Настройка HTTP](INSTALL.md#http), [конфигурация и права](docs/RUNTIME.md), [подключение Python-пакета](INSTALL.md#python-package-and-platform-integration).
 

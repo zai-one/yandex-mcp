@@ -204,6 +204,12 @@ class Runtime:
         self.webmaster_actions = WebmasterActions(config, self.store, self.registry)
         self.audience_actions = AudienceActions(config, self.store, self.registry, self.clean)
 
+    def reload_credentials(self, config: ServiceConfig) -> None:
+        """Hot-reload tokens into the running process (OAuth self-setup). No restart."""
+        self.config = self.settings = config
+        self.webmaster_actions.settings = config
+        self.audience_actions.config = config
+
     def require_scopes(self, *scopes: str) -> Callable[[Any], bool]:
         def check(context: Any) -> bool:
             available = (
