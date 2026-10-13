@@ -42,6 +42,17 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "Check GitHub for a newer zai-yandex-mcp release and suggest the update command. Suggest-only, "
         "24h cache unless force=true; never calls Yandex."
     ),
+    "yandex_auth_status": (
+        "Show which Yandex OAuth services have tokens (never values). Pending device-flow user_code if any. Local."
+    ),
+    "yandex_auth_start": (
+        "Start Yandex OAuth device-code flow: returns verification URL + user_code. Uses MCP URL elicitation when "
+        "the client supports it. Pass client_id or set YANDEX_OAUTH_CLIENT_ID. No token in output."
+    ),
+    "yandex_auth_finish": (
+        "Poll pending device-code auth; on success write 0600 token files and hot-reload (no restart). "
+        "Never returns the token. Call after the user confirms in the browser."
+    ),
 }
 
 GUIDE_TOPICS = (
@@ -56,6 +67,7 @@ GUIDE_TOPICS = (
     "offline-conversions",
     "accounts",
     "tool-map",
+    "oauth",
 )
 
 
@@ -74,6 +86,7 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     ("direct_change", "изменить ставки/бюджет, пауза кампании, минус-слова", "direct_prepare_changes", "direct-safe-change", "prepare-apply"),
     ("direct_extra", "ставки фраз, корректировки, ретаргетинг, фиды, лиды, Changes", "direct_get_keyword_bids", "", "tool-map"),
     ("agency", "агентство, клиенты, аккаунты, песочница, потестить", "direct_list_agency_clients", "yandex-agency-accounts", "accounts"),
+    ("auth", "подключить, OAuth, токен, connect", "yandex_auth_start", "", "oauth"),
     ("metrika_compare", "Метрика, трафик, цели, сравнить периоды", "metrika_list_counters", "metrika-compare-periods", "metrics-dimensions"),
     ("metrika_logs", "сырые визиты, выгрузка логов", "metrika_logs_evaluate", "", "tool-map"),
     ("offline", "офлайн-конверсии, CRM, CSV", "metrika_validate_offline_conversions", "metrika-offline-conversions", "offline-conversions"),
@@ -94,7 +107,7 @@ def build_instructions(
     mode = "read-only" if surface.read_only else "read+write"
     lines = [
         f"Yandex MCP: Direct, Metrika, Webmaster, Wordstat, Search, Audience ({mode}; yandex://toolsets).",
-        "Intent -> first tool; skill; yandex://guide/<topic>. Never guess IDs.",
+        "Intent -> first tool; skill; yandex://guide/<topic>.",
     ]
     for _, words, tool, skill, topic in ROUTES:
         lines.append(f"- {words}: " + "; ".join(part for part in (tool, skill, topic) if part))

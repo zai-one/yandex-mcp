@@ -69,6 +69,9 @@ ADDED_TOOLS = (
         "metrika_list_offline_conversion_uploads",
         "metrika_get_offline_conversion_upload",
         "metrika_upload_offline_conversions",
+        "yandex_auth_status",
+        "yandex_auth_start",
+        "yandex_auth_finish",
     }
 )
 

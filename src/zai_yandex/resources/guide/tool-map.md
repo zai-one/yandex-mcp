@@ -4,9 +4,12 @@ Every tool by toolset. Enable a toolset with YANDEX_TOOLSETS (default = marked *
 yandex_list_accounts appears only with YANDEX_ACCOUNTS_FILE.
 
 ## account*
-Update check and named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set).
+Update check, OAuth self-setup, named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set).
 - `yandex_check_update` - Check GitHub for a newer zai-yandex-mcp release and suggest the update command.
 - `yandex_list_accounts` - Lists configured named accounts (local).
+- `yandex_auth_status` - Show which Yandex OAuth services have tokens (never values).
+- `yandex_auth_start` - Start Yandex OAuth device-code flow: returns verification URL + user_code.
+- `yandex_auth_finish` - Poll pending device-code auth
 
 ## direct_read*
 Direct campaigns, inventory (ads, groups, keywords...), strategies, forecasts.

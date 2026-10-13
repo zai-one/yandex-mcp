@@ -13,6 +13,7 @@ from fastmcp.server.auth.providers.jwt import JWTVerifier
 from zai_yandex import __version__
 from zai_yandex.agent_layer import TOOL_DESCRIPTIONS, build_instructions, register_agent_layer
 from zai_yandex.audience_tools import register_audience_tools
+from zai_yandex.auth_tools import register_auth_tools
 from zai_yandex.config import ACTIVE_ACCOUNT, SCOPES, ServiceConfig
 from zai_yandex.core_tools import register_core_tools
 from zai_yandex.coverage_tools import register_coverage_tools
@@ -179,6 +180,7 @@ def create_server(
     register_coverage_tools(registrar, runtime)
     register_update_tool(server, config, transport, surface)
     register_accounts_tool(server, config, transport, surface)
+    register_auth_tools(server, config, transport, surface, runtime=runtime)
     register_agent_layer(server, surface)
     return server
 
