@@ -2,6 +2,8 @@
 
 # Yandex MCP
 
+<!-- mcp-name: io.github.zai-one/yandex-mcp -->
+
 **Bring Yandex advertising, analytics and search data into one conversation.**
 
 Review Direct campaigns, examine Metrika statistics, build bounded Audience segments, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects six API groups; configure the services relevant to your work and add others as you need them.
@@ -77,6 +79,51 @@ The client starts the MCP server for you. Refresh its tool list, then make your 
 The default setup starts with Metrika. Once its token is accepted, the assistant can list accessible counters and read their goals. Other API groups use separately configured credentials.
 
 If tools do not appear, check the absolute path, whether the client can find `uv`, and the `--check-config` result. For access errors, check account credentials and permissions. [Installation and troubleshooting](INSTALL.md).
+
+### Other clients
+
+```bash
+# Claude Code (MCP only)
+claude mcp add yandex -- uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.5.1" yandex-mcp --config /ABSOLUTE/PATH/mcp.local.json
+# Claude Code plugin (MCP + skills) from this repository; set YANDEX_MCP_CONFIG to your mcp.local.json
+/plugin marketplace add zai-one/yandex-mcp
+/plugin install yandex@zai-yandex
+```
+
+Codex `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.yandex]
+command = "uvx"
+args = ["--from", "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.5.1", "yandex-mcp", "--config", "/ABSOLUTE/PATH/mcp.local.json"]
+env = { YANDEX_TOOLSETS = "default" }
+```
+
+Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (or `"command": "uvx"` with the Codex args).
+
+## Toolsets and read-only mode
+
+Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (account, direct_read, direct_reports, metrika, webmaster, wordstat, audience) - about 30% fewer tool tokens.
+
+| Variable | Effect |
+|---|---|
+| `YANDEX_TOOLSETS` | `all`, `default` or a comma list of `account`, `direct_read`, `direct_reports`, `direct_write`, `metrika`, `metrika_write`, `webmaster`, `webmaster_write`, `wordstat`, `search`, `audience`, `audience_write`. Also `--toolsets`. |
+| `YANDEX_TOOLS` / `YANDEX_DISABLED_TOOLS` | Add or hide individual tools. |
+| `YANDEX_READ_ONLY=1` | Hide every prepare/apply/write/paid-submit tool (also `--read-only`). |
+
+Scopes, write flags, approvals and idempotency keys still apply to whatever is visible. The assistant can read `yandex://toolsets`. Errors are JSON with `code`, `retryable`, `hint` and `docs`.
+
+## Skills, prompts and guides
+
+Self-contained skills in [`skills/`](skills/) (each with its own `references/` and `templates/`): `yandex-direct-audit`, `metrika-compare-periods`, `webmaster-seo-health`, `wordstat-demand-research`, `direct-safe-change`. Copy a folder into `~/.claude/skills/`, `.agents/skills/` or `.cursor/skills/`, or install the plugin. MCP prompts: `campaign_audit`, `weekly_report`, `seo_audit`, `budget_scaling`; resources `yandex://playbook`, `yandex://guide/{api-units|audit-checklist|strategies|metrics-dimensions|diagnostics-codes|wordstat-operators|prepare-apply|errors}`.
+
+### Example tasks
+
+- "Audit my Direct campaigns for the last 30 days and list the top 5 issues."
+- "Compare organic traffic and goal reaches this week vs last week in Metrika."
+- "Check SEO health of example.com in Webmaster and give me a fix list."
+- "Collect Wordstat demand for 'купить диван' in Moscow and cluster it."
+- "Which campaigns can take 20% more budget at CPA under 900 RUB? Prepare the change, do not apply."
 
 ## Access and limits
 

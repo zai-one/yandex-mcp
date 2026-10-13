@@ -20,9 +20,34 @@ from zai_yandex.transport import (
     ProviderTransportError,
 )
 
+# Content-free next-step guidance per code (see yandex://guide/errors).
+ERROR_HINTS: dict[str, str] = {
+    "provider_rate_limited": "Units exhausted (Direct 152), too many connections (506) or local limit; wait retry_after_seconds.",
+    "provider_authentication_failed": "Token missing, expired or without access; ask the user to refresh the OAuth token.",
+    "provider_resource_not_found": "Unknown id; re-list campaigns, counters or hosts instead of guessing.",
+    "provider_payload_too_large": "Narrow dates, fields or limit.",
+    "provider_request_invalid": "Arguments rejected; fix them per the schema, do not retry unchanged.",
+    "provider_timeout": "Retry once later with the same idempotency_key.",
+    "provider_transport_failed": "Network problem; retry later with the same idempotency_key.",
+    "provider_temporarily_unavailable": "Yandex is temporarily unavailable; retry later.",
+    "provider_response_invalid": "Unexpected provider response; report to the user.",
+    "provider_http_error": "Provider error; report to the user.",
+    "validation_failed": "Arguments failed validation (see reason_code); fix them, do not retry unchanged.",
+    "provider_disabled": "Scope, write flag or service is disabled by the operator; tell the user.",
+    "operation_failed": "Unexpected failure; report to the user instead of retrying.",
+    "provider_error": "Provider error; report to the user.",
+    "tool_disabled": "Toolset is not enabled; see yandex://toolsets.",
+}
+
 
 class SafeToolError(ToolError):
     def __init__(self, envelope: dict[str, Any]) -> None:
+        code = str(envelope["code"])
+        envelope = {
+            **envelope,
+            "hint": envelope.get("hint") or ERROR_HINTS.get(code, ERROR_HINTS["operation_failed"]),
+            "docs": f"yandex://guide/errors#{code}",
+        }
         self.envelope = envelope
         self.error_code = str(envelope["code"])
         super().__init__(json.dumps(envelope, sort_keys=True, separators=(",", ":")))

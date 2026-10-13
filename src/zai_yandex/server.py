@@ -11,6 +11,7 @@ from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 
 from zai_yandex import __version__
+from zai_yandex.agent_layer import TOOL_DESCRIPTIONS, build_instructions, register_agent_layer
 from zai_yandex.audience_tools import register_audience_tools
 from zai_yandex.config import SCOPES, ServiceConfig
 from zai_yandex.core_tools import register_core_tools
@@ -18,16 +19,24 @@ from zai_yandex.metrika_reports import register_reports
 from zai_yandex.onboarding import check_config, load_config
 from zai_yandex.runtime import Runtime
 from zai_yandex.tool_annotations import annotations_for
+from zai_yandex.toolsets import Surface, build_surface, surface_from_env
 from zai_yandex.update_check import check_for_update, refresh_in_background, startup_hint
 from zai_yandex.webmaster_tools import register_webmaster_tools
 
 
 class ToolRegistrar:
-    def __init__(self, server: FastMCP, runtime: Runtime):
+    def __init__(self, server: FastMCP, runtime: Runtime, surface: Surface | None = None):
         self.server, self.runtime = server, runtime
+        self.surface = surface or build_surface()
 
     def tool(self, **options: Any) -> Callable[..., Any]:
         def decorate(function: Callable[..., Any]) -> Any:
+            # Fail closed on unclassified tools before any toolset filtering.
+            annotations = annotations_for(function.__name__)
+            if not self.surface.exposes(function.__name__):
+                return function
+            if function.__name__ in TOOL_DESCRIPTIONS:
+                options.setdefault("description", TOOL_DESCRIPTIONS[function.__name__])
             signature = inspect.signature(function)
 
             @wraps(function)
@@ -38,31 +47,35 @@ class ToolRegistrar:
                     function.__name__, dict(bound.arguments), lambda: function(*args, **kwargs)
                 )
 
-            options.setdefault("annotations", annotations_for(function.__name__))
+            options.setdefault("annotations", annotations)
             return self.server.tool(**options)(wrapped)
 
         return decorate
 
 
-SERVER_INSTRUCTIONS = (
-    "Yandex Direct, Metrika, Webmaster, Wordstat/Search and Audience for configured accounts. "
-    "Writes are gated by scopes, prepare/confirm steps and idempotency keys."
-)
 
 
 def update_cache_path(config: ServiceConfig) -> Any:
     return config.state_path.parent / "update-check.json"
 
 
-def register_update_tool(server: FastMCP, config: ServiceConfig, transport: str) -> None:
+def register_update_tool(
+    server: FastMCP, config: ServiceConfig, transport: str, surface: Surface | None = None
+) -> None:
     """Register yandex_check_update outside the provider ledger: it never calls a Yandex API."""
+    if surface is not None and not surface.exposes("yandex_check_update"):
+        return
 
     def authenticated(context: Any) -> bool:
         if transport == "stdio":
             return bool(config.local_scopes)
         return bool(context.token and set(context.token.scopes) & SCOPES)
 
-    @server.tool(auth=authenticated, annotations=annotations_for("yandex_check_update"))
+    @server.tool(
+        auth=authenticated,
+        annotations=annotations_for("yandex_check_update"),
+        description=TOOL_DESCRIPTIONS["yandex_check_update"],
+    )
     async def yandex_check_update(force: bool = False) -> dict[str, Any]:
         """Check whether a newer Yandex MCP release exists on GitHub. Suggests, never installs.
 
@@ -74,7 +87,11 @@ def register_update_tool(server: FastMCP, config: ServiceConfig, transport: str)
 
 
 def create_server(
-    config: ServiceConfig, *, transport: str = "http", http_factory: Callable[..., Any] | None = None
+    config: ServiceConfig,
+    *,
+    transport: str = "http",
+    http_factory: Callable[..., Any] | None = None,
+    surface: Surface | None = None,
 ) -> FastMCP:
     if transport not in {"stdio", "http"}:
         raise ValueError("unsupported transport")
@@ -87,21 +104,23 @@ def create_server(
         if transport == "http"
         else None
     )
+    surface = surface or surface_from_env()
     hint = startup_hint(update_cache_path(config))
     server = FastMCP(
         "Yandex MCP",
         version=__version__,
         auth=auth,
         mask_error_details=True,
-        instructions=SERVER_INSTRUCTIONS + (f" {hint}" if hint else ""),
+        instructions=build_instructions(surface, hint),
     )
     runtime = Runtime(config, transport, http_factory)
-    registrar = ToolRegistrar(server, runtime)
+    registrar = ToolRegistrar(server, runtime, surface)
     register_core_tools(registrar, runtime)
     register_reports(registrar, runtime)
     register_webmaster_tools(registrar, runtime)
     register_audience_tools(registrar, runtime)
-    register_update_tool(server, config, transport)
+    register_update_tool(server, config, transport, surface)
+    register_agent_layer(server, surface)
     return server
 
 
@@ -111,6 +130,8 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8814)
     parser.add_argument("--config", help="Operator JSON settings; paths relative to this file")
+    parser.add_argument("--toolsets", help="Toolsets: comma list, 'default' or 'all' (YANDEX_TOOLSETS)")
+    parser.add_argument("--read-only", action="store_true", help="Hide every write tool (YANDEX_READ_ONLY)")
     parser.add_argument(
         "--check-config", action="store_true", help="Check local settings without provider calls"
     )
@@ -122,7 +143,8 @@ def main() -> None:
             result = check_config(config, args.transport)
             print(json.dumps(result, sort_keys=True))
             parser.exit(0 if result["ready"] else 2)
-        server = create_server(config, transport=args.transport)
+        surface = surface_from_env(cli_toolsets=args.toolsets, cli_read_only=args.read_only)
+        server = create_server(config, transport=args.transport, surface=surface)
         # Refresh the cached update hint for the next start; never blocks startup.
         refresh_in_background(update_cache_path(config))
     except (ValueError, OSError) as exc:
