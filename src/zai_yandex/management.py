@@ -690,7 +690,7 @@ def validate_args(provider: str, op: Op, args: dict[str, Any] | None) -> dict[st
         clean["query"] = dict(sorted(query.items()))
     if op.body is not None:
         body = values.get("body")
-        if op.kind == "write" and op.method in {"POST", "PUT"} and op.body and body is None:
+        if op.kind == "write" and op.method in {"POST", "PUT"} and body is None:
             raise ValueError("body is required")
         if body is not None:
             if not isinstance(body, dict) or not body or len(body) > MAX_BODY_KEYS:

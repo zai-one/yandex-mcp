@@ -68,6 +68,8 @@ def test_catalogue_is_documented_opt_in_and_fail_closed():
         validate_args(
             "yandex_metrika", CATALOG["yandex_metrika"]["filter_update"], {"counter_id": 1, "id": True}
         )
+    with pytest.raises(ValueError):  # raw-body writes need a body too
+        validate_args("yandex_webmaster", CATALOG["yandex_webmaster"]["host_add"], {})
     wrapped = validate_args(
         "yandex_metrika", CATALOG["yandex_metrika"]["label_create"], {"body": {"name": "client-a"}}
     )
