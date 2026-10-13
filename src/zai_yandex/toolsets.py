@@ -18,7 +18,10 @@ from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
 from zai_yandex.tool_annotations import TOOL_ANNOTATIONS
 
 TOOLSETS: dict[str, dict[str, Any]] = {
-    "account": {"description": "Update check and server capabilities.", "tools": ("yandex_check_update",)},
+    "account": {
+        "description": "Update check and named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set).",
+        "tools": ("yandex_check_update", "yandex_list_accounts"),
+    },
     "direct_read": {
         "description": "Direct campaigns, inventory (ads, groups, keywords...), strategies, forecasts.",
         "tools": (

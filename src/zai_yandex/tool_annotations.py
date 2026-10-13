@@ -112,6 +112,7 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "yandex_serp_get_result",
             "audience_validate_create",
             "metrika_validate_offline_conversions",
+            "yandex_list_accounts",
         ),
     ),
     (

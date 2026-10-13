@@ -5,7 +5,7 @@ import inspect
 import json
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
+from typing import Any, Literal
 
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
@@ -13,7 +13,7 @@ from fastmcp.server.auth.providers.jwt import JWTVerifier
 from zai_yandex import __version__
 from zai_yandex.agent_layer import TOOL_DESCRIPTIONS, build_instructions, register_agent_layer
 from zai_yandex.audience_tools import register_audience_tools
-from zai_yandex.config import SCOPES, ServiceConfig
+from zai_yandex.config import ACTIVE_ACCOUNT, SCOPES, ServiceConfig
 from zai_yandex.core_tools import register_core_tools
 from zai_yandex.coverage_tools import register_coverage_tools
 from zai_yandex.expansion_tools import register_expansion_tools
@@ -41,15 +41,42 @@ class ToolRegistrar:
             if function.__name__ in TOOL_DESCRIPTIONS:
                 options.setdefault("description", TOOL_DESCRIPTIONS[function.__name__])
             signature = inspect.signature(function)
+            accounts = self.runtime.config.account_names
 
             @wraps(function)
             async def wrapped(*args: Any, **kwargs: Any) -> Any:
+                account = kwargs.pop("account", None)
                 bound = signature.bind(*args, **kwargs)
                 bound.apply_defaults()
-                return await self.runtime.execute(
-                    function.__name__, dict(bound.arguments), lambda: function(*args, **kwargs)
-                )
+                arguments = dict(bound.arguments)
+                if account is not None:
+                    arguments["account"] = account
+                token = ACTIVE_ACCOUNT.set(account)
+                try:
+                    if accounts:
+                        try:
+                            self.runtime.config.profile(account)
+                        except ValueError as exc:
+                            raise self.runtime.safe_error(
+                                self.runtime.provider_for(function.__name__), exc
+                            ) from None
+                    return await self.runtime.execute(
+                        function.__name__, arguments, lambda: function(*args, **kwargs)
+                    )
+                finally:
+                    ACTIVE_ACCOUNT.reset(token)
 
+            if accounts:
+                # Per-call account selection, advertised only when profiles are configured.
+                extra = inspect.Parameter(
+                    "account",
+                    inspect.Parameter.KEYWORD_ONLY,
+                    default=None,
+                    annotation=Literal[accounts] | None,  # type: ignore[valid-type]
+                )
+                params = list(signature.parameters.values())
+                wrapped.__signature__ = signature.replace(parameters=[*params, extra])  # type: ignore[attr-defined]
+                wrapped.__annotations__ = {**function.__annotations__, "account": extra.annotation}
             options.setdefault("annotations", annotations)
             return self.server.tool(**options)(wrapped)
 
@@ -87,6 +114,31 @@ def register_update_tool(
         return await check_for_update(update_cache_path(config), force=force)
 
 
+def register_accounts_tool(
+    server: FastMCP, config: ServiceConfig, transport: str, surface: Surface | None = None
+) -> None:
+    """yandex_list_accounts: local, never calls Yandex; only when profiles are configured."""
+    if not config.accounts or (surface is not None and not surface.exposes("yandex_list_accounts")):
+        return
+
+    def authenticated(context: Any) -> bool:
+        if transport == "stdio":
+            return bool(config.local_scopes)
+        return bool(context.token and set(context.token.scopes) & SCOPES)
+
+    @server.tool(
+        auth=authenticated,
+        annotations=annotations_for("yandex_list_accounts"),
+        description=TOOL_DESCRIPTIONS["yandex_list_accounts"],
+    )
+    async def yandex_list_accounts() -> dict[str, Any]:
+        return {
+            "default": config.default_account,
+            "accounts": [profile.public() for profile in config.accounts],
+            "usage": "pass account=<name> to any tool; omitted = default",
+        }
+
+
 def create_server(
     config: ServiceConfig,
     *,
@@ -112,7 +164,7 @@ def create_server(
         version=__version__,
         auth=auth,
         mask_error_details=True,
-        instructions=build_instructions(surface, hint),
+        instructions=build_instructions(surface, hint, accounts=config.account_names),
     )
     runtime = Runtime(config, transport, http_factory)
     registrar = ToolRegistrar(server, runtime, surface)
@@ -124,6 +176,7 @@ def create_server(
     register_offline_conversion_tools(registrar, runtime)
     register_coverage_tools(registrar, runtime)
     register_update_tool(server, config, transport, surface)
+    register_accounts_tool(server, config, transport, surface)
     register_agent_layer(server, surface)
     return server
 

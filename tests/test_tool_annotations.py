@@ -27,7 +27,7 @@ WRITE_TOOLS = {
 async def test_every_tool_exposes_reviewed_annotations(tmp_path) -> None:
     async with Client(create_server(config(tmp_path), transport="stdio")) as client:
         tools = {tool.name: tool for tool in await client.list_tools()}
-    assert set(tools) == set(TOOL_ANNOTATIONS)
+    assert set(tools) == set(TOOL_ANNOTATIONS) - {"yandex_list_accounts"}
     for name, tool in tools.items():
         hints = tool.annotations
         assert hints is not None, name

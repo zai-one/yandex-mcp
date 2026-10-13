@@ -129,6 +129,22 @@ Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the rea
 
 Scopes, write flags, approvals and idempotency keys still apply to whatever is visible. The assistant can read `yandex://toolsets`. Errors are JSON with `code`, `retryable`, `hint` and `docs`.
 
+## Multiple accounts and agencies
+
+Set `YANDEX_ACCOUNTS_FILE` to a JSON file of named profiles. Unset fields inherit the base credentials, so an agency client is just a `direct_client_login`; a separate account points to its own owner-private token files (paths relative to the JSON file, tokens never inline).
+
+```json
+{
+  "default": "client-a",
+  "accounts": {
+    "client-a": {"direct_client_login": "client-a-login", "description": "Agency client A"},
+    "shop-b": {"direct_token_file": "shop-b.direct.token", "metrika_token_file": "shop-b.metrika.token"}
+  }
+}
+```
+
+Every tool then gets an optional `account` argument (one of the names) and `yandex_list_accounts` shows the profiles without secrets. Omitted `account` = `default` (or the base credentials). Without the file nothing changes: no extra argument, no extra tokens in the tool list. Use `direct_list_agency_clients` to find client logins.
+
 ## Skills, prompts and guides
 
 Self-contained skills in [`skills/`](skills/) (each with its own `references/` and `templates/`): `yandex-direct-audit`, `metrika-compare-periods`, `webmaster-seo-health`, `wordstat-demand-research`, `direct-safe-change`. Copy a folder into `~/.claude/skills/`, `.agents/skills/` or `.cursor/skills/`, or install the plugin. MCP prompts: `campaign_audit`, `weekly_report`, `seo_audit`, `budget_scaling`; resources `yandex://playbook`, `yandex://guide/{api-units|audit-checklist|strategies|metrics-dimensions|diagnostics-codes|wordstat-operators|prepare-apply|errors}`.

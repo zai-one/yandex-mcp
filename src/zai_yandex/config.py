@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import math
 import os
-from dataclasses import dataclass, field
+import re
+from contextvars import ContextVar
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -35,6 +38,96 @@ def secret_file(name: str) -> str:
     if not result:
         raise ValueError("credential file empty")
     return result
+
+
+ACCOUNT_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+# Per-call account selection (set by the tool registrar for one call only).
+ACTIVE_ACCOUNT: ContextVar[str | None] = ContextVar("yandex_active_account", default=None)
+PROFILE_TOKENS = ("direct_token", "metrika_token", "webmaster_token", "audience_token")
+
+
+def _private_file(value: str, base: Path) -> str:
+    path = Path(value) if Path(value).is_absolute() else base / value
+    if not path.is_file() or path.stat().st_size > 65536:
+        raise ValueError("credential file missing or too large")
+    if os.name != "nt" and path.stat().st_mode & 0o077:
+        raise ValueError("credential file must be owner-private")
+    result = path.read_text(encoding="utf-8").strip()
+    if not result:
+        raise ValueError("credential file empty")
+    return result
+
+
+@dataclass(frozen=True)
+class AccountProfile:
+    """A named account: own token files and/or a Direct Client-Login (agency client).
+
+    Unset fields inherit the base (env) credentials, so an agency profile can be just
+    ``{"direct_client_login": "client-a"}``.
+    """
+
+    name: str
+    direct_token: str = field(default="", repr=False)
+    direct_client_login: str = ""
+    metrika_token: str = field(default="", repr=False)
+    webmaster_token: str = field(default="", repr=False)
+    audience_token: str = field(default="", repr=False)
+    direct_sandbox: bool | None = None
+    description: str = ""
+
+    def public(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "direct_client_login": self.direct_client_login or None,
+            "own_tokens": [key.removesuffix("_token") for key in PROFILE_TOKENS if getattr(self, key)],
+            "direct_sandbox": self.direct_sandbox,
+        }
+
+
+def load_accounts(filename: str) -> tuple[tuple[AccountProfile, ...], str | None]:
+    """Parse YANDEX_ACCOUNTS_FILE: {"default": "name"?, "accounts": {name: {...}}}."""
+    if not filename:
+        return (), None
+    path = Path(filename)
+    if not path.is_file() or path.stat().st_size > 262144:
+        raise ValueError("accounts file missing or too large")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    accounts = data.get("accounts") if isinstance(data, dict) else None
+    if not isinstance(accounts, dict) or not 1 <= len(accounts) <= 500 or set(data) - {"default", "accounts"}:
+        raise ValueError("accounts file needs an accounts object with 1..500 entries")
+    allowed = {f"{key}_file" for key in PROFILE_TOKENS} | {
+        "direct_client_login",
+        "direct_sandbox",
+        "description",
+    }
+    profiles = []
+    for name, spec in accounts.items():
+        if not isinstance(name, str) or not ACCOUNT_NAME.match(name):
+            raise ValueError("account names must match [a-z0-9][a-z0-9_-]{0,63}")
+        if not isinstance(spec, dict) or set(spec) - allowed:
+            raise ValueError(f"account {name}: allowed keys are {', '.join(sorted(allowed))}")
+        tokens = {
+            key: _private_file(str(spec[f"{key}_file"]), path.parent)
+            for key in PROFILE_TOKENS
+            if spec.get(f"{key}_file")
+        }
+        sandbox = spec.get("direct_sandbox")
+        if sandbox is not None and not isinstance(sandbox, bool):
+            raise ValueError(f"account {name}: direct_sandbox must be true or false")
+        profiles.append(
+            AccountProfile(
+                name=name,
+                direct_client_login=str(spec.get("direct_client_login", ""))[:255],
+                direct_sandbox=sandbox,
+                description=str(spec.get("description", ""))[:200],
+                **tokens,
+            )
+        )
+    default = data.get("default")
+    if default is not None and default not in accounts:
+        raise ValueError("default account is not defined")
+    return tuple(profiles), default
 
 
 def flag(name: str) -> bool:
@@ -75,6 +168,8 @@ class ServiceConfig:
     request_rate_limit: int = 10
     principal_rate_limit: int = 10
     max_concurrency: int = 2
+    accounts: tuple[AccountProfile, ...] = ()
+    default_account: str | None = None
 
     def __post_init__(self) -> None:
         if not all(
@@ -111,7 +206,33 @@ class ServiceConfig:
             self.search_api_key,
             self.webmaster_token,
             self.audience_token,
+            *(getattr(profile, key) for profile in self.accounts for key in PROFILE_TOKENS),
         )
+
+    @property
+    def account_names(self) -> tuple[str, ...]:
+        return tuple(profile.name for profile in self.accounts)
+
+    def profile(self, name: str | None) -> AccountProfile | None:
+        name = name or self.default_account
+        if name is None:
+            return None
+        for profile in self.accounts:
+            if profile.name == name:
+                return profile
+        raise ValueError(f"unknown account; configured: {', '.join(self.account_names) or 'none'}")
+
+    def effective(self) -> ServiceConfig:
+        """Credentials of the account selected for this call (base config when none)."""
+        profile = self.profile(ACTIVE_ACCOUNT.get())
+        if profile is None:
+            return self
+        overrides: dict[str, object] = {
+            key: getattr(profile, key) for key in PROFILE_TOKENS if getattr(profile, key)
+        }
+        if profile.direct_client_login:
+            overrides["direct_client_login"] = profile.direct_client_login
+        return replace(self, accounts=(), default_account=None, **overrides)
 
     def enabled(self, provider: str) -> bool:
         return {
@@ -158,4 +279,11 @@ class ServiceConfig:
             request_rate_limit=int(os.environ.get("YANDEX_RATE_LIMIT", "10")),
             principal_rate_limit=int(os.environ.get("YANDEX_PRINCIPAL_RATE_LIMIT", "10")),
             max_concurrency=int(os.environ.get("YANDEX_MAX_CONCURRENCY", "2")),
+            **dict(
+                zip(
+                    ("accounts", "default_account"),
+                    load_accounts(os.environ.get("YANDEX_ACCOUNTS_FILE", "")),
+                    strict=True,
+                )
+            ),
         )
