@@ -6,6 +6,8 @@
 
 **Bring Yandex advertising, analytics and search data into one conversation.**
 
+> MCP server for Yandex Direct, Metrika (incl. Logs API and offline conversions), Webmaster, Wordstat, Search API and Audience: 77 tools in one server, with toolsets, read-only mode and guarded writes.
+
 Review Direct campaigns, examine Metrika statistics, build bounded Audience segments, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects six API groups; configure the services relevant to your work and add others as you need them.
 
 [Quick start](#quick-start) · [Connect your assistant](#connect-your-assistant) · [Issues](https://github.com/zai-one/yandex-mcp/issues)
@@ -26,6 +28,20 @@ Try asking your assistant:
 | Audience | Segments and pixels; guarded circle, polygon, pixel and pixel-viewer creates when explicitly enabled. |
 
 [Report examples and local OAuth help](docs/METRIKA_REPORTS.md) explain how to compare periods, export rows and interpret partial results. [API coverage notes](docs/API_COVERAGE.md) list recently added tools with links to the Yandex documentation.
+
+## Why this MCP
+
+- Six Yandex API groups in one process; enable only the toolsets you need (`YANDEX_TOOLSETS`, `YANDEX_READ_ONLY`).
+- Writes (Direct changes, Audience creates, Metrika uploads and Logs requests) are off until enabled by an env flag and use confirmation hashes or idempotency keys.
+- Agent layer: router instructions, 4 prompts, `yandex://playbook` and guide resources, self-contained skills, structured errors with `hint`.
+- Compared with other Yandex MCP servers on GitHub: [SvechaPVL/yandex-mcp](https://github.com/SvechaPVL/yandex-mcp) (132 tools) and [skiddgoddamn/yandex-marketing-mcp](https://github.com/skiddgoddamn/yandex-marketing-mcp) (153 tools) expose more endpoints; this server focuses on bounded, typed responses, per-service write gates and CI-tested install.
+
+## Maintained and up to date
+
+- Actively maintained by ZAI.ONE: current version 0.5.1; release notes in [CHANGELOG.md](CHANGELOG.md) and [Releases](https://github.com/zai-one/yandex-mcp/releases).
+- Built-in update check: ask the assistant to run `yandex_check_update` (public GitHub API, no credentials, cached; nothing is installed automatically; `YANDEX_DISABLE_UPDATE_CHECK=1` turns it off).
+- Follows current MCP practice: tool annotations (read-only / destructive hints), toolsets and read-only mode, server `instructions`, prompts and resources, structured errors with recovery hints, secrets kept out of tool output, a token budget for tool descriptions enforced in tests.
+- CI runs the test suite on Linux and Windows for every pull request.
 
 ## Quick start
 
@@ -159,9 +175,9 @@ and the server keeps working. Set `YANDEX_DISABLE_UPDATE_CHECK=1` to turn it off
 
 [ZAI.ONE](https://zai.one) is a digital agency working on websites, SEO, advertising and analytics. We also build tools that connect AI assistants to everyday work. [Talk to us on Telegram](https://t.me/zai_one) about setup, automation or an integration for your team.
 
-## Use and feedback
+## License, use and contributing
 
-You may install and use this project for your own accounts under [LicenseRef-ZAI-ONE](LICENSE).
-This is not an open-source license. Third-party notices remain in [NOTICE](NOTICE).
-If it helps, give the repository a ⭐. Missing something or found a bug? [Open an issue](https://github.com/zai-one/yandex-mcp/issues/new/choose).
-I'm working on this project; accepted improvements are implemented here. Support is not guaranteed.
+- **Use:** you may install and use this MCP server freely for yourself and your organisation, including commercial work. If it helps, please consider giving the repository a ⭐ — appreciated, never required.
+- **Contribute:** [issues](https://github.com/zai-one/yandex-mcp/issues/new/choose) and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Never post tokens, cookies, sessions or account data.
+- **Not allowed without written permission from ZAI.ONE:** copying code into other projects, forking for redistribution, embedding the server in other products or offering it as a competing service.
+- License: [LicenseRef-ZAI-ONE 2.0](LICENSE) (source-available, not open source). Third-party notices and license history: [NOTICE](NOTICE).
