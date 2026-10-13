@@ -707,3 +707,39 @@ class YandexWebmasterAdapter:
         path = f"{await self._host_path(host_id)}/query-analytics/list"
         raw = await self._request("POST", f"{self.base_url}{path}", headers=self._headers(), payload=body)
         return self._envelope(raw, pagination={"offset": offset, "limit": limit})
+
+    async def pro_limits(self, host_id: str) -> dict[str, Any]:
+        """domain-limits: GET …/hosts/{host-id}/pro/limits."""
+        return await self._detail(host_id, "pro/limits")
+
+    async def pro_dates(self, host_id: str) -> dict[str, Any]:
+        """available-dates: GET …/hosts/{host-id}/pro/serp/dates."""
+        return await self._detail(host_id, "pro/serp/dates")
+
+    async def pro_export_status(self, host_id: str, task_id: str) -> dict[str, Any]:
+        """status-retrieval: GET …/pro/serp/queries/download/{task-id}."""
+        if not isinstance(task_id, str) or not 8 <= len(task_id) <= 128 or "/" in task_id or ".." in task_id:
+            raise ValueError("task_id must be a non-empty UUID-like string without path segments")
+        return await self._detail(host_id, f"pro/serp/queries/download/{task_id}")
+
+    async def pro_export_start(
+        self,
+        host_id: str,
+        *,
+        dates: list[str],
+        paths: list[str] | None = None,
+        region_ids: list[int] | None = None,
+        use_pro_tariff: bool = False,
+    ) -> dict[str, Any]:
+        """initialization-export: POST …/pro/serp/queries/download/."""
+        body: dict[str, Any] = {
+            "dates": list(dates),
+            "use_pro_tariff": "true" if use_pro_tariff else "false",
+        }
+        if paths:
+            body["paths"] = list(paths)
+        if region_ids:
+            body["region_ids"] = [int(v) for v in region_ids]
+        path = f"{await self._host_path(host_id)}/pro/serp/queries/download/"
+        raw = await self._request("POST", f"{self.base_url}{path}", headers=self._headers(), payload=body)
+        return self._envelope(raw)

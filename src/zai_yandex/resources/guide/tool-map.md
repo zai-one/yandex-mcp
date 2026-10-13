@@ -21,11 +21,13 @@ Direct campaigns, inventory (ads, groups, keywords...), strategies, forecasts.
 - `direct_list_agency_clients` - List an agency's Direct clients (Login, ClientId, ClientInfo, Currency...) via AgencyClients.get
 
 ## direct_extra
-Opt-in Direct reads: client, dictionaries, changes, bids, bid modifiers, audiences, feeds, creatives, extensions, turbo pages, leads.
+Opt-in Direct reads: client, dictionaries, changes, bids/auction, sitelinks, images, businesses, smart/dynamic targets, feeds, creatives, extensions, turbo pages, leads.
 - `direct_get_client` - Own Direct account info (Login, ClientId, currency, type) via Clients.get
 - `direct_get_dictionaries` - Direct reference dictionaries (Currencies, GeoRegions, TimeZones, Constants, Interests, AdCategories...).
 - `direct_check_changes` - What changed in Direct since timestamp (UTC ISO, Z) via Changes: checkCampaigns (which campaigns), check (objects in given ids), checkDictionaries.
 - `direct_get_bid_modifiers` - Bid adjustments (mobile, demographics, retargeting, regional...) by campaign/group/id
+- `direct_get_bids` - Bids.get: current Bid/ContextBid plus optional search auction fields for keywords.
+- `direct_list_ad_images` - AdImages.get: uploaded ad images (hash, name, type, subtype, associated).
 - `direct_list_ad_extensions` - Callout extensions (Id, Type, Status, text).
 - `direct_list_audience_targets` - Audience targets (retargeting/interest) by Ids, AdGroupIds or CampaignIds.
 - `direct_list_retargeting_lists` - Retargeting and audience-selection lists (Id, Type, Name, IsAvailable).
@@ -36,6 +38,10 @@ Opt-in Direct reads: client, dictionaries, changes, bids, bid modifiers, audienc
 - `direct_list_ad_videos` - Ad video status by video Ids (required by the API).
 - `direct_get_keyword_bids` - Current keyword bids and serving status by CampaignIds, AdGroupIds or KeywordIds (one required).
 - `direct_list_leads` - Turbo page leads metadata by TurboPageIds
+- `direct_list_sitelinks` - Sitelink sets (Id + Title/Href/Description).
+- `direct_list_businesses` - Yandex Business profiles (Id, Name, IsPublished, Rubric)
+- `direct_list_smart_ad_targets` - Smart-banner feed filters (SmartAdTargets) by campaign/group/id.
+- `direct_list_dynamic_text_ad_targets` - Dynamic text ad targeting conditions by campaign/group/id.
 
 ## direct_reports*
 Direct Reports service: statistics and goal statistics.
@@ -109,21 +115,25 @@ Webmaster hosts, summary, SQI, diagnostics, queries, indexing, links, sitemaps.
 - `webmaster_get_recrawl_task` - Read IN_PROGRESS/DONE/FAILED
 
 ## webmaster_extra
-Opt-in Webmaster reads: owners, feeds, regions, query analytics with filters.
+Opt-in Webmaster reads: owners, feeds, regions, query analytics, Pro export limits/dates/status.
 - `webmaster_get_owners` - Verified owners of a Webmaster host (login, verification type/date).
 - `webmaster_list_feeds` - Product/service feeds added to a Webmaster host.
 - `webmaster_get_feed` - One Webmaster feed's status and errors by feed URL.
 - `webmaster_get_feed_problems` - Host-level feed problems in Webmaster (blocking offers).
 - `webmaster_list_regions` - Webmaster region directory (ids for `webmaster_query_analytics` region_ids), filter by name.
 - `webmaster_query_analytics` - Webmaster query/URL analytics with region and text/statistic filters (up to 500 rows).
+- `webmaster_get_pro_limits` - Enhanced SERP-query export quotas for a host (GET …/pro/limits).
+- `webmaster_list_pro_dates` - Dates available for enhanced SERP-query export (GET …/pro/serp/dates, up to ~550 days).
+- `webmaster_get_pro_export_status` - Status of an enhanced export task (IN_PROGRESS / SUCCESS with url / FAILED).
 
 ## webmaster_write
-Recrawl and sitemap submission: prepare -> apply -> reconcile.
+Recrawl and sitemap submission: prepare -> apply -> reconcile; Pro SERP export start.
 - `webmaster_prepare_recrawl` - Prepare exactly one URL for human approval after ownership, quota and duplicate checks.
 - `webmaster_apply_recrawl` - Submit one accepted URL exactly once.
 - `webmaster_prepare_sitemap` - Prepare one sitemap registration for expiring human approval.
 - `webmaster_apply_sitemap` - Submit one accepted sitemap with a durable key and registration readback.
 - `webmaster_reconcile_action` - Read and reconcile this principal's existing action.
+- `webmaster_start_pro_export` - Start enhanced SERP-query export (POST …/pro/serp/queries/download/).
 
 ## wordstat*
 Wordstat top requests, dynamics, regions (paid per call).

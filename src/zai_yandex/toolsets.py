@@ -43,7 +43,7 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         ),
     },
     "direct_extra": {
-        "description": "Opt-in Direct reads: client, dictionaries, changes, bids, bid modifiers, audiences, feeds, creatives, extensions, turbo pages, leads.",
+        "description": "Opt-in Direct reads: client, dictionaries, changes, bids/auction, sitelinks, images, businesses, smart/dynamic targets, feeds, creatives, extensions, turbo pages, leads.",
         "tools": DIRECT_EXTRA_TOOLS,
     },
     "direct_reports": {
@@ -99,17 +99,18 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         ),
     },
     "webmaster_extra": {
-        "description": "Opt-in Webmaster reads: owners, feeds, regions, query analytics with filters.",
+        "description": "Opt-in Webmaster reads: owners, feeds, regions, query analytics, Pro export limits/dates/status.",
         "tools": WEBMASTER_EXTRA_TOOLS,
     },
     "webmaster_write": {
-        "description": "Recrawl and sitemap submission: prepare -> apply -> reconcile.",
+        "description": "Recrawl and sitemap submission: prepare -> apply -> reconcile; Pro SERP export start.",
         "tools": (
             "webmaster_prepare_recrawl",
             "webmaster_apply_recrawl",
             "webmaster_prepare_sitemap",
             "webmaster_apply_sitemap",
             "webmaster_reconcile_action",
+            "webmaster_start_pro_export",
         ),
     },
     "wordstat": {

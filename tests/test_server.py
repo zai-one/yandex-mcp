@@ -72,6 +72,8 @@ ADDED_TOOLS = (
         "yandex_auth_status",
         "yandex_auth_start",
         "yandex_auth_finish",
+        # Pro SERP export start (write gate); reads are in WEBMASTER_EXTRA_TOOLS.
+        "webmaster_start_pro_export",
     }
 )
 

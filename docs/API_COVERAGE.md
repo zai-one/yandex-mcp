@@ -73,12 +73,25 @@ clients. Scopes, write flags, approvals and idempotency remain the server-side g
 ## Opt-in coverage toolsets (direct_extra, webmaster_extra)
 
 Direct (JSON v5, `https://api.direct.yandex.com/json/v5/<service>`), each a documented `get`
-(`https://yandex.ru/dev/direct/doc/ru/<service>/get`): clients, dictionaries, bidmodifiers, keywordbids,
-audiencetargets, retargetinglists, feeds, creatives, adextensions, turbopages, leads, advideos,
-negativekeywordsharedsets; Changes `check`, `checkCampaigns`, `checkDictionaries`
+(`https://yandex.ru/dev/direct/doc/ru/<service>/get` unless noted): clients, dictionaries, bidmodifiers,
+keywordbids, **bids** (auction fields opt-in via `include_auction`), audiencetargets, retargetinglists,
+feeds, creatives, adextensions, turbopages, leads, advideos, negativekeywordsharedsets, **sitelinks**,
+**adimages**, **businesses** (no Phone/Address by default), **smartadtargets** (units +
+[smart-ads](https://yandex.ru/dev/direct/doc/ru/best-practice/smart-ads)), **dynamictextadtargets**
+(units table); Changes `check`, `checkCampaigns`, `checkDictionaries`
 (`https://yandex.ru/dev/direct/doc/ru/changes/changes`). Defaults request compact non-PII FieldNames
 (no phones/representatives; lead form `Data` only with `include_data=true`).
 
 Webmaster v4 (`https://yandex.ru/dev/webmaster/doc/ru/reference/<page>`): host-owners-get, feeds-list,
 feeds-info, feeds-host-problems, regions-directory (`pro/regions`), host-query-analytics
-(`POST query-analytics/list`, a read).
+(`POST query-analytics/list`, a read); Pro export reads
+[domain-limits](https://yandex.ru/dev/webmaster/doc/ru/reference/domain-limits),
+[available-dates](https://yandex.ru/dev/webmaster/doc/ru/reference/available-dates),
+[status-retrieval](https://yandex.ru/dev/webmaster/doc/ru/reference/status-retrieval);
+Pro export start
+([initialization-export](https://yandex.ru/dev/webmaster/doc/ru/reference/initialization-export))
+is in `webmaster_write` behind `YANDEX_WEBMASTER_WRITE_ENABLED`.
+
+Skipped with reasons (see `/workspace/yandex-coverage-diff.md` on the worker box, or the PR body):
+VCards dedicated tool (PII; still via `direct_get_inventory`), Metrika CRUD explosion, per-method
+Direct writes, indexing archive binary job, Wordstat userInfo (v1 decommissioned).

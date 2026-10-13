@@ -47,6 +47,17 @@ DIRECT_LISTS: dict[str, tuple[str, list[str], dict[str, list[str]], tuple[str, .
                                 {"SearchFieldNames": ["Bid"], "NetworkFieldNames": ["Bid"]},
                                 ("CampaignIds", "AdGroupIds", "KeywordIds")),
     "direct_list_leads": ("leads", ["Id", "SubmittedAt", "TurboPageId", "TurboPageName"], {}, ("TurboPageIds",)),
+    # Parity reads (also reachable via inventory for sitelinks/businesses/adimages).
+    "direct_list_sitelinks": ("sitelinks", ["Id"],
+                              {"SitelinkFieldNames": ["Title", "Href", "Description"]}, ("Ids",)),
+    "direct_list_businesses": ("businesses",
+                               ["Id", "Name", "IsPublished", "Rubric", "HasOffice"], {}, ("Ids",)),
+    "direct_list_smart_ad_targets": ("smartadtargets",
+                                     ["Id", "AdGroupId", "CampaignId", "Name", "State", "Status",
+                                      "AvailableItemsOnly"], {}, ("Ids", "AdGroupIds", "CampaignIds")),
+    "direct_list_dynamic_text_ad_targets": ("dynamictextadtargets",
+                                            ["Id", "AdGroupId", "CampaignId", "Name", "State", "Status"], {},
+                                            ("Ids", "AdGroupIds", "CampaignIds")),
 }  # fmt: skip
 PARAM_FOR = {
     "Ids": "ids",
@@ -60,6 +71,8 @@ DIRECT_EXTRA_TOOLS = (
     "direct_get_dictionaries",
     "direct_check_changes",
     "direct_get_bid_modifiers",
+    "direct_get_bids",
+    "direct_list_ad_images",
     *DIRECT_LISTS,
 )
 WEBMASTER_EXTRA_TOOLS = (
@@ -69,10 +82,13 @@ WEBMASTER_EXTRA_TOOLS = (
     "webmaster_get_feed_problems",
     "webmaster_list_regions",
     "webmaster_query_analytics",
+    "webmaster_get_pro_limits",
+    "webmaster_list_pro_dates",
+    "webmaster_get_pro_export_status",
 )
 
 LIST_DOCS = {
-    "direct_list_ad_extensions": "Callout extensions (Id, Type, Status, text). For sitelinks use `direct_get_inventory` service=sitelinks.",
+    "direct_list_ad_extensions": "Callout extensions (Id, Type, Status, text). Sitelinks: `direct_list_sitelinks`.",
     "direct_list_audience_targets": "Audience targets (retargeting/interest) by Ids, AdGroupIds or CampaignIds.",
     "direct_list_retargeting_lists": "Retargeting and audience-selection lists (Id, Type, Name, IsAvailable).",
     "direct_list_creatives": "Creatives (image/HTML5/video/smart): Id, Type, Name, size.",
@@ -80,8 +96,12 @@ LIST_DOCS = {
     "direct_list_turbo_pages": "Turbo pages (Id, Name, Href); use Id for `direct_list_leads`.",
     "direct_list_negative_keyword_sets": "Shared negative keyword sets by Ids (required by the API).",
     "direct_list_ad_videos": "Ad video status by video Ids (required by the API).",
-    "direct_get_keyword_bids": "Current keyword bids and serving status by CampaignIds, AdGroupIds or KeywordIds (one required). Change bids via `direct_write` service=bids.",
+    "direct_get_keyword_bids": "Current keyword bids and serving status by CampaignIds, AdGroupIds or KeywordIds (one required). Change bids via `direct_write` service=bids. Auction data: `direct_get_bids`.",
     "direct_list_leads": "Turbo page leads metadata by TurboPageIds; form data (PII) only with include_data=true.",
+    "direct_list_sitelinks": "Sitelink sets (Id + Title/Href/Description). Optional Ids filter.",
+    "direct_list_businesses": "Yandex Business profiles (Id, Name, IsPublished, Rubric); no Phone/Address by default.",
+    "direct_list_smart_ad_targets": "Smart-banner feed filters (SmartAdTargets) by campaign/group/id.",
+    "direct_list_dynamic_text_ad_targets": "Dynamic text ad targeting conditions by campaign/group/id.",
 }  # fmt: skip
 
 
@@ -100,7 +120,7 @@ def build_list_params(
 ) -> dict[str, Any]:
     service, fields, extra, keys = DIRECT_LISTS[tool]
     selection = {k: v for k, v in ((k, _ids(criteria.get(k), k)) for k in keys) if v}
-    if service in {"keywordbids", "leads", "advideos", "negativekeywordsharedsets"} and not selection:
+    if service in {"keywordbids", "leads", "advideos", "negativekeywordsharedsets", "bids"} and not selection:
         raise ValueError(f"{service}.get requires one of: {', '.join(keys)}")
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10_000:
         raise ValueError("limit must be 1..10000")
@@ -143,7 +163,10 @@ def build_changes_params(
 
 
 def register_coverage_tools(server: Any, runtime: Any) -> None:
-    registry, require_scopes, read = runtime.registry, runtime.require_scopes, runtime.read
+    registry, require_scopes, read, write = (
+        runtime.registry, runtime.require_scopes, runtime.read, runtime.write
+    )
+    settings = runtime.settings
 
     async def direct(service: str, build: Any) -> dict[str, Any]:
         holder: dict[str, Any] = {}
@@ -238,6 +261,89 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
             }
 
         return await direct("bidmodifiers", build)
+
+    @server.tool(auth=require_scopes("yandex_direct:read"))
+    async def direct_get_bids(
+        campaign_ids: list[int] | None = None,
+        ad_group_ids: list[int] | None = None,
+        keyword_ids: list[int] | None = None,
+        include_auction: bool = False,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Bids.get: current Bid/ContextBid plus optional search auction fields for keywords. One of campaign_ids, ad_group_ids, keyword_ids required. Monetary values are micros (×1e6). Read-only."""
+
+        def build() -> dict[str, Any]:
+            selection = {
+                k: v
+                for k, v in (
+                    ("CampaignIds", _ids(campaign_ids, "campaign_ids")),
+                    ("AdGroupIds", _ids(ad_group_ids, "ad_group_ids")),
+                    ("KeywordIds", _ids(keyword_ids, "keyword_ids")),
+                )
+                if v
+            }
+            if not selection:
+                raise ValueError("provide campaign_ids, ad_group_ids or keyword_ids")
+            if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10_000:
+                raise ValueError("limit must be 1..10000")
+            if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+                raise ValueError("offset must be >= 0")
+            fields = ["KeywordId", "AdGroupId", "CampaignId", "Bid", "ContextBid", "StrategyPriority"]
+            if include_auction:
+                fields += [
+                    "MinSearchPrice",
+                    "CurrentSearchPrice",
+                    "AuctionBids",
+                    "CompetitorsBids",
+                    "SearchPrices",
+                ]
+            return {
+                "method": "get",
+                "params": {
+                    "SelectionCriteria": selection,
+                    "FieldNames": fields,
+                    "Page": {"Limit": limit, "Offset": offset},
+                },
+            }
+
+        return await direct("bids", build)
+
+    @server.tool(auth=require_scopes("yandex_direct:read"))
+    async def direct_list_ad_images(
+        hashes: list[str] | None = None,
+        associated: Literal["YES", "NO"] | None = None,
+        limit: int = 500,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """AdImages.get: uploaded ad images (hash, name, type, subtype, associated). Optional hashes (≤10000) or associated YES/NO. Read-only."""
+
+        def build() -> dict[str, Any]:
+            selection: dict[str, Any] = {}
+            if hashes is not None:
+                if not isinstance(hashes, list) or not 1 <= len(hashes) <= 10_000:
+                    raise ValueError("hashes must contain 1..10000 strings")
+                if any(not isinstance(h, str) or not 1 <= len(h) <= 256 for h in hashes):
+                    raise ValueError("each hash must be a non-empty string ≤256 chars")
+                selection["AdImageHashes"] = hashes
+            if associated is not None:
+                if associated not in {"YES", "NO"}:
+                    raise ValueError("associated must be YES or NO")
+                selection["Associated"] = associated
+            if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10_000:
+                raise ValueError("limit must be 1..10000")
+            if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+                raise ValueError("offset must be >= 0")
+            return {
+                "method": "get",
+                "params": {
+                    "SelectionCriteria": selection,
+                    "FieldNames": ["AdImageHash", "Name", "Type", "Subtype", "Associated"],
+                    "Page": {"Limit": limit, "Offset": offset},
+                },
+            }
+
+        return await direct("adimages", build)
 
     def make_list(tool: str) -> None:
         service, _, _, keys = DIRECT_LISTS[tool]
@@ -346,4 +452,66 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
             text_indicator=text_indicator,
             region_ids=region_ids,
             filters=filters,
+        )
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_get_pro_limits(host_id: str) -> dict[str, Any]:
+        """Enhanced SERP-query export quotas for a host (GET …/pro/limits). Check before `webmaster_start_pro_export`. Read-only."""
+        return await webmaster("pro_limits", host_id=host_id)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_list_pro_dates(host_id: str) -> dict[str, Any]:
+        """Dates available for enhanced SERP-query export (GET …/pro/serp/dates, up to ~550 days). Read-only."""
+        return await webmaster("pro_dates", host_id=host_id)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:read"))
+    async def webmaster_get_pro_export_status(host_id: str, task_id: str) -> dict[str, Any]:
+        """Status of an enhanced export task (IN_PROGRESS / SUCCESS with url / FAILED). Read-only."""
+        return await webmaster("pro_export_status", host_id=host_id, task_id=task_id)
+
+    @server.tool(auth=require_scopes("yandex_webmaster:write"))
+    async def webmaster_start_pro_export(
+        host_id: str,
+        dates: list[str],
+        paths: list[str] | None = None,
+        region_ids: list[int] | None = None,
+        use_pro_tariff: bool = False,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Start enhanced SERP-query export (POST …/pro/serp/queries/download/). Spends daily quota; needs YANDEX_WEBMASTER_WRITE_ENABLED. Poll `webmaster_get_pro_export_status`."""
+
+        def check() -> None:
+            if not isinstance(dates, list) or not 1 <= len(dates) <= 100:
+                raise ValueError("dates must contain 1..100 YYYY-MM-DD strings")
+            if any(not isinstance(d, str) or len(d) != 10 for d in dates):
+                raise ValueError("each date must be YYYY-MM-DD")
+            if paths is not None and (
+                not isinstance(paths, list) or not 1 <= len(paths) <= 100
+            ):
+                raise ValueError("paths must contain 1..100 strings")
+            if region_ids is not None:
+                _ids(region_ids, "region_ids")
+            if len(dates) + len(paths or []) > 100:
+                raise ValueError("dates + paths must be ≤100 (PAYLOAD_TOO_LARGE)")
+
+        return await write(
+            "yandex_webmaster",
+            "webmaster_start_pro_export",
+            {
+                "host_id": host_id,
+                "dates": dates,
+                "paths": paths,
+                "region_ids": region_ids,
+                "use_pro_tariff": use_pro_tariff,
+            },
+            idempotency_key,
+            enabled=settings.yandex_webmaster_write_enabled,
+            validate=check,
+            apply_fn=lambda: registry.yandex_webmaster().pro_export_start(
+                host_id,
+                dates=dates,
+                paths=paths,
+                region_ids=region_ids,
+                use_pro_tariff=use_pro_tariff,
+            ),
         )
