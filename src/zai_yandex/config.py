@@ -140,6 +140,10 @@ def flag(name: str) -> bool:
     return value == "true"
 
 
+DIRECT_API_URL = "https://api.direct.yandex.com/json/v5"
+DIRECT_SANDBOX_URL = "https://api-sandbox.direct.yandex.com/json/v5"
+
+
 @dataclass(frozen=True)
 class ServiceConfig:
     state_path: Path
@@ -163,6 +167,8 @@ class ServiceConfig:
     yandex_webmaster_write_enabled: bool = False
     yandex_audience_write_enabled: bool = False
     yandex_wordstat_live_enabled: bool = False
+    # https://yandex.ru/dev/direct/doc/ru/concepts/sandbox : same API, test data only.
+    direct_sandbox: bool = False
     yandex_wordstat_cost_per_call: float = 0
     yandex_wordstat_max_cost_per_call: float = 0
     yandex_search_max_cost_per_approval: float = 0
@@ -213,6 +219,10 @@ class ServiceConfig:
         )
 
     @property
+    def direct_url(self) -> str:
+        return DIRECT_SANDBOX_URL if self.direct_sandbox else DIRECT_API_URL
+
+    @property
     def account_names(self) -> tuple[str, ...]:
         return tuple(profile.name for profile in self.accounts)
 
@@ -233,13 +243,17 @@ class ServiceConfig:
     def ledger_scope(self, provider: str) -> str | None:
         """Write target beyond (account_id, actor, provider), mixed into ledger keys and approvals.
 
-        None for the base target (no named account resolved), so ledger rows and
-        approvals recorded before named accounts existed keep their meaning.
+        The resolved named account and, for Direct, the sandbox endpoint. None for the
+        base production target, so ledger rows and approvals recorded before named
+        accounts and the sandbox existed keep their meaning.
         """
         if provider not in PROFILE_PROVIDERS:
             return None
         name = self.selected_account()
-        return f"account={name}" if name else None
+        parts = [f"account={name}"] if name else []
+        if provider == "yandex_direct" and self.effective().direct_sandbox:
+            parts.append("endpoint=sandbox")
+        return ";".join(parts) or None
 
     def effective(self) -> ServiceConfig:
         """Credentials of the account selected for this call (base config when none)."""
@@ -251,6 +265,8 @@ class ServiceConfig:
         }
         if profile.direct_client_login:
             overrides["direct_client_login"] = profile.direct_client_login
+        if profile.direct_sandbox is not None:
+            overrides["direct_sandbox"] = profile.direct_sandbox
         return replace(self, accounts=(), default_account=None, **overrides)
 
     def enabled(self, provider: str) -> bool:
@@ -285,6 +301,7 @@ class ServiceConfig:
             yandex_webmaster_write_enabled=flag("YANDEX_WEBMASTER_WRITE_ENABLED"),
             yandex_audience_write_enabled=flag("YANDEX_AUDIENCE_WRITE_ENABLED"),
             yandex_wordstat_live_enabled=flag("YANDEX_WORDSTAT_LIVE_ENABLED"),
+            direct_sandbox=flag("YANDEX_DIRECT_SANDBOX"),
             **{
                 name: float(os.environ.get(name.upper(), "0"))
                 for name in (

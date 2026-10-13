@@ -104,7 +104,7 @@ class Registry:
             match provider:
                 case "yandex_direct":
                     adapter = YandexDirectAdapter(
-                        "https://api.direct.yandex.com/json/v5",
+                        config.direct_url,
                         config.direct_token,
                         config.direct_client_login,
                         **kwargs,
