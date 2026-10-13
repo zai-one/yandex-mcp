@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Metrika Logs API: `metrika_logs_evaluate`, `metrika_logs_list`, `metrika_logs_get`, `metrika_logs_download_part` (bounded TSV preview) and opt-in `metrika_logs_create` / `metrika_logs_cleanup` (`YANDEX_METRIKA_LOGS_ENABLED`, metrika write scope, idempotency ledger). Toolsets `metrika_logs`, `metrika_logs_write`.
+- Direct `direct_list_agency_clients` (AgencyClients.get, compact non-PII fields) for agency accounts.
+
 - Toolsets (`YANDEX_TOOLSETS`, `YANDEX_TOOLS`, `YANDEX_DISABLED_TOOLS`, `--toolsets`) and read-only mode (`YANDEX_READ_ONLY`, `--read-only`, driven by the reviewed annotations). Unset = previous surface.
 - Router `instructions`; compact descriptions for the five tools over 300 chars; error envelopes gain `hint` and `docs`.
 - Resources `yandex://toolsets`, `yandex://playbook`, `yandex://guide/{topic}`; prompts `campaign_audit`, `weekly_report`, `seo_audit`, `budget_scaling`.

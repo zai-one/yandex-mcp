@@ -17,6 +17,7 @@ from zai_yandex.adapters.audience import BASE_URL as AUDIENCE_BASE_URL
 from zai_yandex.adapters.audience import YandexAudienceAdapter
 from zai_yandex.adapters.direct import YandexDirectAdapter
 from zai_yandex.adapters.metrika import YandexMetrikaAdapter
+from zai_yandex.adapters.metrika_logs import YandexMetrikaLogsAdapter
 from zai_yandex.adapters.search import YandexSearchAdapter
 from zai_yandex.adapters.webmaster import YandexWebmasterAdapter
 from zai_yandex.admission import PolicyStore
@@ -136,6 +137,14 @@ class Registry:
 
     def yandex_metrika(self) -> YandexMetrikaAdapter:
         return self._adapter("yandex_metrika")
+
+    def yandex_metrika_logs(self) -> YandexMetrikaLogsAdapter:
+        state = self.runtime.state.get()
+        if state.provider != "yandex_metrika":
+            raise PermissionError("provider does not match this execution")
+        return YandexMetrikaLogsAdapter(
+            "https://api-metrika.yandex.net", self.runtime.config.metrika_token, http=state.http
+        )
 
     def yandex_search(self) -> YandexSearchAdapter:
         return self._adapter("yandex_search")

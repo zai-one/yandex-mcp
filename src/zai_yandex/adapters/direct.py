@@ -27,7 +27,7 @@ V501_SERVICES = frozenset({"strategies"})
 # Documented points/connection limit errors
 # (https://yandex.ru/dev/direct/doc/ru/concepts/errors-list): 152 not enough units, 506 too many connections.
 RATE_LIMIT_ERROR_CODES = frozenset({"152", "506"})
-READ_SERVICES = INVENTORY_READ_SERVICES | {"keywordsresearch"}
+READ_SERVICES = INVENTORY_READ_SERVICES | {"keywordsresearch", "agencyclients"}
 
 # Guarded write allowlist per service. A new writable service/method is inert
 # until it is added here on review. campaigns:update keeps the approval-gated
@@ -56,6 +56,8 @@ ID_BASED_METHODS: frozenset[str] = frozenset(
 MAX_APPLY_ITEMS = 100
 
 READ_METHODS = {
+    # https://yandex.ru/dev/direct/doc/ru/agencyclients/get (agency accounts only)
+    "agencyclients": frozenset({"get"}),
     "campaigns": frozenset({"get"}),
     "adgroups": frozenset({"get"}),
     "ads": frozenset({"get"}),

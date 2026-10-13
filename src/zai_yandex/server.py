@@ -15,6 +15,7 @@ from zai_yandex.agent_layer import TOOL_DESCRIPTIONS, build_instructions, regist
 from zai_yandex.audience_tools import register_audience_tools
 from zai_yandex.config import SCOPES, ServiceConfig
 from zai_yandex.core_tools import register_core_tools
+from zai_yandex.expansion_tools import register_expansion_tools
 from zai_yandex.metrika_reports import register_reports
 from zai_yandex.onboarding import check_config, load_config
 from zai_yandex.runtime import Runtime
@@ -119,6 +120,7 @@ def create_server(
     register_reports(registrar, runtime)
     register_webmaster_tools(registrar, runtime)
     register_audience_tools(registrar, runtime)
+    register_expansion_tools(registrar, runtime)
     register_update_tool(server, config, transport, surface)
     register_agent_layer(server, surface)
     return server

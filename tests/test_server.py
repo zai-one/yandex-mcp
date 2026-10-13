@@ -39,7 +39,7 @@ AUDIENCE_TOOLS = {
     "audience_create_pixel_viewers",
     "audience_reconcile_create",
 }
-# Read-only tools added after the frozen 44-tool contract baseline.
+# Tools added after the frozen 44-tool contract baseline.
 ADDED_TOOLS = {
     "metrika_report",
     "yandex_wordstat_dynamics",
@@ -53,6 +53,14 @@ ADDED_TOOLS = {
     "direct_get_goal_statistics",
     "direct_list_strategies",
     "yandex_check_update",
+    "direct_list_agency_clients",
+    "metrika_logs_evaluate",
+    "metrika_logs_list",
+    "metrika_logs_get",
+    "metrika_logs_download_part",
+    # Quota-spending Logs API writes behind YANDEX_METRIKA_LOGS_ENABLED + metrika write scope.
+    "metrika_logs_create",
+    "metrika_logs_cleanup",
 }
 
 

@@ -18,6 +18,8 @@ WRITE_TOOLS = {
     "audience_create_geo_polygon",
     "audience_create_pixel",
     "audience_create_pixel_viewers",
+    "metrika_logs_create",
+    "metrika_logs_cleanup",
 }
 
 
