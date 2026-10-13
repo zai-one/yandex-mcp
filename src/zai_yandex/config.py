@@ -62,6 +62,8 @@ class ServiceConfig:
     local_scopes: frozenset[str] = SCOPES
     yandex_direct_write_enabled: bool = False
     yandex_metrika_write_enabled: bool = False
+    # Logs API requests spend the per-counter 10 GB storage quota; opt-in like other writes.
+    yandex_metrika_logs_enabled: bool = False
     yandex_webmaster_write_enabled: bool = False
     yandex_audience_write_enabled: bool = False
     yandex_wordstat_live_enabled: bool = False
@@ -139,6 +141,7 @@ class ServiceConfig:
             audience=os.environ.get("YANDEX_MCP_AUDIENCE", "yandex-mcp"),
             yandex_direct_write_enabled=flag("YANDEX_DIRECT_WRITE_ENABLED"),
             yandex_metrika_write_enabled=flag("YANDEX_METRIKA_WRITE_ENABLED"),
+            yandex_metrika_logs_enabled=flag("YANDEX_METRIKA_LOGS_ENABLED"),
             yandex_webmaster_write_enabled=flag("YANDEX_WEBMASTER_WRITE_ENABLED"),
             yandex_audience_write_enabled=flag("YANDEX_AUDIENCE_WRITE_ENABLED"),
             yandex_wordstat_live_enabled=flag("YANDEX_WORDSTAT_LIVE_ENABLED"),

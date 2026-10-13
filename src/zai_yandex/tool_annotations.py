@@ -81,6 +81,11 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "audience_get_segment",
             "audience_list_pixels",
             "audience_get_pixel",
+            "direct_list_agency_clients",
+            "metrika_logs_evaluate",
+            "metrika_logs_list",
+            "metrika_logs_get",
+            "metrika_logs_download_part",
             # Public GitHub release lookup; suggests an update, never installs.
             "yandex_check_update",
         ),
@@ -115,9 +120,14 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
             "audience_create_geo_polygon",
             "audience_create_pixel",
             "audience_create_pixel_viewers",
+            # Spends the per-counter Logs API storage quota; keyed by idempotency key.
+            "metrika_logs_create",
         ),
     ),
-    (DESTRUCTIVE_WRITE, ("direct_write", "direct_apply_changes", "metrika_apply_goal")),
+    (
+        DESTRUCTIVE_WRITE,
+        ("direct_write", "direct_apply_changes", "metrika_apply_goal", "metrika_logs_cleanup"),
+    ),
 )
 
 TOOL_ANNOTATIONS: dict[str, ToolAnnotations] = {

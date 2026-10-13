@@ -103,11 +103,11 @@ Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (o
 
 ## Toolsets and read-only mode
 
-Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (account, direct_read, direct_reports, metrika, webmaster, wordstat, audience) - about 30% fewer tool tokens.
+Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (account, direct_read, direct_reports, metrika, webmaster, wordstat, audience) - about 30% fewer tool tokens. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`.
 
 | Variable | Effect |
 |---|---|
-| `YANDEX_TOOLSETS` | `all`, `default` or a comma list of `account`, `direct_read`, `direct_reports`, `direct_write`, `metrika`, `metrika_write`, `webmaster`, `webmaster_write`, `wordstat`, `search`, `audience`, `audience_write`. Also `--toolsets`. |
+| `YANDEX_TOOLSETS` | `all`, `default` or a comma list of `account`, `direct_read`, `direct_reports`, `direct_write`, `metrika`, `metrika_logs`, `metrika_logs_write`, `metrika_write`, `webmaster`, `webmaster_write`, `wordstat`, `search`, `audience`, `audience_write`. Also `--toolsets`. |
 | `YANDEX_TOOLS` / `YANDEX_DISABLED_TOOLS` | Add or hide individual tools. |
 | `YANDEX_READ_ONLY=1` | Hide every prepare/apply/write/paid-submit tool (also `--read-only`). |
 

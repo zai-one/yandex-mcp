@@ -26,6 +26,7 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             "direct_get_inventory",
             "direct_list_strategies",
             "direct_keyword_forecast",
+            "direct_list_agency_clients",
         ),
     },
     "direct_reports": {
@@ -39,6 +40,19 @@ TOOLSETS: dict[str, dict[str, Any]] = {
     "metrika": {
         "description": "Metrika counters, goals, Reporting API and period comparison.",
         "tools": ("metrika_list_counters", "metrika_list_goals", "metrika_get_statistics", "metrika_report"),
+    },
+    "metrika_logs": {
+        "description": "Metrika Logs API: evaluate, list, status, preview download (read).",
+        "tools": (
+            "metrika_logs_evaluate",
+            "metrika_logs_list",
+            "metrika_logs_get",
+            "metrika_logs_download_part",
+        ),
+    },
+    "metrika_logs_write": {
+        "description": "Create Logs API exports and clean/cancel them (quota; YANDEX_METRIKA_LOGS_ENABLED).",
+        "tools": ("metrika_logs_create", "metrika_logs_cleanup"),
     },
     "metrika_write": {"description": "Create/update/delete Metrika goals.", "tools": ("metrika_apply_goal",)},
     "webmaster": {
