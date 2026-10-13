@@ -4,12 +4,12 @@
   "title": "Yandex MCP",
   "description": "Yandex Direct, Metrika, Webmaster, Wordstat/Search and Audience for AI assistants, with toolsets, read-only mode and approval-gated writes.",
   "repository": {"url": "https://github.com/zai-one/yandex-mcp", "source": "github"},
-  "version": "0.5.1",
+  "version": "0.6.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "zai-yandex-mcp",
-      "version": "0.5.1",
+      "version": "0.6.0",
       "transport": {"type": "stdio"},
       "environmentVariables": [
         {"name": "YANDEX_METRIKA_TOKEN_FILE", "description": "File with a Metrika OAuth token", "isRequired": false, "format": "filepath"},

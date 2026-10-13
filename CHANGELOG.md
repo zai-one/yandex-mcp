@@ -1,10 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
 
 ### Added
-- Coverage parity (opt-in): Direct `Bids.get`, Sitelinks/AdImages/Businesses/SmartAdTargets/DynamicTextAdTargets reads in `direct_extra`; Webmaster Pro export limits/dates/status in `webmaster_extra` and `webmaster_start_pro_export` (write gate; the paid `use_pro_tariff=true` also needs an accepted approval) in `webmaster_write`. Default toolset unchanged. Co-authored with Grok.
-
+- Coverage parity (opt-in): Direct `Bids.get`, Sitelinks/AdImages/Businesses/SmartAdTargets/DynamicTextAdTargets reads in `direct_extra`; Webmaster Pro export limits/dates/status in `webmaster_extra` and `webmaster_start_pro_export` (write gate; the paid `use_pro_tariff=true` also needs an accepted approval) in `webmaster_write`. Default toolset unchanged.
 
 - OAuth self-setup: `yandex_auth_start` / `yandex_auth_finish` / `yandex_auth_status` (device-code flow per https://yandex.ru/dev/id/doc/ru/codes/screen-code-oauth), owner-private token files (0600), hot reload without restart, optional MCP URL elicitation, per-account when profiles are configured. CLI: `yandex-mcp-oauth --device`. Guide `yandex://guide/oauth`. Tokens never returned in tool output. `yandex_auth_start` / `yandex_auth_finish` exist only on the local stdio transport (an HTTP server is shared, so its credentials are never replaceable by a caller; over HTTP only `yandex_auth_status` remains, behind a Yandex scope). Results name token locations relative to the state directory, not absolute paths. A configured token file always wins; a new per-account file is linked into `YANDEX_ACCOUNTS_FILE` so it survives a restart; a replaced token is kept as `<file>.bak`; only directories the tool creates are set to 0700.
 
@@ -16,17 +15,36 @@
 
 - Opt-in toolsets `direct_extra` (14 reads: `direct_get_client`, `direct_get_dictionaries`, `direct_check_changes`, `direct_get_bid_modifiers`, `direct_get_keyword_bids`, `direct_list_audience_targets`, `direct_list_retargeting_lists`, `direct_list_feeds`, `direct_list_creatives`, `direct_list_ad_extensions`, `direct_list_turbo_pages`, `direct_list_leads`, `direct_list_ad_videos`, `direct_list_negative_keyword_sets`) and `webmaster_extra` (6 reads: `webmaster_get_owners`, `webmaster_list_feeds`, `webmaster_get_feed`, `webmaster_get_feed_problems`, `webmaster_list_regions`, `webmaster_query_analytics`). Every endpoint links its official doc page; not in `default`, so the default tool list is unchanged.
 
-- License: LicenseRef-ZAI-ONE 2.0 (source-available). Free install and use for yourself and your organisation, including commercial work; issues and pull requests welcome; copying code into other projects, redistribution, embedding and competing hosted services need written permission. Earlier releases keep their LicenseRef-ZAI-ONE 1.0 terms (see NOTICE). README first screen: one-line scope, why this MCP, maintenance and update check.
-
 - Metrika offline conversions: `metrika_validate_offline_conversions` (local CSV validation, confirmation_hash), `metrika_upload_offline_conversions` (multipart upload; `YANDEX_METRIKA_WRITE_ENABLED`, metrika write scope, hash + idempotency key, never auto-retried), `metrika_list_offline_conversion_uploads`, `metrika_get_offline_conversion_upload`. Toolset `metrika_offline`; upload joins `metrika_write`. Skill `metrika-offline-conversions`, guide `yandex://guide/offline-conversions`.
 - Wordstat `yandex_wordstat_get_top` gains optional `devices` and validates `num_phrases` 1..2000 before reserving budget (Search API v2 GetTop).
 - Metrika Logs API: `metrika_logs_evaluate`, `metrika_logs_list`, `metrika_logs_get`, `metrika_logs_download_part` (bounded TSV preview) and opt-in `metrika_logs_create` / `metrika_logs_cleanup` (`YANDEX_METRIKA_LOGS_ENABLED`, metrika write scope, idempotency ledger). Toolsets `metrika_logs`, `metrika_logs_write`.
 - Direct `direct_list_agency_clients` (AgencyClients.get, compact non-PII fields) for agency accounts.
 
-- Toolsets (`YANDEX_TOOLSETS`, `YANDEX_TOOLS`, `YANDEX_DISABLED_TOOLS`, `--toolsets`) and read-only mode (`YANDEX_READ_ONLY`, `--read-only`, driven by the reviewed annotations). Unset = previous surface.
+- Toolsets (`YANDEX_TOOLSETS`, `YANDEX_TOOLS`, `YANDEX_DISABLED_TOOLS`, `--toolsets`) and read-only mode (`YANDEX_READ_ONLY`, `--read-only`, driven by the reviewed annotations). Unset = every tool, as before.
 - Router `instructions`; compact descriptions for the five tools over 300 chars; error envelopes gain `hint` and `docs`.
 - Resources `yandex://toolsets`, `yandex://playbook`, `yandex://guide/{topic}`; prompts `campaign_audit`, `weekly_report`, `seo_audit`, `budget_scaling`.
 - Self-contained skills (`skills/`), Claude Code plugin + marketplace (`.claude-plugin/`), `server.json`, `scripts/token_budget.py` (enforced in tests).
+
+### Changed
+- Toolsets: with `YANDEX_TOOLSETS` unset (or `all`) every tool stays visible, which now includes all the new toolsets
+  above. `YANDEX_TOOLSETS=default` keeps the read toolsets plus `account`; `direct_extra`, `webmaster_extra`,
+  `metrika_logs`, `metrika_offline`, `search` and every write toolset are opt-in, e.g.
+  `YANDEX_TOOLSETS=default,direct_extra`. `default` is not strictly read-only: `account` includes the stdio OAuth
+  self-setup tools; add `YANDEX_READ_ONLY=1` to hide them.
+- The Claude Code plugin starts the server with `YANDEX_TOOLSETS=default`. Plugin, README and Codex snippets install
+  `zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.6.0`.
+- License: LicenseRef-ZAI-ONE 2.0 (source-available). Free install and use for yourself and your organisation, including commercial work; issues and pull requests welcome; copying code into other projects, redistribution, embedding and competing hosted services need written permission. Earlier releases keep their LicenseRef-ZAI-ONE 1.0 terms (see NOTICE). README first screen: one-line scope, why this MCP, maintenance and update check.
+
+### Security
+Safeguards in the new features of this release:
+- Write ledger, idempotency keys and approvals are partitioned by the resolved account profile: a write or approval
+  for one account never replays or applies on another account or on the base credentials.
+- Direct sandbox writes and approvals are kept apart from production: toggling `YANDEX_DIRECT_SANDBOX` never answers a
+  production write from a sandbox rehearsal or applies a sandbox approval live.
+- `yandex_auth_start` / `yandex_auth_finish` exist only on the local stdio transport, so an authenticated HTTP caller
+  cannot replace the server's token files; results no longer show absolute token paths.
+- `webmaster_start_pro_export` with the paid `use_pro_tariff=true` first returns `approval_required`; it starts only
+  after a human accepts the approval bound to that exact export, and the approval is consumed once.
 
 ## 0.5.1
 
