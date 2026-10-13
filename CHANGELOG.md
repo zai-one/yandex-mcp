@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- Coverage parity (opt-in): Direct `Bids.get`, Sitelinks/AdImages/Businesses/SmartAdTargets/DynamicTextAdTargets reads in `direct_extra`; Webmaster Pro export limits/dates/status in `webmaster_extra` and `webmaster_start_pro_export` (write gate) in `webmaster_write`. Default toolset unchanged. Co-authored with Grok.
+- Coverage parity (opt-in): Direct `Bids.get`, Sitelinks/AdImages/Businesses/SmartAdTargets/DynamicTextAdTargets reads in `direct_extra`; Webmaster Pro export limits/dates/status in `webmaster_extra` and `webmaster_start_pro_export` (write gate; the paid `use_pro_tariff=true` also needs an accepted approval) in `webmaster_write`. Default toolset unchanged. Co-authored with Grok.
 
 
 - OAuth self-setup: `yandex_auth_start` / `yandex_auth_finish` / `yandex_auth_status` (device-code flow per https://yandex.ru/dev/id/doc/ru/codes/screen-code-oauth), owner-private token files (0600), hot reload without restart, optional MCP URL elicitation, per-account when profiles are configured. CLI: `yandex-mcp-oauth --device`. Guide `yandex://guide/oauth`. Tokens never returned in tool output. `yandex_auth_start` / `yandex_auth_finish` exist only on the local stdio transport (an HTTP server is shared, so its credentials are never replaceable by a caller; over HTTP only `yandex_auth_status` remains, behind a Yandex scope). Results name token locations relative to the state directory, not absolute paths. A configured token file always wins; a new per-account file is linked into `YANDEX_ACCOUNTS_FILE` so it survives a restart; a replaced token is kept as `<file>.bak`; only directories the tool creates are set to 0700.

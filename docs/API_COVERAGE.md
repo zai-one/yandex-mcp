@@ -90,8 +90,11 @@ feeds-info, feeds-host-problems, regions-directory (`pro/regions`), host-query-a
 [status-retrieval](https://yandex.ru/dev/webmaster/doc/ru/reference/status-retrieval);
 Pro export start
 ([initialization-export](https://yandex.ru/dev/webmaster/doc/ru/reference/initialization-export))
-is in `webmaster_write` behind `YANDEX_WEBMASTER_WRITE_ENABLED`.
+is in `webmaster_write` behind `YANDEX_WEBMASTER_WRITE_ENABLED`; with `use_pro_tariff=true` (paid
+Pro tariff quota) the first call returns an approval, and the export starts only after a human
+accepts it and the same call is repeated with `approval_id`.
 
-Skipped with reasons (see `/workspace/yandex-coverage-diff.md` on the worker box, or the PR body):
-VCards dedicated tool (PII; still via `direct_get_inventory`), Metrika CRUD explosion, per-method
-Direct writes, indexing archive binary job, Wordstat userInfo (v1 decommissioned).
+Not covered on purpose: a dedicated VCards tool (contact PII; still reachable through
+`direct_get_inventory`), one tool per Metrika management method, one tool per Direct write method
+(writes go through `direct_prepare_changes` / `direct_write`), the Webmaster indexing archive (a
+large binary job) and Wordstat `userInfo` (v1 decommissioned).

@@ -6,7 +6,7 @@ compatibility: Requires the zai-yandex-mcp server.
 metadata:
   mcp-server: zai-yandex-mcp
 ---
-For enhanced SERP-query export (Pro): `webmaster_get_pro_limits`, `webmaster_list_pro_dates`, then `webmaster_start_pro_export` (write flag) and `webmaster_get_pro_export_status`.
+For enhanced SERP-query export (Pro): `webmaster_get_pro_limits`, `webmaster_list_pro_dates`, then `webmaster_start_pro_export` (write flag; the paid `use_pro_tariff=true` first returns an approval to accept) and `webmaster_get_pro_export_status`.
 
 
 # Webmaster SEO health

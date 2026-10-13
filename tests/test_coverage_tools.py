@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import pytest
 from conftest import HOST, Recorder, config
 from fastmcp import Client
@@ -10,6 +12,7 @@ from zai_yandex.coverage_tools import (
     build_list_params,
 )
 from zai_yandex.server import create_server
+from zai_yandex.state import StateStore
 from zai_yandex.toolsets import DEFAULT_TOOLSETS, TOOLSETS, build_surface
 
 
@@ -137,3 +140,31 @@ async def test_webmaster_start_pro_export_requires_write_flag(tmp_path):
     assert posts and posts[0][1].endswith("/pro/serp/queries/download/")
     body = posts[0][2]
     assert body["dates"] == ["2026-09-10", "2026-09-11"] and body["use_pro_tariff"] == "false"
+
+
+async def test_paid_pro_tariff_export_needs_an_accepted_approval(tmp_path):
+    settings = config(tmp_path, yandex_webmaster_write_enabled=True)
+    recorder = Recorder()
+    paid = {"host_id": HOST, "dates": ["2026-09-10"], "use_pro_tariff": True, "idempotency_key": "pro-paid-1"}
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        gate = (await client.call_tool("webmaster_start_pro_export", paid)).data
+        assert gate["status"] == "approval_required"
+        assert not [call for call in recorder.calls if call[0] == "POST"]
+        approved = {**paid, "approval_id": gate["approval_id"]}
+        with pytest.raises(ToolError):  # Prepared, not yet accepted by a human.
+            await client.call_tool("webmaster_start_pro_export", approved)
+        assert StateStore(settings).accept(
+            UUID(gate["approval_id"]), principal=settings.principal_id, request_hash=gate["request_hash"]
+        )
+        with pytest.raises(ToolError):  # The approval covers these exact dates only.
+            await client.call_tool("webmaster_start_pro_export", {**approved, "dates": ["2026-09-11"]})
+        first = (await client.call_tool("webmaster_start_pro_export", approved)).data
+        assert first["applied"]
+        replay = (await client.call_tool("webmaster_start_pro_export", approved)).data
+        assert replay == first
+        with pytest.raises(ToolError):  # Consumed: no second paid export under a new key.
+            await client.call_tool(
+                "webmaster_start_pro_export", {**approved, "idempotency_key": "pro-paid-2"}
+            )
+    posts = [call for call in recorder.calls if call[0] == "POST"]
+    assert len(posts) == 1 and posts[0][2]["use_pro_tariff"] == "true"

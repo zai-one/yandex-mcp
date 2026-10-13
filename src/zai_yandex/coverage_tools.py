@@ -2,17 +2,20 @@
 
 Every endpoint is documented: Direct https://yandex.ru/dev/direct/doc/ru/<service>/get and
 https://yandex.ru/dev/direct/doc/ru/changes/changes ; Webmaster
-https://yandex.ru/dev/webmaster/doc/ru/reference/<page>. All tools are reads.
+https://yandex.ru/dev/webmaster/doc/ru/reference/<page>. All tools are reads except
+webmaster_start_pro_export (write flag; the paid Pro tariff also needs an accepted approval).
 """
 
 from __future__ import annotations
 
 import inspect
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, cast
+from uuid import UUID, uuid4
 
 from zai_yandex.adapters.direct import YandexDirectAdapter
 from zai_yandex.sanitizer import sanitize_provider_response
-from zai_yandex.transport import ProviderError
+from zai_yandex.transport import ProviderError, request_hash
 
 DICTIONARY_NAMES = frozenset(
     {
@@ -160,6 +163,9 @@ def build_changes_params(
     if not set(fields) <= CHANGES_FIELDS:
         raise ValueError("field_names must be from CampaignIds, AdGroupIds, AdIds, CampaignsStat")
     return {"method": method, "params": {**present, "Timestamp": timestamp, "FieldNames": fields}}
+
+
+PRO_EXPORT_APPROVAL = "pro_export_paid"
 
 
 def register_coverage_tools(server: Any, runtime: Any) -> None:
@@ -477,8 +483,9 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
         region_ids: list[int] | None = None,
         use_pro_tariff: bool = False,
         idempotency_key: str | None = None,
+        approval_id: str | None = None,
     ) -> dict[str, Any]:
-        """Start enhanced SERP-query export (POST …/pro/serp/queries/download/). Spends daily quota; needs YANDEX_WEBMASTER_WRITE_ENABLED. Poll `webmaster_get_pro_export_status`."""
+        """Start enhanced SERP-query export (POST …/pro/serp/queries/download/). Spends daily quota; needs YANDEX_WEBMASTER_WRITE_ENABLED. use_pro_tariff=true (paid) first returns an approval to accept, then pass approval_id. Poll `webmaster_get_pro_export_status`."""
 
         def check() -> None:
             if not isinstance(dates, list) or not 1 <= len(dates) <= 100:
@@ -494,24 +501,85 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
             if len(dates) + len(paths or []) > 100:
                 raise ValueError("dates + paths must be ≤100 (PAYLOAD_TOO_LARGE)")
 
-        return await write(
-            "yandex_webmaster",
-            "webmaster_start_pro_export",
-            {
-                "host_id": host_id,
-                "dates": dates,
-                "paths": paths,
-                "region_ids": region_ids,
-                "use_pro_tariff": use_pro_tariff,
-            },
-            idempotency_key,
-            enabled=settings.yandex_webmaster_write_enabled,
-            validate=check,
-            apply_fn=lambda: registry.yandex_webmaster().pro_export_start(
+        arguments = {
+            "host_id": host_id,
+            "dates": dates,
+            "paths": paths,
+            "region_ids": region_ids,
+            "use_pro_tariff": use_pro_tariff,
+        }
+
+        async def start() -> dict[str, Any]:
+            if use_pro_tariff and not await runtime.store.consume_approval(UUID(str(approval_id))):
+                raise PermissionError("Pro tariff approval is not accepted or was already consumed")
+            return await registry.yandex_webmaster().pro_export_start(
                 host_id,
                 dates=dates,
                 paths=paths,
                 region_ids=region_ids,
                 use_pro_tariff=use_pro_tariff,
-            ),
+            )
+
+        if use_pro_tariff:
+            # Paid Pro tariff quota: the same human approval gate as the other Webmaster writes.
+            gate = await _pro_tariff_gate(arguments, approval_id, check)
+            if gate is not None:
+                return gate
+        return await write(
+            "yandex_webmaster",
+            "webmaster_start_pro_export",
+            arguments,
+            idempotency_key,
+            enabled=settings.yandex_webmaster_write_enabled,
+            validate=check,
+            apply_fn=start,
         )
+
+    async def _pro_tariff_gate(
+        arguments: dict[str, Any], approval_id: str | None, check: Any
+    ) -> dict[str, Any] | None:
+        """Open an approval for a paid export, or verify the one passed back; None = proceed."""
+        try:
+            if not settings.yandex_webmaster_write_enabled:
+                raise ProviderError("write runtime is not enabled")
+            check()
+            digest = request_hash({"operation": PRO_EXPORT_APPROVAL, "arguments": arguments})
+            principal = runtime.state.get().actor
+            if approval_id is None:
+                created = uuid4()
+                expires = datetime.now(UTC) + timedelta(minutes=30)
+                await runtime.store.create_approval(
+                    runtime.approval_record(
+                        created,
+                        principal,
+                        "yandex_webmaster",
+                        PRO_EXPORT_APPROVAL,
+                        digest,
+                        0.0,
+                        0.0,
+                        "prepared",
+                        expires,
+                        True,
+                    )
+                )
+                return {
+                    "status": "approval_required",
+                    "approval_id": str(created),
+                    "request_hash": digest,
+                    "expires_at": expires.isoformat(),
+                    "next_gate": "Accept this approval, then repeat the same call with approval_id.",
+                }
+            approval = await runtime.store.get_approval(UUID(approval_id))
+            if (
+                approval is None
+                or approval.principal_id != principal
+                or approval.provider != "yandex_webmaster"
+                or approval.operation != PRO_EXPORT_APPROVAL
+                or approval.request_hash != digest
+                or approval.status not in {"accepted", "consumed"}  # consumed: replay by key
+                or (approval.status == "accepted" and approval.expires_at <= datetime.now(UTC))
+            ):
+                raise PermissionError("an accepted approval matching this Pro tariff export is required")
+            return None
+        except (ProviderError, PermissionError, ValueError) as exc:
+            raise runtime.safe_error("yandex_webmaster", exc) from None
