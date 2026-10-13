@@ -52,6 +52,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 "src/zai_yandex/errors.py" = ["E501"]
 "src/zai_yandex/toolsets.py" = ["E501"]
 "src/zai_yandex/expansion_tools.py" = ["E501"]
+"src/zai_yandex/offline_conversions.py" = ["E501"]
 
 [project.urls]
 Homepage = "https://github.com/zai-one/yandex-mcp"

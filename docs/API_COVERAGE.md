@@ -39,6 +39,19 @@ Direct error codes 152 (not enough units) and 506 (too many connections),
 
 Per counter, requested plus stored logs are capped at 10 GB ([Logs API intro](https://yandex.ru/dev/metrika/ru/logs/)); `date2` cannot be today; the API has no row filters.
 
+## Metrika offline conversions
+
+| Tool | Upstream |
+|---|---|
+| `metrika_validate_offline_conversions` | local only: columns per [Передача офлайн-конверсий](https://yandex.ru/dev/metrika/ru/management/offline-conv) |
+| `metrika_upload_offline_conversions` | [POST …/offline_conversions/upload](https://yandex.ru/dev/metrika/ru/management/openapi/offline_conversions/upload_1) — multipart `file`, query `type`, `comment`; write flag |
+| `metrika_list_offline_conversion_uploads` | [GET …/offline_conversions/uploadings](https://yandex.ru/dev/metrika/ru/management/openapi/offline_conversions/findAll_1) |
+| `metrika_get_offline_conversion_upload` | [GET …/offline_conversions/uploading/{id}](https://yandex.ru/dev/metrika/ru/management/openapi/offline_conversions/findById_1) |
+
+## Wordstat (Search API v2)
+
+All four methods are covered: GetTop `/topRequests`, GetDynamics `/dynamics`, GetRegionsDistribution `/regions`, GetRegionsTree `/getRegionsTree`. GetTop now passes `devices` and bounds `numPhrases` 1..2000.
+
 ## Direct AgencyClients
 
 `direct_list_agency_clients` → [AgencyClients.get](https://yandex.ru/dev/direct/doc/ru/agencyclients/get) (10 units + 1 per client, [units](https://yandex.ru/dev/direct/doc/ru/concepts/units)). Returns Login, ClientId, ClientInfo, Archived, Currency, CreatedAt, Type; no phones or representatives. Set `YANDEX_DIRECT_CLIENT_LOGIN` to a returned Login to work on that client.

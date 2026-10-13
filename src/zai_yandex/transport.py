@@ -368,3 +368,37 @@ class JsonHttpClient:
                         break
                     await asyncio.sleep(delay)
         self._raise_final(last_error)
+
+    async def request_multipart(
+        self,
+        method: str,
+        url: str,
+        *,
+        files: dict[str, tuple[str, bytes, str]],
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Send one multipart/form-data upload. Never retried: uploads are not idempotent."""
+        size = sum(len(content) for _, content, _ in files.values())
+        if size > self.max_request_bytes:
+            raise ProviderRequestTooLarge("provider request exceeded the configured byte limit")
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=False) as client:
+                await self._admit_attempt(1)
+                response = await client.request(method, url, headers=headers, params=params, files=files)
+        except httpx.TimeoutException as exc:
+            raise ProviderTimeoutError("provider request timed out") from exc
+        except httpx.TransportError as exc:
+            raise ProviderTransportError("provider transport failed") from exc
+        self._validate_response_size(response)
+        if response.status_code == 429:
+            raise self._rate_limit_error(response)
+        if response.status_code >= 400:
+            raise self._http_error(response)
+        try:
+            value = response.json() if response.content else {}
+        except ValueError as exc:
+            raise ProviderResponseError("provider returned invalid JSON") from exc
+        if not isinstance(value, dict):
+            raise ProviderResponseError("provider returned non-object JSON")
+        return value

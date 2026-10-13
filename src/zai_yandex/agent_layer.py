@@ -49,6 +49,7 @@ GUIDE_TOPICS = (
     "wordstat-operators",
     "prepare-apply",
     "errors",
+    "offline-conversions",
 )
 
 
@@ -67,12 +68,13 @@ def build_instructions(surface: Surface, update_hint: str | None = None) -> str:
         "Start: direct_list_campaigns / metrika_list_counters / webmaster_list_hosts to get IDs. "
         "Never guess IDs.\n"
         "Reports: direct_get_statistics, metrika_report (period compare), webmaster_get_summary; raw rows via "
-        "metrika_logs_* (evaluate first). Agencies: direct_list_agency_clients.\n"
+        "metrika_logs_* (evaluate first). Offline conversions: metrika_validate_offline_conversions first. "
+        "Agencies: direct_list_agency_clients.\n"
         "Costs: Direct calls spend API units (yandex://guide/api-units); Wordstat and Search submit are paid.\n"
         "Writes: prepare -> show diff/cost -> operator accepts approval -> apply with idempotency_key; "
         "reuse the key on retry.\n"
         "Skills: yandex-direct-audit, metrika-compare-periods, webmaster-seo-health, "
-        "wordstat-demand-research, direct-safe-change; or yandex://playbook.\n"
+        "wordstat-demand-research, direct-safe-change, metrika-offline-conversions; or yandex://playbook.\n"
         "Errors: retry only if retryable; follow hint."
     )
     return f"{router}\n{update_hint}" if update_hint else router

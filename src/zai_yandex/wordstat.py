@@ -10,6 +10,29 @@ DEVICES = frozenset({"DEVICE_ALL", "DEVICE_DESKTOP", "DEVICE_PHONE", "DEVICE_TAB
 PERIODS = frozenset({"PERIOD_DAILY", "PERIOD_WEEKLY", "PERIOD_MONTHLY"})
 
 
+MAX_TOP_PHRASES = 2000
+
+
+def validate_devices(devices: Any) -> list[str]:
+    if devices is None:
+        return ["DEVICE_ALL"]
+    if (
+        not isinstance(devices, list)
+        or not 1 <= len(devices) <= 3
+        or any(device not in DEVICES for device in devices)
+        or len(set(devices)) != len(devices)
+        or ("DEVICE_ALL" in devices and len(devices) != 1)
+    ):
+        raise ValueError("invalid Wordstat devices")
+    return list(devices)
+
+
+def validate_num_phrases(value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= MAX_TOP_PHRASES:
+        raise ValueError(f"num_phrases must be 1..{MAX_TOP_PHRASES}")
+    return value
+
+
 def request_body(operation: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if operation == "getRegionsTree":
         if arguments:
@@ -20,17 +43,7 @@ def request_body(operation: str, arguments: dict[str, Any]) -> dict[str, Any]:
     phrase = arguments["phrase"]
     if not isinstance(phrase, str) or not phrase.strip() or len(phrase) > 400:
         raise ValueError("phrase must contain 1-400 characters")
-    devices = arguments.get("devices")
-    if devices is None:
-        devices = ["DEVICE_ALL"]
-    if (
-        not isinstance(devices, list)
-        or not 1 <= len(devices) <= 3
-        or any(device not in DEVICES for device in devices)
-        or len(set(devices)) != len(devices)
-        or ("DEVICE_ALL" in devices and len(devices) != 1)
-    ):
-        raise ValueError("invalid Wordstat devices")
+    devices = validate_devices(arguments.get("devices"))
     payload = {"phrase": phrase, "devices": devices}
     if operation == "regions":
         region = arguments.get("region", "REGION_ALL")

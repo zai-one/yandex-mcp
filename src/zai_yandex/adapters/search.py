@@ -31,13 +31,15 @@ class YandexSearchAdapter:
         return {"Authorization": f"Api-Key {self.api_key}", "Accept": "application/json"}
 
     async def wordstat_get_top(
-        self, phrase: str, regions: list[str], num_phrases: int = 10
+        self, phrase: str, regions: list[str], num_phrases: int = 10, devices: list[str] | None = None
     ) -> dict[str, Any]:
+        from zai_yandex.wordstat import validate_devices, validate_num_phrases
+
         payload = {
             "phrase": phrase,
-            "numPhrases": num_phrases,
+            "numPhrases": validate_num_phrases(num_phrases),
             "regions": regions,
-            "devices": ["DEVICE_ALL"],
+            "devices": validate_devices(devices),
             "folderId": self.folder_id,
         }
         raw = await self.coalescer.run(

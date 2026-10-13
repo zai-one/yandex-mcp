@@ -61,6 +61,10 @@ ADDED_TOOLS = {
     # Quota-spending Logs API writes behind YANDEX_METRIKA_LOGS_ENABLED + metrika write scope.
     "metrika_logs_create",
     "metrika_logs_cleanup",
+    "metrika_validate_offline_conversions",
+    "metrika_list_offline_conversion_uploads",
+    "metrika_get_offline_conversion_upload",
+    "metrika_upload_offline_conversions",
 }
 
 
@@ -86,9 +90,7 @@ async def test_all_44_original_contracts_and_real_read_adapters(tmp_path):
             "audience_create_pixel",
             "audience_create_pixel_viewers",
         }:
-            assert {"confirmation_hash", "idempotency_key"} <= set(
-                listed[name]["inputSchema"]["required"]
-            )
+            assert {"confirmation_hash", "idempotency_key"} <= set(listed[name]["inputSchema"]["required"])
         direct = (await client.call_tool("direct_list_campaigns", {})).data
         assert direct["result"]["Campaigns"][0]["Id"] == 7
         assert SECRET not in json.dumps(direct)
