@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Toolsets (`YANDEX_TOOLSETS`, `YANDEX_TOOLS`, `YANDEX_DISABLED_TOOLS`, `--toolsets`) and read-only mode (`YANDEX_READ_ONLY`, `--read-only`, driven by the reviewed annotations). Unset = previous surface.
+- Router `instructions`; compact descriptions for the five tools over 300 chars; error envelopes gain `hint` and `docs`.
+- Resources `yandex://toolsets`, `yandex://playbook`, `yandex://guide/{topic}`; prompts `campaign_audit`, `weekly_report`, `seo_audit`, `budget_scaling`.
+- Self-contained skills (`skills/`), Claude Code plugin + marketplace (`.claude-plugin/`), `server.json`, `scripts/token_budget.py` (enforced in tests).
+
 ## 0.5.1
 
 - Update check: a cached `latest` or `release_notes_url` is validated on read like a fresh GitHub answer; only plain

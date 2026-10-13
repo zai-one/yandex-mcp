@@ -46,9 +46,15 @@ line-length = 110
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
+[tool.ruff.lint.per-file-ignores]
+# Agent-facing prose tables read better one entry per line.
+"src/zai_yandex/agent_layer.py" = ["E501"]
+"src/zai_yandex/errors.py" = ["E501"]
+"src/zai_yandex/toolsets.py" = ["E501"]
+
 [project.urls]
 Homepage = "https://github.com/zai-one/yandex-mcp"
 Issues = "https://github.com/zai-one/yandex-mcp/issues"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "tests", "scripts", "contracts", "examples", "docs", "pyproject.toml", "uv.lock", "README.md", "README.ru.md", "INSTALL.md", "LICENSE", "NOTICE", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "mcp.example.json", ".env.example", "SOURCE_PROVENANCE.json", "third_party", "vendor"]
+include = ["src", "tests", "scripts", "contracts", "examples", "docs", "pyproject.toml", "uv.lock", "skills", ".claude-plugin", "server.json", "README.md", "README.ru.md", "INSTALL.md", "LICENSE", "NOTICE", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "mcp.example.json", ".env.example", "SOURCE_PROVENANCE.json", "third_party", "vendor"]

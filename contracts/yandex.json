@@ -354,7 +354,7 @@
         "additionalProperties": true,
         "type": "object"
       },
-      "description": "Execute one accepted, allowlisted Direct write (Campaigns.update) with readback.\n\nFail-closed: needs the runtime flag, an accepted approval whose hash\nmatches these exact changes, and a bounded allowlisted service/method.\nThe approval is consumed exactly once (idempotency); after the write the\naffected campaigns are re-read to confirm the applied state."
+      "description": "Apply an accepted Direct change set (from `direct_prepare_changes`, approved by the operator) exactly once with approval_id + idempotency_key; re-reads campaigns to verify. Writes; spends units. Fails closed without approval."
     },
     "direct_write": {
       "inputSchema": {
@@ -396,7 +396,7 @@
         "additionalProperties": true,
         "type": "object"
       },
-      "description": "Autonomously apply a Direct write across campaigns/adgroups/ads/keywords/bids.\n\nAllowlisted service/method only (add/update/delete/suspend/resume/archive/\nmoderate, bids set/setAuto). Idempotent, with a post-write readback of the\naffected objects. campaigns:update also has an approval-gated path\n(direct_apply_changes) for a stricter human gate."
+      "description": "Generic idempotent Direct API write (service, method, items) behind the server write flag and audit log. Prefer `direct_prepare_changes` -> `direct_apply_changes` for campaign changes. Writes; spends units; confirm with the user first."
     },
     "metrika_list_counters": {
       "inputSchema": {

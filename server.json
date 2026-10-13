@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.zai-one/yandex-mcp",
+  "title": "Yandex MCP",
+  "description": "Yandex Direct, Metrika, Webmaster, Wordstat/Search and Audience for AI assistants, with toolsets, read-only mode and approval-gated writes.",
+  "repository": {"url": "https://github.com/zai-one/yandex-mcp", "source": "github"},
+  "version": "0.5.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "zai-yandex-mcp",
+      "version": "0.5.1",
+      "transport": {"type": "stdio"},
+      "environmentVariables": [
+        {"name": "YANDEX_METRIKA_TOKEN_FILE", "description": "File with a Metrika OAuth token", "isRequired": false, "format": "filepath"},
+        {"name": "YANDEX_DIRECT_TOKEN_FILE", "description": "File with a Direct OAuth token", "isRequired": false, "format": "filepath"},
+        {"name": "YANDEX_WEBMASTER_TOKEN_FILE", "description": "File with a Webmaster OAuth token", "isRequired": false, "format": "filepath"},
+        {"name": "YANDEX_AUDIENCE_TOKEN_FILE", "description": "File with an Audience OAuth token", "isRequired": false, "format": "filepath"},
+        {"name": "YANDEX_SEARCH_API_KEY_FILE", "description": "File with a Yandex Cloud Search API key", "isRequired": false, "format": "filepath"},
+        {"name": "YANDEX_SEARCH_FOLDER_ID", "description": "Yandex Cloud folder id for Search API", "isRequired": false},
+        {"name": "YANDEX_STATE_PATH", "description": "SQLite state path", "isRequired": false, "format": "filepath"},
+        {"name": "YANDEX_TOOLSETS", "description": "all (default), default (read toolsets) or comma list", "isRequired": false},
+        {"name": "YANDEX_READ_ONLY", "description": "1 hides every write/prepare/paid-submit tool", "isRequired": false}
+      ]
+    }
+  ]
+}
