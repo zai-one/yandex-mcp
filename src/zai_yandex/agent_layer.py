@@ -5,7 +5,7 @@ from __future__ import annotations
 from importlib.resources import files
 from typing import Any
 
-from zai_yandex.toolsets import ALL_TOOLSETS, Surface
+from zai_yandex.toolsets import Surface
 
 # Overrides only where the original docstring was over the 300-char budget.
 TOOL_DESCRIPTIONS: dict[str, str] = {
@@ -54,6 +54,8 @@ GUIDE_TOPICS = (
     "prepare-apply",
     "errors",
     "offline-conversions",
+    "accounts",
+    "tool-map",
 )
 
 
@@ -63,35 +65,46 @@ def guide(topic: str) -> str:
     return files("zai_yandex").joinpath(f"resources/guide/{topic}.md").read_text(encoding="utf-8")
 
 
+# Router: intent words (ru/en, also used by the routing eval) -> first tool | skill | guide.
+# Each line names where the full detail lives so the short router loses no capability.
+ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
+    # (route id, intent words, first tool, skill or "", guide topic)
+    ("direct_audit", "аудит Директа, CPA вырос, сливаем", "direct_list_campaigns", "yandex-direct-audit", "audit-checklist"),
+    ("direct_stats", "статистика Директа, расход, потратили, клики, запросы", "direct_get_statistics", "yandex-direct-audit", "api-units"),
+    ("direct_change", "изменить ставки/бюджет, пауза кампании, минус-слова", "direct_prepare_changes", "direct-safe-change", "prepare-apply"),
+    ("direct_extra", "ставки фраз, корректировки, ретаргетинг, фиды, лиды, Changes", "direct_get_keyword_bids", "", "tool-map"),
+    ("agency", "агентство, клиенты, аккаунты, песочница, потестить", "direct_list_agency_clients", "yandex-agency-accounts", "accounts"),
+    ("metrika_compare", "Метрика, трафик, цели, сравнить периоды", "metrika_list_counters", "metrika-compare-periods", "metrics-dimensions"),
+    ("metrika_logs", "сырые визиты, выгрузка логов", "metrika_logs_evaluate", "", "tool-map"),
+    ("offline", "офлайн-конверсии, CRM, CSV", "metrika_validate_offline_conversions", "metrika-offline-conversions", "offline-conversions"),
+    ("seo", "Вебмастер, SEO, индексация, ИКС, страницы", "webmaster_list_hosts", "webmaster-seo-health", "diagnostics-codes"),
+    ("wordstat", "Wordstat, спрос, частотность, семантика", "yandex_wordstat_get_top", "wordstat-demand-research", "wordstat-operators"),
+    ("serp", "выдача, позиции, SERP", "yandex_serp_prepare", "", "tool-map"),
+    ("audience", "аудитории, сегменты, пиксель", "audience_list_segments", "", "tool-map"),
+    ("errors", "ошибка, баллы, лимит", "", "", "errors"),
+)  # fmt: skip
+
+
 def build_instructions(
     surface: Surface,
     update_hint: str | None = None,
     accounts: tuple[str, ...] = (),
     direct_sandbox: bool = False,
 ) -> str:
-    active = "all" if surface.toolsets == ALL_TOOLSETS else ",".join(surface.toolsets)
     mode = "read-only" if surface.read_only else "read+write"
-    router = (
-        "Yandex MCP: Direct, Metrika, Webmaster, Wordstat/Search API and Audience for configured accounts. "
-        f"Toolsets: {active}; {mode} (see yandex://toolsets).\n"
-        "Start: direct_list_campaigns / metrika_list_counters / webmaster_list_hosts to get IDs. "
-        "Never guess IDs.\n"
-        "Reports: direct_get_statistics, metrika_report (period compare), webmaster_get_summary; raw rows via "
-        "metrika_logs_* (evaluate first). Offline conversions: metrika_validate_offline_conversions first. "
-        "Agencies: direct_list_agency_clients. Rare reads (bids, modifiers, feeds, Changes, owners, query analytics): toolsets direct_extra/webmaster_extra.\n"
-        "Costs: Direct calls spend API units (yandex://guide/api-units); Wordstat and Search submit are paid.\n"
-        "Writes: prepare -> show diff/cost -> operator accepts approval -> apply with idempotency_key; "
-        "reuse the key on retry.\n"
-        "Skills: yandex-direct-audit, metrika-compare-periods, webmaster-seo-health, "
-        "wordstat-demand-research, direct-safe-change, metrika-offline-conversions; or yandex://playbook.\n"
-        "Errors: retry only if retryable; follow hint."
-    )
+    lines = [
+        f"Yandex MCP: Direct, Metrika, Webmaster, Wordstat, Search, Audience ({mode}; yandex://toolsets).",
+        "Intent -> first tool; skill; yandex://guide/<topic>. Never guess IDs.",
+    ]
+    for _, words, tool, skill, topic in ROUTES:
+        lines.append(f"- {words}: " + "; ".join(part for part in (tool, skill, topic) if part))
+    lines.append("Writes: prepare -> user approval -> apply + idempotency_key. Wordstat/SERP are paid.")
+    lines.append("Unsure? yandex://playbook (skills) or yandex://guide/tool-map (all tools, toolsets).")
     if direct_sandbox:
-        router += (
-            "\nDirect SANDBOX: test data only (api-sandbox), safe to rehearse writes; say so in answers."
-        )
+        lines.append("Direct SANDBOX: test data only (api-sandbox); say so in answers.")
     if accounts:
-        router += f"\nAccounts: {len(accounts)} profiles; yandex_list_accounts, then account=<name> per call."
+        lines.append(f"Accounts: {len(accounts)} profiles; yandex_list_accounts, then account=<name> per call.")
+    router = "\n".join(lines)
     return f"{router}\n{update_hint}" if update_hint else router
 
 
@@ -120,6 +133,7 @@ def register_agent_layer(server: Any, surface: Surface) -> None:
             "| Weekly report | metrika_report with compare dates + direct_get_statistics | weekly_report |\n"
             "| SEO health | webmaster summary -> diagnostics -> indexing -> queries | seo_audit |\n"
             "| Budget scaling | statistics by campaign -> headroom -> prepare change | budget_scaling |\n\n"
+            "Skills (skills/<name>/SKILL.md): " + ", ".join(sorted({r[3] for r in ROUTES if r[3]})) + ".\n\n"
             "Rules: never guess IDs; minimal FieldNames (units); compare equal periods; flag sampling; "
             "writes only via prepare -> approval -> apply.\n\nGuides:\n" + topics + "\n"
         )

@@ -40,10 +40,21 @@ Try asking your assistant:
 
 - Actively maintained by ZAI.ONE: current version 0.5.1; release notes in [CHANGELOG.md](CHANGELOG.md) and [Releases](https://github.com/zai-one/yandex-mcp/releases).
 - Built-in update check: ask the assistant to run `yandex_check_update` (public GitHub API, no credentials, cached; nothing is installed automatically; `YANDEX_DISABLE_UPDATE_CHECK=1` turns it off).
-- Follows current MCP practice: tool annotations (read-only / destructive hints), toolsets and read-only mode, server `instructions`, prompts and resources, structured errors with recovery hints, secrets kept out of tool output, a token budget for tool descriptions enforced in tests.
+- Follows current MCP practice: tool annotations (read-only / destructive hints), toolsets and read-only mode, server `instructions`, prompts and resources, structured errors with recovery hints, secrets kept out of tool output, a token budget for tool descriptions enforced in tests, and a routing eval: 23 messy RU/EN requests must reach the right skill, guide and tool from the short router.
 - CI runs the test suite on Linux and Windows for every pull request.
 
 ## Quick start
+
+**In one minute** (Python 3.12+ and uv installed, a Metrika OAuth token at hand):
+
+```sh
+git clone https://github.com/zai-one/yandex-mcp.git && cd yandex-mcp
+uv sync --frozen --extra standalone
+uv run --frozen --extra standalone python scripts/configure.py   # paste the token into the hidden prompt
+```
+
+Merge the generated `mcp-client.json` into your client (Claude Desktop, Cursor...), restart it and ask: *"List my Metrika counters"*. Tip: add `"YANDEX_TOOLSETS": "default"` to the env for a smaller tool list; the assistant finds everything else through the router (`yandex://guide/tool-map`). Details below.
+
 
 Prefer a ready package? [Install the release and generate your client configuration](INSTALL.md#install-a-release-package). No source checkout is required.
 
