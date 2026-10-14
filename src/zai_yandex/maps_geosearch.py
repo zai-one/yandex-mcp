@@ -267,6 +267,9 @@ def register_maps_tools(
 
     async def run(kind: Literal["biz", "geo"], detail: str, **arguments: Any) -> dict[str, Any]:
         try:
+            # Same account boundary as the provider tools (scope alone is not enough): a token minted for
+            # another account must not spend this server's Geosearch license quota.
+            runtime.identity()
             params = build_params(kind, **arguments)
             if detail not in {"summary", "full"}:
                 raise ValueError("detail must be summary or full")
