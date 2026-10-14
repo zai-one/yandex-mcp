@@ -63,7 +63,7 @@ def test_toolsets_cover_every_reviewed_tool():
 
 async def test_router_resources_and_prompts(tmp_path):
     server = create_server(config(tmp_path), transport="stdio", surface=build_surface("default"))
-    assert len(server.instructions) <= 1700 and "direct-safe-change" in server.instructions
+    assert len(server.instructions) <= 1800 and "direct-safe-change" in server.instructions
     async with Client(server) as client:
         toolsets = json.loads((await client.read_resource("yandex://toolsets"))[0].text)
         assert (
@@ -72,7 +72,7 @@ async def test_router_resources_and_prompts(tmp_path):
         assert "Units" in (await client.read_resource("yandex://guide/api-units"))[0].text
         assert "yandex://guide/errors" in (await client.read_resource("yandex://playbook"))[0].text
         prompts = {prompt.name for prompt in await client.list_prompts()}
-        assert prompts == {"campaign_audit", "weekly_report", "seo_audit", "budget_scaling"}
+        assert prompts == {"campaign_audit", "weekly_report", "seo_audit", "budget_scaling", "yandex_setup"}
         rendered = await client.get_prompt("budget_scaling", {"target_cpa": "900 RUB"})
         assert "Do not apply" in rendered.messages[0].content.text
 

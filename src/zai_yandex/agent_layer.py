@@ -42,6 +42,11 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "Check GitHub for a newer zai-yandex-mcp release and suggest the update command. Suggest-only, "
         "24h cache unless force=true; never calls Yandex."
     ),
+    "yandex_setup_toolsets": (
+        "Pick Yandex platforms (direct, metrika, webmaster, audience, wordstat, serp, maps, manage) or a preset "
+        "(direct-only, analytics, seo, everything) -> YANDEX_TOOLSETS + measured token cost. write=true saves it "
+        "to mcp.local.json (stdio). No secrets."
+    ),
     "yandex_auth_status": (
         "Show which Yandex OAuth services have tokens (never values). Pending device-flow user_code if any. Local."
     ),
@@ -90,6 +95,7 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     ("direct_extra", "ставки фраз, аукцион, быстрые ссылки, картинки, фиды, лиды, Changes", "direct_get_keyword_bids", "", "tool-map"),
     ("agency", "агентство, клиенты, аккаунты, песочница, потестить", "direct_list_agency_clients", "yandex-agency-accounts", "accounts"),
     ("auth", "подключить, OAuth, токен, connect", "yandex_auth_start", "", "oauth"),
+    ("setup", "настройка, выбрать платформы, сэкономить токены (default=all), setup", "yandex_setup_toolsets", "", "tool-map"),
     ("metrika_compare", "Метрика, трафик, цели, сравнить периоды", "metrika_list_counters", "metrika-compare-periods", "metrics-dimensions"),
     ("metrika_logs", "сырые визиты, выгрузка логов", "metrika_logs_evaluate", "", "tool-map"),
     ("offline", "офлайн-конверсии, CRM, CSV", "metrika_validate_offline_conversions", "metrika-offline-conversions", "offline-conversions"),

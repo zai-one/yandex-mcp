@@ -1,6 +1,6 @@
 """Token budget for the agent-facing surface (enforced in CI via tests/test_agent_layer.py).
 
-Checks: router instructions <= 1700 chars (1800 with the key-gated Geosearch line), each tool
+Checks: router instructions <= 1800 chars (1900 with the key-gated Geosearch line), each tool
 description <= 300 chars, tools/list JSON per preset <= BUDGET_BYTES, skills frontmatter and
 file references valid.
 Usage: python scripts/token_budget.py
@@ -19,9 +19,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUDGET_BYTES = {"default": 34_000, "all": 92_000, "default+maps": 37_000}
 # Estimated tokens an agent pays at startup: instructions + tools/list + every skill frontmatter.
-STARTUP_TOKENS = {"default": 9_500, "all": 24_500, "default+maps": 10_500}
-# default/all stay at 1700; the Geosearch router line exists only with a key (default+maps).
-INSTRUCTIONS_CHARS = {"default": 1700, "all": 1700, "default+maps": 1800}
+STARTUP_TOKENS = {"default": 10_000, "all": 24_500, "default+maps": 11_000}
+# default/all: 1800 (incl. the setup line); the Geosearch line exists only with a key.
+INSTRUCTIONS_CHARS = {"default": 1800, "all": 1800, "default+maps": 1900}
 
 
 def estimate_tokens(text: str) -> int:
@@ -91,21 +91,46 @@ async def surface_sizes(config) -> dict[str, dict]:
     return out
 
 
-def main() -> int:
-    sys.path.insert(0, str(ROOT / "src"))
+async def preset_costs(config) -> dict[str, dict[str, int]]:
+    """Measured cost of each setup preset (no Geosearch key): tools, tools/list bytes, ~tokens."""
+    from fastmcp import Client
+
+    from zai_yandex.server import create_server
+    from zai_yandex.setup_toolsets import PRESETS, resolve_toolsets
+    from zai_yandex.toolsets import build_surface
+
+    out = {}
+    for preset in PRESETS:
+        surface = build_surface(resolve_toolsets(preset=preset))
+        server = create_server(config, transport="stdio", surface=surface)
+        async with Client(server) as client:
+            tools = await client.list_tools()
+        payload = json.dumps([tool.model_dump(mode="json", exclude_none=True) for tool in tools])
+        tokens = estimate_tokens((server.instructions or "") + payload)
+        out[preset] = {"tools": len(tools), "bytes": len(payload.encode()), "tokens": tokens}
+    return out
+
+
+def synthetic_config(tmp: str):
     from zai_yandex.config import ServiceConfig
 
+    return ServiceConfig(
+        state_path=Path(tmp) / "state.sqlite",
+        direct_token="synthetic",
+        metrika_token="synthetic",
+        search_api_key="synthetic",
+        search_folder_id="synthetic-folder",
+        webmaster_token="synthetic",
+        audience_token="synthetic",
+    )
+
+
+def main() -> int:
+    sys.path.insert(0, str(ROOT / "src"))
     with tempfile.TemporaryDirectory() as tmp:
-        config = ServiceConfig(
-            state_path=Path(tmp) / "state.sqlite",
-            direct_token="synthetic",
-            metrika_token="synthetic",
-            search_api_key="synthetic",
-            search_folder_id="synthetic-folder",
-            webmaster_token="synthetic",
-            audience_token="synthetic",
-        )
+        config = synthetic_config(tmp)
         sizes = asyncio.run(surface_sizes(config))
+        presets = asyncio.run(preset_costs(config))
     problems = skill_problems()
     for preset, info in sizes.items():
         if info["bytes"] > BUDGET_BYTES[preset]:
@@ -116,7 +141,7 @@ def main() -> int:
         if info["startup_tokens"] > STARTUP_TOKENS[preset]:
             problems.append(f"{preset}: startup ~{info['startup_tokens']} tokens > {STARTUP_TOKENS[preset]}")
         problems += [f"{preset}: description over 300 chars: {name}" for name in info["long_descriptions"]]
-    print(json.dumps({"sizes": sizes, "problems": problems}, indent=2))
+    print(json.dumps({"sizes": sizes, "presets": presets, "problems": problems}, indent=2))
     return 1 if problems else 0
 
 

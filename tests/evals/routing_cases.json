@@ -213,5 +213,15 @@
     "request": "геопоиск: где находится улица Ленина 10 в Твери",
     "route": "maps",
     "tool": "maps_search_places"
+  },
+  {
+    "request": "только поставил сервер, хочу оставить лишь Директ и Метрику, чтобы сэкономить токены",
+    "route": "setup",
+    "tool": "yandex_setup_toolsets"
+  },
+  {
+    "request": "помоги с настройкой: какие платформы яндекса включить?",
+    "route": "setup",
+    "tool": "yandex_setup_toolsets"
   }
 ]

@@ -10,7 +10,7 @@ from typing import Any, Literal
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 
-from zai_yandex import __version__
+from zai_yandex import __version__, setup_toolsets
 from zai_yandex.agent_layer import TOOL_DESCRIPTIONS, build_instructions, register_agent_layer
 from zai_yandex.audience_tools import register_audience_tools
 from zai_yandex.auth_tools import register_auth_tools
@@ -25,6 +25,7 @@ from zai_yandex.metrika_reports import register_reports
 from zai_yandex.offline_conversions import register_offline_conversion_tools
 from zai_yandex.onboarding import check_config, load_config
 from zai_yandex.runtime import Runtime
+from zai_yandex.setup_toolsets import register_setup_tool
 from zai_yandex.tool_annotations import annotations_for
 from zai_yandex.toolsets import Surface, build_surface, surface_from_env
 from zai_yandex.update_check import check_for_update, refresh_in_background, startup_hint
@@ -190,6 +191,7 @@ def create_server(
     register_update_tool(server, config, transport, surface)
     register_accounts_tool(server, config, transport, surface)
     register_auth_tools(server, config, transport, surface, runtime=runtime)
+    register_setup_tool(server, config, transport, surface)
     register_agent_layer(server, surface)
     return server
 
@@ -211,7 +213,9 @@ def main() -> None:
     )
     args = parser.parse_args()
     try:
-        load_config(args.config or default_config_file())
+        config_file = args.config or default_config_file()
+        load_config(config_file)
+        setup_toolsets.ACTIVE_CONFIG = config_file
         apply_defaults()
         config = ServiceConfig.from_env()
         if args.check_config:

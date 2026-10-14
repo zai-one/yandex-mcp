@@ -6,9 +6,18 @@
 
 **Bring Yandex advertising, analytics and search data into one conversation.**
 
-> MCP server for Yandex Direct, Metrika (incl. Logs API and offline conversions), Webmaster, Wordstat, Search API and Audience: 97 tools in one server, with toolsets, read-only mode and guarded writes.
+> MCP server for Yandex Direct, Metrika (incl. Logs API and offline conversions), Webmaster, Wordstat, Search API and Audience: 127 tools in one server, with toolsets, read-only mode and guarded writes.
 
 Review Direct campaigns, examine Metrika statistics, build bounded Audience segments, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects six API groups; configure the services relevant to your work and add others as you need them.
+
+**Default: every tool (`all`, 127 tools, ~22k tokens per session start).** To save tokens, pick platforms with `YANDEX_TOOLSETS` - the setup wizard (`yandex-mcp-setup`) or the `yandex_setup` prompt asks which you need and writes it for you. Measured tools/list + router cost (no Geosearch key):
+
+| Preset | Platforms | Tools | ~Tokens |
+|---|---|---|---|
+| `everything` (default) | all | 127 | 21,986 |
+| `seo` | webmaster, wordstat, serp | 55 | 8,971 |
+| `direct-only` | direct | 40 | 8,055 |
+| `analytics` | metrika, audience | 30 | 5,786 |
 
 [Quick start](#quick-start) · [Connect your assistant](#connect-your-assistant) · [Issues](https://github.com/zai-one/yandex-mcp/issues)
 
@@ -33,7 +42,7 @@ Try asking your assistant:
 
 - Six Yandex API groups in one process; enable only the toolsets you need (`YANDEX_TOOLSETS`, `YANDEX_READ_ONLY`).
 - Writes (Direct changes, Audience creates, Metrika uploads and Logs requests) are off until enabled by an env flag and use confirmation hashes or idempotency keys.
-- Agent layer: router instructions, 4 prompts, `yandex://playbook` and guide resources, self-contained skills, structured errors with `hint`.
+- Agent layer: router instructions, 5 prompts (incl. `yandex_setup`), `yandex://playbook` and guide resources, self-contained skills, structured errors with `hint`.
 - Compared with other Yandex MCP servers on GitHub: [SvechaPVL/yandex-mcp](https://github.com/SvechaPVL/yandex-mcp) (132 tools), [skiddgoddamn/yandex-marketing-mcp](https://github.com/skiddgoddamn/yandex-marketing-mcp) (153 tools) and [webkoth/yandex-mcp](https://github.com/webkoth/yandex-mcp) (125 tools) still expose more *total* endpoints (often one tool per add/update/delete); this server matches them on documented Direct+Webmaster **read** methods that matter, keeps writes behind per-service gates, and ships bounded typed responses with CI on Linux and Windows.
 
 ## Maintained and up to date
@@ -138,7 +147,7 @@ Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (o
 
 ## Toolsets and read-only mode
 
-Unset = every tool (126; previous behaviour) - opt-in toolsets below are opt-in only relative to `default`. `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics). Administration lives in opt-in `metrika_manage`, `webmaster_manage` and `audience_manage` (grants, delegates, counters, filters, segments, labels, annotations, uploads, hosts, feeds, Audience segments; catalogue in `yandex://guide/management`), all writes through prepare -> approval -> apply. Yandex Maps organization search (`maps_geosearch`: `maps_search_organizations`, `maps_search_places`) is added only when `YANDEX_MAPS_GEOSEARCH_API_KEY` (or `YANDEX_MAPS_GEOSEARCH_API_KEY_FILE`, owner-private) is set - a separate Geosearch key from the developer cabinet; results are not cached and keep Yandex attribution per the Maps API terms (`yandex://guide/maps-geosearch`). Competitor comparison: [docs/COVERAGE_DIFF.md](docs/COVERAGE_DIFF.md).
+Unset = every tool (127; previous behaviour). Platforms: `yandex_setup_toolsets(platforms|preset, write=true)` (stdio) sets only `YANDEX_TOOLSETS` in the active `mcp.local.json` (it wins over client env; restart to apply) - opt-in toolsets below are opt-in only relative to `default`. `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics). Administration lives in opt-in `metrika_manage`, `webmaster_manage` and `audience_manage` (grants, delegates, counters, filters, segments, labels, annotations, uploads, hosts, feeds, Audience segments; catalogue in `yandex://guide/management`), all writes through prepare -> approval -> apply. Yandex Maps organization search (`maps_geosearch`: `maps_search_organizations`, `maps_search_places`) is added only when `YANDEX_MAPS_GEOSEARCH_API_KEY` (or `YANDEX_MAPS_GEOSEARCH_API_KEY_FILE`, owner-private) is set - a separate Geosearch key from the developer cabinet; results are not cached and keep Yandex attribution per the Maps API terms (`yandex://guide/maps-geosearch`). Competitor comparison: [docs/COVERAGE_DIFF.md](docs/COVERAGE_DIFF.md).
 
 | Variable | Effect |
 |---|---|

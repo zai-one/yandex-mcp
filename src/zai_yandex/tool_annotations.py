@@ -126,6 +126,8 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
     (
         PREPARE,
         (
+            # Writes only YANDEX_TOOLSETS into the local mcp.local.json; never calls Yandex.
+            "yandex_setup_toolsets",
             "direct_prepare_changes",
             *(names[1] for names in _MANAGE),
             "direct_prepare_write",

@@ -24,7 +24,8 @@ TOOLSETS: dict[str, dict[str, Any]] = {
     "account": {
         "description": (
             "Update check, named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set), "
-            "OAuth self-setup (start/finish write local token files; stdio only)."
+            "OAuth self-setup (start/finish write local token files; stdio only), platform picker "
+            "yandex_setup_toolsets (writes YANDEX_TOOLSETS to mcp.local.json; stdio only)."
         ),
         "tools": (
             "yandex_check_update",
@@ -32,6 +33,7 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             "yandex_auth_status",
             "yandex_auth_start",
             "yandex_auth_finish",
+            "yandex_setup_toolsets",
         ),
     },
     "direct_read": {

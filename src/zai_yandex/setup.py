@@ -113,6 +113,20 @@ def configure(directory: Path) -> Path:
             values[key] = str(source.resolve())
         else:
             values[key] = _required(key + ": ")
+    if SERVICE == "yandex":
+        from .setup_toolsets import PLATFORMS, PRESET_COST, PRESETS, resolve_toolsets
+
+        print("Default is every tool (all). Pick platforms to save tokens (measured ~tokens per preset):")
+        for name, cost in PRESET_COST.items():
+            print(f"  {name}: {', '.join(PRESETS[name])} - {cost['tools']} tools, ~{cost['tokens']} tokens")
+        answer = input(f"Preset or comma list of {', '.join(PLATFORMS)} [everything]: ").strip()
+        names = [item.strip() for item in answer.split(",") if item.strip()]
+        if not names or names == ["everything"]:
+            values["YANDEX_TOOLSETS"] = "all"
+        elif len(names) == 1 and names[0] in PRESETS:
+            values["YANDEX_TOOLSETS"] = resolve_toolsets(preset=names[0])
+        else:
+            values["YANDEX_TOOLSETS"] = resolve_toolsets(names)
     root.mkdir(parents=True, exist_ok=True)
     _private_directory(root / "secrets")
     for path, value in pending.items():

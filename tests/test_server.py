@@ -46,6 +46,7 @@ ADDED_TOOLS = (
     set(DIRECT_EXTRA_TOOLS)
     | set(WEBMASTER_EXTRA_TOOLS)
     | {name for names in MANAGEMENT_TOOLS.values() for name in names}
+    | {"yandex_setup_toolsets"}
     | {"direct_prepare_write", "direct_apply_write"}
     | {
         "metrika_report",

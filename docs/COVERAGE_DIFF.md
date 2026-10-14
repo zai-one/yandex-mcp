@@ -8,14 +8,14 @@ references (Direct `https://yandex.ru/dev/direct/doc/ru/`, Metrika
 Audience `https://yandex.ru/dev/audience/ru/llms.txt`, Wordstat/Search API).
 
 Competitors expose one MCP tool per CRUD verb (122–150 tools). We keep the default
-`tools/list` flat (52 tools, 32 KB) and reach the same methods through opt-in toolsets:
+`tools/list` flat (53 tools, 33 KB) and reach the same methods through opt-in toolsets:
 allowlisted generic tools with a declarative catalogue (`yandex://guide/management`) and
 the prepare -> approval -> apply -> reconcile flow for every write.
 
 | | zai-one (this change) | SvechaPVL | skiddgoddamn | webkoth | axisrow |
 |---|---|---|---|---|---|
-| MCP tools (all / default) | 126 / 52 (+2 Geosearch with key) | ~122 | ~150 | ~85 registered | ~110 |
-| Callable documented methods | 126 tools + 126 catalogue operations + 77 Direct write methods | ≈ tools | ≈ tools | ≈ tools | ≈ tools |
+| MCP tools (all / default) | 127 / 53 (+2 Geosearch with key) | ~122 | ~150 | ~85 registered | ~110 |
+| Callable documented methods | 127 tools + 126 catalogue operations + 77 Direct write methods | ≈ tools | ≈ tools | ≈ tools | ≈ tools |
 | Human approval bound to account + exact request | yes (all writes) | no | no | no | no |
 | Idempotency ledger, readback, reconcile | yes | no | no | no | no |
 | Zero-config start + OAuth device flow | yes | no | partial (token env) | no | yes (plugin OAuth) |

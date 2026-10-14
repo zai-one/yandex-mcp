@@ -4,12 +4,13 @@ Every tool by toolset. Enable a toolset with YANDEX_TOOLSETS (default = marked *
 yandex_list_accounts appears only with YANDEX_ACCOUNTS_FILE.
 
 ## account*
-Update check, named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set), OAuth self-setup (start/finish write local token files; stdio only).
+Update check, named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set), OAuth self-setup (start/finish write local token files; stdio only), platform picker yandex_setup_toolsets (writes YANDEX_TOOLSETS to mcp.local.json; stdio only).
 - `yandex_check_update` - Check GitHub for a newer zai-yandex-mcp release and suggest the update command.
 - `yandex_list_accounts` - Lists configured named accounts (local).
 - `yandex_auth_status` - Show which Yandex OAuth services have tokens (never values).
 - `yandex_auth_start` - Start Yandex OAuth device-code flow: returns verification URL + user_code.
 - `yandex_auth_finish` - Poll pending device-code auth
+- `yandex_setup_toolsets` - Pick Yandex platforms (direct, metrika, webmaster, audience, wordstat, serp, maps, manage) or a preset (direct-only, analytics, seo, everything) -> YA
 
 ## direct_read*
 Direct campaigns, inventory (ads, groups, keywords...), strategies, forecasts.
