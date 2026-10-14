@@ -87,10 +87,10 @@ A mismatch is refused; apply also rejects approvals from another account, endpoi
 | segment_list | read | GET /management/v1/counter/{counter_id}/apisegment/segments | https://yandex.ru/dev/metrika/ru/management/openapi/segment/ |
 | segment_update | write/medium | PUT /management/v1/counter/{counter_id}/apisegment/segment/{id} | https://yandex.ru/dev/metrika/ru/management/openapi/segment/ |
 | social_networks | read | GET /management/v1/social_networks | https://yandex.ru/dev/metrika/ru/management/openapi/goal/getSocialNetworks |
-| stat_bytime | read | GET /stat/v1/data/bytime | https://yandex.ru/dev/metrika/ru/stat/bytime |
-| stat_comparison | read | GET /stat/v1/data/comparison | https://yandex.ru/dev/metrika/ru/stat/comparison |
-| stat_comparison_drilldown | read | GET /stat/v1/data/comparison/drilldown | https://yandex.ru/dev/metrika/ru/stat/comparison-drilldown |
-| stat_drilldown | read | GET /stat/v1/data/drilldown | https://yandex.ru/dev/metrika/ru/stat/drilldown |
+| stat_bytime | read | GET /stat/v1/data/bytime | https://yandex.ru/dev/metrika/ru/stat/openapi/bytime |
+| stat_comparison | read | GET /stat/v1/data/comparison | https://yandex.ru/dev/metrika/ru/stat/openapi/comparison |
+| stat_comparison_drilldown | read | GET /stat/v1/data/comparison/drilldown | https://yandex.ru/dev/metrika/ru/stat/openapi/comparison_drilldown |
+| stat_drilldown | read | GET /stat/v1/data/drilldown | https://yandex.ru/dev/metrika/ru/stat/openapi/drilldown |
 | user_params_confirm | write/medium | POST /management/v1/counter/{counter_id}/user_params/uploading/{id}/confirm | https://yandex.ru/dev/metrika/ru/management/openapi/user_params/confirm |
 | user_params_upload | upload/medium | POST /management/v1/counter/{counter_id}/user_params/uploadings/upload | https://yandex.ru/dev/metrika/ru/management/openapi/user_params/upload |
 | user_params_uploading | read | GET /management/v1/counter/{counter_id}/user_params/uploading/{id} | https://yandex.ru/dev/metrika/ru/management/openapi/user_params/findById |
@@ -107,21 +107,21 @@ A mismatch is refused; apply also rejects approvals from another account, endpoi
 | feeds_change_regions | write/medium | POST {host}/feeds/change | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-region-change |
 | feeds_list | read | GET {host}/feeds/list | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-list |
 | feeds_moderation_recheck | write/low | POST {host}/feeds/moderation/recheck | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-moderation-recheck |
-| feeds_problems | read | GET {host}/feeds/problems | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-problems |
-| feeds_rejected_offers | read | GET {host}/feeds/moderation/rejected-offers | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-moderation-rejected-offers |
+| feeds_problems | read | GET {host}/feeds/problems ?url= | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-problems |
+| feeds_rejected_offers | read | GET {host}/feeds/moderation/rejected-offers ?url= | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-moderation-rejected-offers |
 | feeds_status_list | read | GET {host}/feeds/status/list | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-status-list |
 | feeds_summary | read | GET {host}/feeds/summary | https://yandex.ru/dev/webmaster/doc/ru/reference/feeds-summary |
 | host_add | write/medium | POST {user}/hosts | https://yandex.ru/dev/webmaster/doc/ru/reference/hosts-add-site |
 | host_delete | write/high | DELETE {host} | https://yandex.ru/dev/webmaster/doc/ru/reference/hosts-delete |
 | indexing_archive_create | write/low | POST {host}/indexing/archive/ | https://yandex.ru/dev/webmaster/doc/ru/reference/host-id-important-archive-all-pages |
 | indexing_archive_status | read | GET {host}/indexing/archive/{task_id} | https://yandex.ru/dev/webmaster/doc/ru/reference/host-id-important-archive-all-pages |
-| insearch_history | read | GET {host}/indexing/insearch/history | https://yandex.ru/dev/webmaster/doc/ru/reference/hosts-indexing-insearch-history |
-| insearch_samples | read | GET {host}/indexing/insearch/samples | https://yandex.ru/dev/webmaster/doc/ru/reference/hosts-indexing-insearch-samples |
+| insearch_history | read | GET {host}/search-urls/in-search/history | https://yandex.ru/dev/webmaster/doc/ru/reference/hosts-indexing-insearch-history |
+| insearch_samples | read | GET {host}/search-urls/in-search/samples | https://yandex.ru/dev/webmaster/doc/ru/reference/hosts-indexing-insearch-samples |
 | search_queries_all_history | read | GET {host}/search-queries/all/history | https://yandex.ru/dev/webmaster/doc/ru/reference/host-search-queries-history-all |
 | sitemap_delete | write/medium | DELETE {host}/user-added-sitemaps/{sitemap_id} | https://yandex.ru/dev/webmaster/doc/ru/reference/host-user-added-sitemaps-sitemap-id-delete |
 | sitemap_recrawl | write/low | POST {host}/sitemaps/{sitemap_id}/recrawl | https://yandex.ru/dev/webmaster/doc/ru/reference/host-priority-re-crawl-initiation-sitemap |
 | sitemap_recrawl_quota | read | GET {host}/sitemaps/recrawl | https://yandex.ru/dev/webmaster/doc/ru/reference/host-priority-limit-sitemap-get |
-| verification_start | write/low | POST {host}/verification | https://yandex.ru/dev/webmaster/doc/ru/reference/host-verification-post |
+| verification_start | write/low | POST {host}/verification ?verification_type= | https://yandex.ru/dev/webmaster/doc/ru/reference/host-verification-post |
 
 ## yandex_audience (`audience_manage_read`, `audience_manage_prepare`, `audience_manage_apply`, `audience_manage_reconcile`)
 

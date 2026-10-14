@@ -424,3 +424,130 @@ async def test_axisrow_parity_direct_services(tmp_path):
     assert urls[0].endswith("/json/v5/keywordsresearch") and recorder.calls[0][2]["method"] == "deduplicate"
     assert urls[1].endswith("/dynamicfeedadtargets")
     assert urls[2].endswith("/json/v501/strategies") and recorder.calls[2][2]["method"] == "archive"
+
+
+async def test_webmaster_feed_and_search_url_paths_match_the_reference(tmp_path):
+    # Pinned to https://yandex.ru/dev/webmaster/doc/ru/reference/ (paths and query names):
+    # in-search history/samples live under /search-urls/in-search/, the feed is ``url``,
+    # and feeds/add/info takes {"requestId": ...} as a JSON body of the GET.
+    recorder = Calls()
+    server = create_server(config(tmp_path), transport="stdio", http_factory=recorder.factory)
+    reads = [
+        ("insearch_history", {"query": {"date_from": "2026-01-01"}}),
+        ("insearch_samples", {"query": {"offset": 0, "limit": 10}}),
+        ("feeds_problems", {"query": {"url": "https://example.test/feed.yml", "severity": "ERROR"}}),
+        ("feeds_rejected_offers", {"query": {"url": "https://example.test/feed.yml"}}),
+        ("feeds_status_list", {"query": {"offset": 0, "limit": 20, "status": "OK"}}),
+        ("feeds_summary", {"query": {"type": "REALTY"}}),
+        ("feeds_add_info", {"body": {"requestId": "c7fe80c0-36e3-11e6-8b2d-df96aa592c0a"}}),
+    ]
+    async with Client(server) as client:
+        for name, args in reads:
+            await client.call_tool(
+                "webmaster_manage_read", {"operation": name, "args": {"host_id": HOST, **args}}
+            )
+        for name, args in (
+            ("feeds_problems", {"query": {"feed_url": "https://example.test/feed.yml"}}),
+            ("feeds_problems", {}),  # url is mandatory
+            ("feeds_add_info", {}),  # requestId body is mandatory
+        ):
+            with pytest.raises(ToolError):
+                await client.call_tool(
+                    "webmaster_manage_read", {"operation": name, "args": {"host_id": HOST, **args}}
+                )
+    sent = [call for call in recorder.calls if "/hosts/" in call[1]]
+    tails = [call[1].split("/hosts/", 1)[1].split("/", 1)[1] for call in sent]
+    assert tails == [
+        "search-urls/in-search/history",
+        "search-urls/in-search/samples",
+        "feeds/problems",
+        "feeds/moderation/rejected-offers",
+        "feeds/status/list",
+        "feeds/summary",
+        "feeds/add/info",
+    ]
+    host_params = [p for p in recorder.params if p and ("url" in p or "date_from" in p or "offset" in p)]
+    assert {"url": "https://example.test/feed.yml", "severity": "ERROR"} in host_params
+    assert sent[-1][0] == "GET" and sent[-1][2] == {"requestId": "c7fe80c0-36e3-11e6-8b2d-df96aa592c0a"}
+
+
+def test_required_queries_and_raw_bodies_fail_closed():
+    web = CATALOG["yandex_webmaster"]
+    with pytest.raises(ValueError, match="verification_type"):
+        validate_args("yandex_webmaster", web["verification_start"], {"host_id": HOST})
+    with pytest.raises(ValueError, match="body"):  # DELETE with a raw body still needs the body
+        validate_args("yandex_webmaster", web["feeds_batch_remove"], {"host_id": HOST})
+    ok = validate_args(
+        "yandex_webmaster",
+        web["sitemap_recrawl"],
+        {"host_id": HOST, "sitemap_id": "abc-1", "query": {"parent_id": "root-1"}},
+    )
+    assert ok["query"] == {"parent_id": "root-1"}
+
+
+@pytest.mark.parametrize(
+    ("operation", "allowed", "denied"),
+    [
+        ("stat_bytime", {"group": "day", "timezone": "+03:00", "keys_sort": "desc"}, {"offset": 1}),
+        ("stat_drilldown", {"parent_id": '["a"]', "proposed_accuracy": "true"}, {"group": "day"}),
+        ("stat_comparison", {"date1_a": "2026-01-01", "filters_b": "x"}, {"date1": "2026-01-01"}),
+        ("stat_comparison_drilldown", {"parent_id": "[]", "access_filter_id": 5}, {"top_keys": 3}),
+    ],
+)
+def test_reporting_queries_follow_each_endpoint_reference(operation, allowed, denied):
+    op = CATALOG["yandex_metrika"][operation]
+    assert op.doc.startswith("https://yandex.ru/dev/metrika/ru/stat/openapi/")
+    validate_args("yandex_metrika", op, {"query": {"ids": 9, **allowed}})
+    with pytest.raises(ValueError):
+        validate_args("yandex_metrika", op, {"query": {"ids": 9, **denied}})
+
+
+async def test_reconcile_never_settles_a_write_that_is_still_running(tmp_path):
+    import asyncio
+
+    settings = config(tmp_path, yandex_webmaster_write_enabled=True)
+    gate, seen = asyncio.Event(), asyncio.Event()
+
+    async def handle(method, url, payload, params):
+        if url.endswith("/user"):
+            return {"user_id": 42}
+        if method == "DELETE":
+            seen.set()
+            await gate.wait()
+        return {"ok": True}
+
+    recorder = Recorder(handle)
+    args = {"host_id": HOST}
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        draft = (
+            await client.call_tool("webmaster_manage_prepare", {"operation": "host_delete", "args": args})
+        ).data
+        assert accept(settings, draft)
+        apply = asyncio.create_task(
+            client.call_tool(
+                "webmaster_manage_apply",
+                {
+                    "operation": "host_delete",
+                    "args": args,
+                    "approval_id": draft["approval_id"],
+                    "idempotency_key": "host-delete-slow",
+                },  # fmt: skip
+            )
+        )
+        await asyncio.wait_for(seen.wait(), 5)
+        early = (
+            await client.call_tool(
+                "webmaster_manage_reconcile",
+                {"operation": "host_delete", "args": args, "idempotency_key": "host-delete-slow"},
+            )
+        ).data
+        assert early["status"] == "in_flight"
+        gate.set()
+        assert (await apply).data["applied"]
+        late = (
+            await client.call_tool(
+                "webmaster_manage_reconcile",
+                {"operation": "host_delete", "args": args, "idempotency_key": "host-delete-slow"},
+            )
+        ).data
+        assert late["status"] == "applied"

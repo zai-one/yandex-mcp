@@ -52,6 +52,7 @@ class Op:
     risk: str = "low"
     readback: str | None = None
     fixed_query: dict[str, str] = field(default_factory=dict)
+    required_query: frozenset[str] = frozenset()
 
     @property
     def path_args(self) -> tuple[str, ...]:
@@ -59,37 +60,43 @@ class Op:
 
 
 M = "https://yandex.ru/dev/metrika/ru/management/openapi/"
-STAT_QUERY = frozenset(
+# Reporting API query parameters per endpoint, from the official OpenAPI pages
+# (https://yandex.ru/dev/metrika/ru/stat/openapi/<endpoint>). ``attribution``/``currency``
+# are the documented parametrization keys and ``access_filter_id`` the documented
+# access-filter switch (stat/examples); ``callback`` (JSONP) is deliberately omitted.
+_STAT_COMMON = frozenset(
     {
         "ids",
-        "date1",
-        "date2",
         "metrics",
         "dimensions",
         "filters",
-        "sort",
-        "limit",
-        "offset",
         "accuracy",
+        "proposed_accuracy",
         "preset",
         "lang",
-        "group",
-        "top_keys",
-        "row_ids",
         "include_undefined",
+        "direct_client_logins",
+        "pretty",
+        "timezone",
         "attribution",
         "currency",
-        "direct_client_logins",
-        "parent_id",
-        "pretty",
-        "date1_a",
-        "date2_a",
-        "date1_b",
-        "date2_b",
-        "filters_a",
-        "filters_b",
+        "access_filter_id",
     }
 )
+_STAT_PERIOD = frozenset({"date1", "date2"})
+_STAT_AB = frozenset({"date1_a", "date2_a", "date1_b", "date2_b", "filters_a", "filters_b"})
+STAT_QUERY: dict[str, frozenset[str]] = {
+    "bytime": _STAT_COMMON
+    | _STAT_PERIOD
+    | {"group", "top_keys", "row_ids", "keys_sort", "include_annotations", "annotation_groups"},
+    "drilldown": _STAT_COMMON
+    | _STAT_PERIOD
+    | {"sort", "limit", "offset", "parent_id", "only_expandable_undefined"},
+    "comparison": _STAT_COMMON | _STAT_AB | {"sort", "limit", "offset"},
+    "comparison_drilldown": _STAT_COMMON
+    | _STAT_AB
+    | {"sort", "limit", "offset", "parent_id", "only_expandable_undefined"},
+}
 
 
 def _crud(prefix: str, coll: str, item: str, key: str, doc: str, *, counter: bool = True) -> dict[str, Op]:
@@ -354,29 +361,29 @@ METRIKA_OPS: dict[str, Op] = {
         "read",
         "GET",
         "/stat/v1/data/bytime",
-        "https://yandex.ru/dev/metrika/ru/stat/bytime",
-        query=STAT_QUERY,
+        "https://yandex.ru/dev/metrika/ru/stat/openapi/bytime",
+        query=STAT_QUERY["bytime"],
     ),
     "stat_drilldown": Op(
         "read",
         "GET",
         "/stat/v1/data/drilldown",
-        "https://yandex.ru/dev/metrika/ru/stat/drilldown",
-        query=STAT_QUERY,
+        "https://yandex.ru/dev/metrika/ru/stat/openapi/drilldown",
+        query=STAT_QUERY["drilldown"],
     ),
     "stat_comparison": Op(
         "read",
         "GET",
         "/stat/v1/data/comparison",
-        "https://yandex.ru/dev/metrika/ru/stat/comparison",
-        query=STAT_QUERY,
+        "https://yandex.ru/dev/metrika/ru/stat/openapi/comparison",
+        query=STAT_QUERY["comparison"],
     ),
     "stat_comparison_drilldown": Op(
         "read",
         "GET",
         "/stat/v1/data/comparison/drilldown",
-        "https://yandex.ru/dev/metrika/ru/stat/comparison-drilldown",
-        query=STAT_QUERY,
+        "https://yandex.ru/dev/metrika/ru/stat/openapi/comparison_drilldown",
+        query=STAT_QUERY["comparison_drilldown"],
     ),
 }
 
@@ -391,6 +398,7 @@ WEBMASTER_OPS: dict[str, Op] = {
         H + "/verification",
         W + "host-verification-post",
         query=frozenset({"verification_type"}),
+        required_query=frozenset({"verification_type"}),
         risk="low",
     ),
     "sitemap_delete": Op(
@@ -408,6 +416,7 @@ WEBMASTER_OPS: dict[str, Op] = {
         "POST",
         "v4.1:" + H + "/sitemaps/{sitemap_id}/recrawl",
         W + "host-priority-re-crawl-initiation-sitemap",
+        query=frozenset({"parent_id"}),
         risk="low",
         readback="sitemap_recrawl_quota",
     ),
@@ -421,14 +430,14 @@ WEBMASTER_OPS: dict[str, Op] = {
     "insearch_history": Op(
         "read",
         "GET",
-        H + "/indexing/insearch/history",
+        H + "/search-urls/in-search/history",
         W + "hosts-indexing-insearch-history",
         query=frozenset({"date_from", "date_to"}),
     ),
     "insearch_samples": Op(
         "read",
         "GET",
-        H + "/indexing/insearch/samples",
+        H + "/search-urls/in-search/samples",
         W + "hosts-indexing-insearch-samples",
         query=frozenset({"offset", "limit"}),
     ),
@@ -447,9 +456,8 @@ WEBMASTER_OPS: dict[str, Op] = {
         risk="medium",
         readback="feeds_list",
     ),
-    "feeds_add_info": Op(
-        "read", "GET", H + "/feeds/add/info", W + "feeds-add-info", query=frozenset({"request_id"})
-    ),
+    # GET with a JSON body {"requestId": ...} (feeds-add-info), not a query parameter.
+    "feeds_add_info": Op("read", "GET", H + "/feeds/add/info", W + "feeds-add-info", body=""),
     "feeds_batch_add": Op(
         "write",
         "POST",
@@ -481,17 +489,30 @@ WEBMASTER_OPS: dict[str, Op] = {
         "write", "POST", H + "/feeds/moderation/recheck", W + "feeds-moderation-recheck", body="", risk="low"
     ),
     "feeds_list": Op("read", "GET", H + "/feeds/list", W + "feeds-list"),
-    "feeds_status_list": Op("read", "GET", H + "/feeds/status/list", W + "feeds-status-list"),
-    "feeds_summary": Op("read", "GET", H + "/feeds/summary", W + "feeds-summary"),
+    "feeds_status_list": Op(
+        "read",
+        "GET",
+        H + "/feeds/status/list",
+        W + "feeds-status-list",
+        query=frozenset({"offset", "limit", "orderBy", "orderDirection", "status", "type"}),
+    ),
+    "feeds_summary": Op("read", "GET", H + "/feeds/summary", W + "feeds-summary", query=frozenset({"type"})),
+    # The feed is the documented ``url`` query parameter (feeds-problems, rejected-offers).
     "feeds_problems": Op(
-        "read", "GET", H + "/feeds/problems", W + "feeds-problems", query=frozenset({"feed_url"})
+        "read",
+        "GET",
+        H + "/feeds/problems",
+        W + "feeds-problems",
+        query=frozenset({"url", "severity"}),
+        required_query=frozenset({"url"}),
     ),
     "feeds_rejected_offers": Op(
         "read",
         "GET",
         H + "/feeds/moderation/rejected-offers",
         W + "feeds-moderation-rejected-offers",
-        query=frozenset({"feed_url"}),
+        query=frozenset({"url"}),
+        required_query=frozenset({"url"}),
     ),
 }
 
@@ -632,6 +653,11 @@ def catalog(provider: str) -> dict[str, Any]:
                 + [f"query.{key}" for key in sorted(op.query)]
                 + (["body"] if op.body is not None else [])
                 + (["csv"] if op.kind == "upload" else []),
+                **(
+                    {"required": [f"query.{key}" for key in sorted(op.required_query)]}
+                    if op.required_query
+                    else {}
+                ),
                 "risk": op.risk if op.kind != "read" else "read",
                 "doc": op.doc,
             }
@@ -686,11 +712,16 @@ def validate_args(provider: str, op: Op, args: dict[str, Any] | None) -> dict[st
             raise ValueError("query.user_login must be a Yandex login")
     if "user_login" in op.query and op.method == "DELETE" and "user_login" not in query:
         raise ValueError("query.user_login is required")
+    missing = sorted(op.required_query - set(query))
+    if missing:
+        raise ValueError("required query keys: " + ", ".join(f"query.{key}" for key in missing))
     if query:
         clean["query"] = dict(sorted(query.items()))
     if op.body is not None:
         body = values.get("body")
-        if op.kind == "write" and op.method in {"POST", "PUT"} and body is None:
+        # Raw-body requests (host_add, feeds_*, feeds_add_info, feeds_batch_remove via DELETE)
+        # carry their whole payload in the body, so it is mandatory for every method.
+        if body is None and (op.body == "" or (op.kind == "write" and op.method in {"POST", "PUT"})):
             raise ValueError("body is required")
         if body is not None:
             if not isinstance(body, dict) or not body or len(body) > MAX_BODY_KEYS:
@@ -773,6 +804,16 @@ async def open_approval(runtime: Any, provider: str, operation: str, request: st
     }
 
 
+# (principal, provider, idempotency_key) of governed writes dispatched by this process
+# and not yet settled. Reconcile must not settle these: a slow but successful write
+# would otherwise be recorded as unconfirmed and invite a duplicate re-send.
+_IN_FLIGHT: set[tuple[str, str, str]] = set()
+
+
+def in_flight(principal: Any, provider: str, key: str) -> bool:
+    return (str(principal), provider, key) in _IN_FLIGHT
+
+
 def ledger_hash(provider: str, operation: str, request: str) -> str:
     """The digest runtime.write records for this governed request (see Runtime.write)."""
     return request_hash(
@@ -828,16 +869,21 @@ async def governed_apply(
             raise PermissionError("approval is not accepted or was already consumed")
     except (ProviderError, PermissionError, ValueError) as exc:
         raise runtime.safe_error(provider, exc) from None
-    result = await runtime.write(
-        provider,
-        operation,
-        {"operation": operation, "request_hash": request},
-        key,
-        enabled=True,
-        validate=lambda: None,
-        apply_fn=apply_fn,
-        readback_fn=readback_fn,
-    )
+    marker = (str(principal), provider, key)
+    _IN_FLIGHT.add(marker)
+    try:
+        result = await runtime.write(
+            provider,
+            operation,
+            {"operation": operation, "request_hash": request},
+            key,
+            enabled=True,
+            validate=lambda: None,
+            apply_fn=apply_fn,
+            readback_fn=readback_fn,
+        )
+    finally:
+        _IN_FLIGHT.discard(marker)
     return {**result, "request_hash": request, "approval_id": str(approval_id)}
 
 
@@ -954,6 +1000,8 @@ def _register(server: Any, runtime: Any, provider: str, prefix: str, scope: str)
             return {"status": "applied", "result": cached["result"]}
         if cached["status"] == "failed":
             return {"status": "settled_unconfirmed", "result": cached["result"]}
+        if in_flight(principal, provider, key):
+            return {"status": "in_flight", "next": "the write is still running; call reconcile again later"}
         observed = None
         if op.readback is not None:
             rb_op = CATALOG[provider][op.readback]

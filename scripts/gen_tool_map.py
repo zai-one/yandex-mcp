@@ -85,7 +85,10 @@ def build_management() -> str:
         lines += [f"## {provider} ({tools})", "", *header]
         for name, op in sorted(ops.items()):
             risk = "read" if op.kind == "read" else f"{op.kind}/{op.risk}"
-            lines.append(f"| {name} | {risk} | {op.method} {op.path.removeprefix('v4.1:')} | {op.doc} |")
+            need = "".join(f" ?{key}=" for key in sorted(op.required_query))
+            lines.append(
+                f"| {name} | {risk} | {op.method} {op.path.removeprefix('v4.1:')}{need} | {op.doc} |"
+            )
         lines.append("")
     return "\n".join(lines)
 
