@@ -173,3 +173,16 @@ async def test_setup_tool_offers_and_saves_tool_loading(tmp_path, monkeypatch):
     target = tmp_path / "mcp.local.json"
     setup_toolsets.write_toolsets(target, "all", "lazy")
     assert json.loads(target.read_text(encoding="utf-8"))["env"]["YANDEX_TOOL_LOADING"] == "lazy"
+
+
+async def test_enablement_is_per_session(tmp_path, monkeypatch):
+    monkeypatch.setenv(f"{ENV}_TOOL_LOADING", "lazy")
+    shared = build(tmp_path / "shared")
+    async with Client(shared) as first, Client(shared) as second:
+        before = {tool.name for tool in await second.list_tools()}
+        result = (await first.call_tool(ENABLE, {"toolsets": ["all"]})).data
+        assert result["scope"] == "session" and result["added_tools"]
+        assert set(result["added_tools"]) <= {tool.name for tool in await first.list_tools()}
+        assert {tool.name for tool in await second.list_tools()} == before
+        with pytest.raises(Exception):  # noqa: B017 - hidden for this session: unknown tool
+            await second.call_tool(result["added_tools"][0], {})

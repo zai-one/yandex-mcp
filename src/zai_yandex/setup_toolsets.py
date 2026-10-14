@@ -44,7 +44,7 @@ PRESET_COST: dict[str, dict[str, int]] = {
 
 # Startup tokens with YANDEX_TOOLSETS=all (tools/list + instructions, ~chars/4); lazy lists a core plus
 # yandex_enable_toolsets and adds toolsets on demand. Kept honest by tests/test_lazy_loading.py.
-LOADING_COST: dict[str, int] = {"eager": 21_872, "lazy": 2_570}
+LOADING_COST: dict[str, int] = {"eager": 21_872, "lazy": 2_574}
 
 ACTIVE_CONFIG: str | None = None  # set by server.main to the file it loaded
 
