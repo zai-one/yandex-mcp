@@ -155,6 +155,10 @@ def create_server(
         raise ValueError("unsupported transport")
     if transport == "http" and not config.public_key:
         raise ValueError("HTTP requires an RSA public verification key")
+    if transport == "http" and lazy_loading.loading_mode(LAZY_PROFILE) == "lazy":
+        # Stateless HTTP: every request is its own MCP session, so tools enabled in one request
+        # would be hidden again in the next. Lazy loading is a local stdio feature.
+        raise ValueError("YANDEX_TOOL_LOADING=lazy is stdio only; use eager or YANDEX_TOOLSETS over HTTP")
     auth = (
         JWTVerifier(
             public_key=config.public_key, algorithm="RS256", issuer=config.issuer, audience=config.audience

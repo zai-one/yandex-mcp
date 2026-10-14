@@ -186,3 +186,12 @@ async def test_enablement_is_per_session(tmp_path, monkeypatch):
         assert {tool.name for tool in await second.list_tools()} == before
         with pytest.raises(Exception):  # noqa: B017 - hidden for this session: unknown tool
             await second.call_tool(result["added_tools"][0], {})
+
+
+def test_lazy_is_rejected_over_stateless_http(tmp_path, pair, monkeypatch):
+    # Stateless HTTP opens a new session per request: enabled toolsets would never stay callable.
+    monkeypatch.setenv(f"{ENV}_TOOL_LOADING", "lazy")
+    with pytest.raises(ValueError, match="stdio only"):
+        create_server(config(tmp_path, public_key=pair.public_key), transport="http")
+    monkeypatch.setenv(f"{ENV}_TOOL_LOADING", "eager")
+    assert create_server(config(tmp_path, public_key=pair.public_key), transport="http")

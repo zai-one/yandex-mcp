@@ -81,7 +81,7 @@ def install(server: Any, profile: Any, keep: set[str], environ: Mapping[str, str
     Deferred tools stay registered but are disabled globally by name; ``<service>_enable_toolsets``
     re-enables them for the calling session only (FastMCP session visibility rules), so one client's
     choice never changes another client's tool list. Stateless HTTP has no session that outlives a
-    request, so enablement there lasts one request: use eager (or <ENV>_TOOLSETS) for HTTP.
+    request, so create_server refuses lazy mode on HTTP (stdio only).
     """
     if loading_mode(profile, environ) != "lazy":
         return set(keep)
