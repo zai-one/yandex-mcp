@@ -44,8 +44,8 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "yandex_setup_toolsets": (
         "Pick Yandex platforms (direct, metrika, webmaster, audience, wordstat, serp, maps, manage) or a preset "
-        "(direct-only, analytics, seo, everything) -> YANDEX_TOOLSETS + measured token cost. write=true saves it "
-        "to mcp.local.json (stdio). No secrets."
+        "(direct-only, analytics, seo, everything) and tool_loading eager|lazy -> YANDEX_TOOLSETS + token cost. "
+        "write=true saves to mcp.local.json (stdio). No secrets."
     ),
     "yandex_auth_status": (
         "Show which Yandex OAuth services have tokens (never values). Pending device-flow user_code if any. Local."

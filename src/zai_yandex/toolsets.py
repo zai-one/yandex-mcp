@@ -245,6 +245,7 @@ class Surface:
                 "YANDEX_TOOLS": "extra tool names",
                 "YANDEX_DISABLED_TOOLS": "tool names to hide",
                 "YANDEX_READ_ONLY": "1 hides every prepare/apply/write/paid-submit tool",
+                "YANDEX_TOOL_LOADING": "eager (default) | lazy: core tools + yandex_enable_toolsets",
                 "YANDEX_MAPS_GEOSEARCH_API_KEY_FILE": "Geosearch key file; maps_geosearch tools exist only with a key",
             },
         }
@@ -304,3 +305,31 @@ def surface_from_env(
         or env.get("YANDEX_READ_ONLY", "").strip().lower() in {"1", "true", "yes", "on"},
         maps_key=maps_configured(env),
     )
+
+
+@dataclass(frozen=True)
+class LazyProfile:
+    """What lazy_loading.install needs: toolsets, one-line notes and the start core."""
+
+    service: str = "yandex"
+    env: str = "YANDEX"
+    lazy_core: tuple[str, ...] = (
+        *TOOLSETS["account"]["tools"],
+        "direct_list_campaigns",
+        "direct_get_statistics",
+        "metrika_list_counters",
+        "metrika_report",
+        "webmaster_list_hosts",
+        "webmaster_get_summary",
+    )
+
+    @property
+    def toolsets(self) -> dict[str, tuple[str, ...]]:
+        return {name: tuple(spec["tools"]) for name, spec in TOOLSETS.items()}
+
+    @property
+    def toolset_notes(self) -> dict[str, str]:
+        return {name: spec["description"] for name, spec in TOOLSETS.items()}
+
+
+LAZY_PROFILE = LazyProfile()

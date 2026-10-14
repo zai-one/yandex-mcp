@@ -10,7 +10,7 @@ from typing import Any, Literal
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 
-from zai_yandex import __version__, setup_toolsets
+from zai_yandex import __version__, lazy_loading, setup_toolsets
 from zai_yandex.agent_layer import TOOL_DESCRIPTIONS, build_instructions, register_agent_layer
 from zai_yandex.audience_tools import register_audience_tools
 from zai_yandex.auth_tools import register_auth_tools
@@ -27,7 +27,7 @@ from zai_yandex.onboarding import check_config, load_config
 from zai_yandex.runtime import Runtime
 from zai_yandex.setup_toolsets import register_setup_tool
 from zai_yandex.tool_annotations import annotations_for
-from zai_yandex.toolsets import Surface, build_surface, surface_from_env
+from zai_yandex.toolsets import LAZY_PROFILE, Surface, build_surface, surface_from_env
 from zai_yandex.update_check import check_for_update, refresh_in_background, startup_hint
 from zai_yandex.webmaster_tools import register_webmaster_tools
 
@@ -193,6 +193,10 @@ def create_server(
     register_auth_tools(server, config, transport, surface, runtime=runtime)
     register_setup_tool(server, config, transport, surface)
     register_agent_layer(server, surface)
+    registered = {
+        tool.name for key, tool in server.local_provider._components.items() if key.startswith("tool:")
+    }
+    lazy_loading.install(server, LAZY_PROFILE, registered)
     return server
 
 

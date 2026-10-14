@@ -40,6 +40,7 @@ Try asking your assistant:
 
 ## Why this MCP
 
+- Optional lazy tool loading: `YANDEX_TOOL_LOADING=lazy` starts with a small core plus `yandex_enable_toolsets` and adds toolsets on demand (`tools/list_changed`). Startup cost (tools/list + instructions, ≈chars/4): eager ≈21872 tokens, lazy ≈2570 tokens (−88%). Default `eager` is unchanged; if your client ignores `tools/list_changed`, keep `eager` or reconnect after enabling.
 - Six Yandex API groups in one process; enable only the toolsets you need (`YANDEX_TOOLSETS`, `YANDEX_READ_ONLY`).
 - Writes (Direct changes, Audience creates, Metrika uploads and Logs requests) are off until enabled by an env flag and use confirmation hashes or idempotency keys.
 - Agent layer: router instructions, 5 prompts (incl. `yandex_setup`), `yandex://playbook` and guide resources, self-contained skills, structured errors with `hint`.
