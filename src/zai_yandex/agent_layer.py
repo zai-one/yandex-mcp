@@ -25,8 +25,8 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "units. Fails closed without approval."
     ),
     "direct_write": (
-        "Generic idempotent Direct API write (service, method, items) behind the server write flag and "
-        "audit log. Prefer `direct_prepare_changes` -> `direct_apply_changes` for campaign changes. "
+        "Idempotent non-destructive Direct write (no deletes or bid changes: use direct_prepare_write) "
+        "behind the server write flag and audit log. Prefer `direct_prepare_changes` -> `direct_apply_changes` for campaign changes. "
         "Writes; spends units; confirm with the user first."
     ),
     "metrika_report": (

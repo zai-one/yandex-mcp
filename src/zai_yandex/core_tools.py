@@ -12,6 +12,7 @@ from zai_yandex.adapters.direct import (
     prepare_changes,
 )
 from zai_yandex.adapters.metrika import YandexMetrikaAdapter
+from zai_yandex.errors import approval_required_error
 from zai_yandex.sanitizer import DURABLE_SANITIZER_LIMITS, sanitize_provider_response
 from zai_yandex.transport import ProviderAdmissionDenied, ProviderError, ProviderRateLimited, request_hash
 
@@ -498,7 +499,11 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         if validated[1] not in AUTONOMOUS_WRITE_METHODS.get(validated[0], ()) or (
             YandexDirectAdapter.is_unified(*validated)
         ):
-            raise ProviderError("this Direct method needs direct_prepare_write -> direct_apply_write")
+            raise approval_required_error(
+                "yandex_direct",
+                "Deletes, bid changes and this service/method need direct_prepare_write -> accepted "
+                "approval -> direct_apply_write.",
+            )
         return validated
 
     def _direct_readback_ids(items: list[dict[str, Any]], result: Any) -> list[int]:
@@ -525,10 +530,11 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         items: list[dict[str, Any]],
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        """Autonomously apply a Direct write across campaigns/adgroups/ads/keywords/bids.
+        """Autonomously apply a non-destructive Direct write to campaigns/adgroups/ads/keywords.
 
-        Allowlisted service/method only (add/update/delete/suspend/resume/archive/
-        moderate, bids set/setAuto). Idempotent, with a post-write readback of the
+        Allowlisted service/method only (add/update/suspend/resume/archive/moderate).
+        Deletes and bid changes need direct_prepare_write -> approval -> direct_apply_write.
+        Idempotent, with a post-write readback of the
         affected objects. campaigns:update also has an approval-gated path
         (direct_apply_changes) for a stricter human gate.
         """
@@ -587,7 +593,16 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         goal_id: int | None = None,
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        """Autonomously create, update or delete a Metrika goal (idempotent, readback)."""
+        """Autonomously create or update a Metrika goal (idempotent, readback).
+
+        Deleting a goal needs a human approval: metrika_manage_prepare(operation='goal_delete').
+        """
+        if str(operation).strip() == "delete_goal":
+            raise approval_required_error(
+                "yandex_metrika",
+                "Deleting a goal needs metrika_manage_prepare(operation='goal_delete', counter_id, id) "
+                "-> accepted approval -> metrika_manage_apply.",
+            )
         adapter = registry.yandex_metrika()
         payload = params or {}
         return cast(

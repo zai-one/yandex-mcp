@@ -10,7 +10,7 @@ Update check, named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is 
 - `yandex_auth_status` - Show which Yandex OAuth services have tokens (never values).
 - `yandex_auth_start` - Start Yandex OAuth device-code flow: returns verification URL + user_code.
 - `yandex_auth_finish` - Poll pending device-code auth
-- `yandex_setup_toolsets` - Pick Yandex platforms (direct, metrika, webmaster, audience, wordstat, serp, maps, manage) or a preset (direct-only, analytics, seo, everything) -> YA
+- `yandex_setup_toolsets` - Pick Yandex platforms (direct, metrika, webmaster, audience, wordstat, serp, maps, manage) or a preset (direct-only, analytics, seo, everything) and t
 
 ## direct_read*
 Direct campaigns, inventory (ads, groups, keywords...), strategies, forecasts.
@@ -55,7 +55,7 @@ Direct Reports service: statistics and goal statistics.
 Direct changes: prepare -> human approval -> apply (any allowlisted service/method); generic direct_write.
 - `direct_prepare_changes` - Draft a Direct change set and open an unaccepted, expiring approval.
 - `direct_apply_changes` - Apply an accepted Direct change set (from `direct_prepare_changes`, approved by the operator) exactly once with approval_id + idempotency_key
-- `direct_write` - Generic idempotent Direct API write (service, method, items) behind the server write flag and audit log.
+- `direct_write` - Idempotent non-destructive Direct write (add/update/suspend/resume/archive
 - `direct_prepare_write` - Open an approval for one allowlisted Direct write (any service/method
 - `direct_apply_write` - Execute an accepted Direct write once (write flag, approval_id, idempotency_key), then read back.
 
@@ -86,7 +86,7 @@ Create Logs API exports and clean/cancel them (quota; YANDEX_METRIKA_LOGS_ENABLE
 
 ## metrika_write
 Create/update/delete Metrika goals; upload offline conversions.
-- `metrika_apply_goal` - Autonomously create, update or delete a Metrika goal (idempotent, readback).
+- `metrika_apply_goal` - Autonomously create or update a Metrika goal (idempotent, readback).
 - `metrika_upload_offline_conversions` - Upload offline conversions to Metrika (affects goal stats and Direct optimisation).
 
 ## webmaster*

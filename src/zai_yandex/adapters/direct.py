@@ -105,16 +105,15 @@ LEGACY_REFERENCE_SERVICES = frozenset(
 APPROVAL_ONLY_WRITES: frozenset[str] = (
     frozenset({"agencyclients", "clients", "strategies"}) | LEGACY_REFERENCE_SERVICES
 )
-# The autonomous ``direct_write`` path (write flag + idempotency, no human approval) keeps exactly
-# its 0.6.0 allowlist. Every service/method added since (bid and bid-modifier changes, deletes of
-# retargeting lists, feeds, sitelinks, images, extensions, ...) runs only through
-# direct_prepare_write -> accepted approval -> direct_apply_write.
+# The autonomous ``direct_write`` path (write flag + idempotency, no human approval) covers only
+# non-destructive edits of campaigns, ad groups, ads and keywords. Deletes and bid changes are never
+# autonomous (an agent can pick the wrong id or be steered into it); they and every other
+# service/method run only through direct_prepare_write -> accepted approval -> direct_apply_write.
 AUTONOMOUS_WRITE_METHODS: dict[str, frozenset[str]] = {
-    "campaigns": frozenset({"update", "add", "suspend", "resume", "archive", "unarchive", "delete"}),
-    "adgroups": frozenset({"add", "update", "delete"}),
-    "ads": frozenset({"add", "update", "delete", "moderate", "suspend", "resume", "archive"}),
-    "keywords": frozenset({"add", "update", "delete", "suspend", "resume"}),
-    "bids": frozenset({"set", "setAuto"}),
+    "campaigns": frozenset({"update", "add", "suspend", "resume", "archive", "unarchive"}),
+    "adgroups": frozenset({"add", "update"}),
+    "ads": frozenset({"add", "update", "moderate", "suspend", "resume", "archive"}),
+    "keywords": frozenset({"add", "update", "suspend", "resume"}),
 }
 # Upstream top-level payload key for object-based writes (add/update/set).
 SERVICE_PAYLOAD_KEY: dict[str, str] = {
