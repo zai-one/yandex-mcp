@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0
 
 - Security: `maps_search_organizations` / `maps_search_places` now enforce the same account-bound identity as every provider tool; over HTTP a token signed for another `account_id` is refused even with `yandex_search:read`, so it cannot spend this server's Geosearch quota.
 - Security: feed URLs with embedded `user:password` sent as a query value (`feeds_problems`, `feeds_rejected_offers`, `webmaster_get_feed`) are masked in httpx/httpcore request logs, raw and percent-encoded; the provider still receives the real URL.
