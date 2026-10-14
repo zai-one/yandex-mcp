@@ -38,11 +38,25 @@
 
 ## Почему этот MCP
 
-- Ленивая загрузка инструментов (опционально): `YANDEX_TOOL_LOADING=lazy` стартует с небольшим ядром и `yandex_enable_toolsets`, остальные наборы включаются по запросу (`tools/list_changed`). Стоимость старта (tools/list + instructions, ≈символы/4): eager ≈21872 токенов, lazy ≈2574 токенов (−88%). По умолчанию `eager` — без изменений; если клиент не поддерживает `tools/list_changed`, оставьте `eager` или переподключитесь после включения. Область: включение действует в пределах MCP-сессии (session visibility FastMCP), включённые одним клиентом наборы не видны другому. HTTP-транспорт здесь stateless (каждый запрос — отдельная сессия), поэтому включение там не сохраняется: для общего HTTP используйте `eager` или `YANDEX_TOOLSETS`.
+- Ленивая загрузка инструментов (опционально): `YANDEX_TOOL_LOADING=lazy` (или выбор в мастере настройки) — старт с небольшим ядром, наборы включаются по запросу; см. [Ленивая загрузка инструментов](#ленивая-загрузка-инструментов).
 - Шесть групп API Яндекса в одном процессе; включайте только нужные наборы (`YANDEX_TOOLSETS`, `YANDEX_READ_ONLY`). Редкие чтения — в отдельных наборах `direct_extra` (клиент, справочники, Changes, ставки, корректировки, аудитории, ретаргетинг, фиды, креативы, уточнения, турбо-страницы, лиды, видео, наборы минус-фраз) и `webmaster_extra` (владельцы, фиды, регионы, аналитика запросов); в пресет `default` они не входят (без `YANDEX_TOOLSETS` включены все 127 инструментов; выбрать платформы: `yandex_setup_toolsets`, пишет только `YANDEX_TOOLSETS` в `mcp.local.json`, затем перезапуск клиента). Поиск организаций Яндекс Карт (`maps_geosearch`: `maps_search_organizations`, `maps_search_places`) появляется только при заданном `YANDEX_MAPS_GEOSEARCH_API_KEY` (или `YANDEX_MAPS_GEOSEARCH_API_KEY_FILE`); результаты не кэшируются, атрибуция Яндекса сохраняется. Администрирование — в наборах `metrika_manage`, `webmaster_manage`, `audience_manage` (доступы, представители, счётчики, фильтры, сегменты, метки, примечания, загрузки звонков/расходов/параметров, сайты, фиды, сегменты Аудиторий); все записи через prepare -> согласование -> apply. Сравнение с конкурентами: [docs/COVERAGE_DIFF.md](docs/COVERAGE_DIFF.md). Запуск без `--config`: `uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@main" yandex-mcp`, затем попросите ассистента подключить Яндекс (OAuth device flow).
 - Запись (изменения в Директе, создание сегментов Аудиторий, загрузки и Logs-запросы Метрики) выключена, пока не включена переменной окружения, и использует хэши подтверждения или ключи идемпотентности.
 - Агентский слой: инструкции-роутер, 4 промпта, ресурсы `yandex://playbook` и гайды, самодостаточные skills, структурированные ошибки с `hint`.
 - Сравнение с другими Yandex MCP на GitHub: [SvechaPVL/yandex-mcp](https://github.com/SvechaPVL/yandex-mcp) (132), [skiddgoddamn/yandex-marketing-mcp](https://github.com/skiddgoddamn/yandex-marketing-mcp) (153) и [webkoth/yandex-mcp](https://github.com/webkoth/yandex-mcp) (125) по-прежнему показывают больше *инструментов* (часто add/update/delete отдельно); этот сервер закрывает документированные **чтения** Direct+Webmaster, которые важны на практике, держит запись за флагами по сервисам и отдаёт ограниченные типизированные ответы; CI на Linux и Windows.
+
+## Ленивая загрузка инструментов
+
+Ленивая загрузка инструментов (опционально): `YANDEX_TOOL_LOADING=lazy` стартует с небольшим ядром и `yandex_enable_toolsets`, остальные наборы включаются по запросу (`tools/list_changed`). Стоимость старта (tools/list + instructions, ≈символы/4): eager ≈21872 токенов, lazy ≈2574 токенов (−88%). По умолчанию `eager` — без изменений; если клиент не поддерживает `tools/list_changed`, оставьте `eager` или переподключитесь после включения. Область: включение действует в пределах MCP-сессии (session visibility FastMCP), включённые одним клиентом наборы не видны другому. HTTP-транспорт здесь stateless (каждый запрос — отдельная сессия), поэтому включение там не сохраняется: для общего HTTP используйте `eager` или `YANDEX_TOOLSETS`.
+
+Клиенты и `notifications/tools/list_changed` (проверено по официальной документации, changelog или заявлениям мейнтейнеров, 2026-10):
+
+| Клиент | `tools/list_changed` | Источник |
+|---|---|---|
+| Claude Code | Да (интерактивно: tools, prompts, resources; `-p`/Agent SDK: только tools) | [docs: Dynamic tool updates](https://code.claude.com/docs/en/mcp) |
+| VS Code (GitHub Copilot) | Да (dynamic tool discovery); новые инструменты могут стать доступны агенту только со следующего хода | [docs](https://code.visualstudio.com/api/extension-guides/ai/mcp), [#303012](https://github.com/microsoft/vscode/issues/303012) |
+| Gemini CLI | Да (обновляет реестр инструментов) | [PR #14375](https://github.com/google-gemini/gemini-cli/pull/14375), [PR #21050](https://github.com/google-gemini/gemini-cli/pull/21050) |
+| Cursor | Ненадёжно: регрессия в 3.12.x подтверждена командой Cursor; после включения перезапустите Cursor | [forum](https://forum.cursor.com/t/mcp-server-regression-does-not-reload-tools-disconnect-does-nothing-ignores-mcp-json-changes-etc/166216) |
+| Claude Desktop, Windsurf, Codex CLI, Cline, Zed, Continue | Не проверено: официальных данных нет; используйте `eager` или переподключитесь после включения | — |
 
 ## Поддержка и обновления
 
