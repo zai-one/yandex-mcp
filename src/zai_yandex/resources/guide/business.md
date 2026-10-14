@@ -1,6 +1,6 @@
 # Yandex Business, Maps promotion, business cards
 
-What has an official API, and the tool to use (sources and gaps: docs/COVERAGE_DIFF.md).
+What has an official API, and the tool to use.
 
 | Need | Tool | Notes |
 |---|---|---|

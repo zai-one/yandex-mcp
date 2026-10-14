@@ -1,7 +1,7 @@
 """Governed management catalogue for Metrika, Webmaster and Audience (opt-in toolsets).
 
 One declarative allowlist of documented endpoints instead of one MCP tool per
-CRUD verb: the default ``tools/list`` stays flat while every competitor capability
+CRUD verb: the default ``tools/list`` stays flat while every documented operation
 is reachable. Per provider there are three tools:
 
 * ``<provider>_manage_read(operation, args)`` – documented GET endpoints
