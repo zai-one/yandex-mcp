@@ -189,6 +189,18 @@ async def test_metrika_write_runs_real_apply_and_readback(tmp_path):
     assert [call[0] for call in recorder.calls] == ["POST", "GET"]
 
 
+async def test_metrika_goal_delete_needs_approval(tmp_path):
+    """metrika_apply_goal never deletes a goal on its own, even with the write flag on."""
+    recorder = Recorder()
+    settings = config(tmp_path, yandex_metrika_write_enabled=True)
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        with pytest.raises(ToolError, match="metrika_manage_prepare"):
+            await client.call_tool(
+                "metrika_apply_goal",
+                {"operation": "delete_goal", "counter_id": 7, "goal_id": 9, "idempotency_key": "goal-del-1"},
+            )
+    assert not recorder.calls
+
 async def test_direct_approval_is_exact_actor_bound_and_consumed_once(tmp_path, pair):
     recorder = Recorder()
     settings = config(tmp_path, public_key=pair.public_key, yandex_direct_write_enabled=True)

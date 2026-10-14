@@ -37,7 +37,13 @@ ERROR_HINTS: dict[str, str] = {
     "operation_failed": "Unexpected failure; report to the user instead of retrying.",
     "provider_error": "Provider error; report to the user.",
     "tool_disabled": "Toolset is not enabled; see yandex://toolsets.",
+    "approval_required": "This change needs a human approval; use the prepare tool named in the hint.",
 }
+
+
+def approval_required_error(provider: str, hint: str) -> SafeToolError:
+    """A write that is never autonomous (deletes, bid changes); ``hint`` names the gated path."""
+    return SafeToolError({"code": "approval_required", "provider": provider, "retryable": False, "hint": hint})
 
 
 class SafeToolError(ToolError):

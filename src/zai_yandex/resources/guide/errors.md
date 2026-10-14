@@ -12,4 +12,5 @@ Envelope: `{"code", "provider", "retryable", "hint", "docs", "retry_after_second
 | provider_payload_too_large | no | Narrow dates, fields or limit. |
 | provider_disabled | no | Scope or write flag is off; tell the user. |
 | tool_disabled | no | Toolset is off; see yandex://toolsets. |
+| approval_required | no | Deletes and bid changes are never autonomous: use the prepare tool in `hint`, the user accepts, then apply. |
 | provider_response_invalid, provider_http_error, operation_failed, provider_error | no | Report to the user. |

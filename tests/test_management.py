@@ -837,16 +837,53 @@ async def test_autonomous_direct_write_keeps_the_060_allowlist(tmp_path):
             )
         ).data
         assert draft["status"] == "approval_required"
-        # The 0.6.0 autonomous allowlist is unchanged.
+        # Non-destructive edits stay autonomous.
         await client.call_tool(
             "direct_write",
             {
-                "service": "bids",
-                "method": "set",
-                "items": [{"KeywordId": 1, "Bid": 1}],
-                "idempotency_key": "bids-ok-1",
+                "service": "campaigns",
+                "method": "suspend",
+                "items": [{"Id": 1}],
+                "idempotency_key": "suspend-ok-1",
             },
         )
     assert not any(call[0] == "POST" and "keywordbids" in call[1] for call in recorder.calls)
     assert all(AUTONOMOUS_WRITE_METHODS[s] <= WRITE_METHODS[s] for s in AUTONOMOUS_WRITE_METHODS)
-    assert set(AUTONOMOUS_WRITE_METHODS) == {"campaigns", "adgroups", "ads", "keywords", "bids"}
+    assert set(AUTONOMOUS_WRITE_METHODS) == {"campaigns", "adgroups", "ads", "keywords"}
+
+
+async def test_autonomous_direct_write_never_deletes_or_changes_bids(tmp_path):
+    """Deletes and bid changes need an accepted approval even with the write flag on."""
+    from zai_yandex.adapters.direct import AUTONOMOUS_WRITE_METHODS
+
+    assert not any("delete" in methods for methods in AUTONOMOUS_WRITE_METHODS.values())
+    assert "bids" not in AUTONOMOUS_WRITE_METHODS
+    settings = config(tmp_path, yandex_direct_write_enabled=True)
+    recorder = Recorder(lambda *_: {"result": {"DeleteResults": [], "SetResults": []}})
+    blocked = [
+        ("campaigns", "delete", [{"Id": 1}]),
+        ("adgroups", "delete", [{"Id": 1}]),
+        ("ads", "delete", [{"Id": 1}]),
+        ("keywords", "delete", [{"Id": 1}]),
+        ("bids", "set", [{"KeywordId": 1, "Bid": 1}]),
+        ("bids", "setAuto", [{"CampaignId": 1, "Scope": ["SEARCH"]}]),
+    ]
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        for number, (service, method, items) in enumerate(blocked):
+            with pytest.raises(ToolError, match="approval_required"):
+                await client.call_tool(
+                    "direct_write",
+                    {
+                        "service": service,
+                        "method": method,
+                        "items": items,
+                        "idempotency_key": f"no-{number}-x",
+                    },
+                )
+        draft = (
+            await client.call_tool(
+                "direct_prepare_write", {"service": "campaigns", "method": "delete", "items": [{"Id": 1}]}
+            )
+        ).data
+        assert draft["status"] == "approval_required"
+    assert not [call for call in recorder.calls if call[0] == "POST"]
