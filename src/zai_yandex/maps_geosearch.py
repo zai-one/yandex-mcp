@@ -13,8 +13,10 @@ owner-private file, or ``YANDEX_MAPS_GEOSEARCH_API_KEY``). The key is never retu
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 import os
+import re
 import time
 from collections.abc import Mapping
 from typing import Any, Literal
@@ -185,11 +187,35 @@ def shape(payload: Any, kind: str, detail: str) -> dict[str, Any]:
     }
 
 
+APIKEY_IN_URL = re.compile(r"(?i)(apikey=)[^&\s\"'#]+")
+
+
+class _RedactApiKey(logging.Filter):
+    """httpx logs every request URL at INFO; Geosearch takes its key only as a query parameter."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:  # noqa: BLE001 - never break logging over a malformed record
+            return True
+        if "apikey=" in message.lower():
+            record.msg, record.args = APIKEY_IN_URL.sub(r"\1***", message), ()
+        return True
+
+
+def _redact_http_logs() -> None:
+    for name in ("httpx", "httpcore"):
+        logger = logging.getLogger(name)
+        if not any(isinstance(item, _RedactApiKey) for item in logger.filters):
+            logger.addFilter(_RedactApiKey())
+
+
 class GeosearchClient:
     """Stateless caller: one request per tool call, paced, nothing cached."""
 
     def __init__(self, key: str, transport: httpx.AsyncBaseTransport | None = None, timeout: float = 15.0):
         self._key, self._transport, self._timeout = key, transport, timeout
+        _redact_http_logs()
         self._lock = asyncio.Lock()
         self._last = 0.0
 

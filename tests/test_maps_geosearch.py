@@ -163,3 +163,16 @@ async def test_server_registers_tools_only_with_key_and_redacts(tmp_path, monkey
         assert result.structured_content["results"][0]["name"] == "Кафе Б"
         with pytest.raises(ToolError):
             await client.call_tool("maps_search_organizations", {"text": "кафе", "results": 99})
+
+
+async def test_key_never_reaches_http_logs(caplog):
+    caplog.set_level("DEBUG")
+
+    def handler(request):
+        assert request.url.params["apikey"] == KEY  # sent to the API ...
+        return httpx.Response(200, json=BIZ)
+
+    client = geo.GeosearchClient(KEY, transport=httpx.MockTransport(handler))
+    await client.search(geo.build_params("biz", text="кафе"))
+    assert "search-maps.yandex.ru" in caplog.text and "apikey=***" in caplog.text
+    assert KEY not in caplog.text  # ... but never logged
