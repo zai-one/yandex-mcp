@@ -22,7 +22,7 @@ uv run python -m zai_yandex --transport stdio
 ```
 
 Для установки локального wheel используйте `pip install
-'./dist/zai_yandex_mcp-0.6.0-py3-none-any.whl[standalone]'`.
+'./dist/zai_yandex_mcp-0.7.0-py3-none-any.whl[standalone]'`.
 
 Базовый пакет содержит адаптеры и регистрацию инструментов. Extra `standalone`
 закрепляет FastMCP 3.4.4 для собственного сервера. Платформа устанавливает базовый

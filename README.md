@@ -62,7 +62,7 @@ Clients and `notifications/tools/list_changed` (verified against official docs, 
 
 ## Maintained and up to date
 
-- Actively maintained by ZAI.ONE: current version 0.6.0; release notes in [CHANGELOG.md](CHANGELOG.md) and [Releases](https://github.com/zai-one/yandex-mcp/releases).
+- Actively maintained by ZAI.ONE: current version 0.7.0; release notes in [CHANGELOG.md](CHANGELOG.md) and [Releases](https://github.com/zai-one/yandex-mcp/releases).
 - Built-in update check: ask the assistant to run `yandex_check_update` (public GitHub API, no credentials, cached; nothing is installed automatically; `YANDEX_DISABLE_UPDATE_CHECK=1` turns it off).
 - Follows current MCP practice: tool annotations (read-only / destructive hints), toolsets and read-only mode, server `instructions`, prompts and resources, structured errors with recovery hints, secrets kept out of tool output, a token budget for tool descriptions enforced in tests, and a routing eval: messy RU/EN requests must reach the right skill, guide and tool from the short router.
 - CI runs the test suite on Linux and Windows for every pull request.
@@ -143,7 +143,7 @@ If tools do not appear, check the absolute path, whether the client can find `uv
 
 ```bash
 # Claude Code (MCP only); --config is optional (see Zero config above)
-claude mcp add yandex -- uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.6.0" yandex-mcp --config /ABSOLUTE/PATH/mcp.local.json
+claude mcp add yandex -- uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.7.0" yandex-mcp --config /ABSOLUTE/PATH/mcp.local.json
 # Claude Code plugin (MCP + skills) from this repository; set YANDEX_MCP_CONFIG to your mcp.local.json
 /plugin marketplace add zai-one/yandex-mcp
 /plugin install yandex@zai-yandex
@@ -154,7 +154,7 @@ Codex `~/.codex/config.toml`:
 ```toml
 [mcp_servers.yandex]
 command = "uvx"
-args = ["--from", "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.6.0", "yandex-mcp", "--config", "/ABSOLUTE/PATH/mcp.local.json"]
+args = ["--from", "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.7.0", "yandex-mcp", "--config", "/ABSOLUTE/PATH/mcp.local.json"]
 env = { YANDEX_TOOLSETS = "default" }
 ```
 
