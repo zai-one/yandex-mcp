@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Platform setup: default stays `all`. Prompt `yandex_setup` + tool `yandex_setup_toolsets` (platforms direct/metrika/webmaster/audience/wordstat/serp/maps/manage or presets direct-only/analytics/seo/everything) return `YANDEX_TOOLSETS` with measured token cost; `write=true` (stdio only) sets just that key in the active or per-user `mcp.local.json` (0600), restart to apply. `yandex-mcp-setup` asks the same question. No secrets involved. Router +1 line (limit 1800 chars); routing eval 45 cases. Without a key `default` = 53 tools, `all` = 127.
+- Platform setup: default stays `all`. Prompt `yandex_setup` + tool `yandex_setup_toolsets` (platforms direct/metrika/webmaster/audience/wordstat/serp/maps/manage or presets direct-only/analytics/seo/everything) return `YANDEX_TOOLSETS` with measured token cost; `write=true` (stdio only) sets just that key in the active or per-user `mcp.local.json` (0600), restart to apply. `yandex-mcp-setup` asks the same question. No secrets involved. Router +1 line (limit 1800 chars); Unknown wizard input keeps `all`. Routing eval 45 cases. Without a key `default` = 53 tools, `all` = 127.
 
 - Opt-in `maps_geosearch` toolset (Yandex Maps organization search, `search-maps.yandex.ru/v1`): `maps_search_organizations`, `maps_search_places`. Enabled only when `YANDEX_MAPS_GEOSEARCH_API_KEY` or `YANDEX_MAPS_GEOSEARCH_API_KEY_FILE` (owner-private file) is set; read-only, scope `yandex_search:read`, compact output in API order with attribution, no caching, client pacing. Router line appears only when the tools are exposed; guide `yandex://guide/maps-geosearch`; routing eval 43 cases. Without a key `default` and `all` are unchanged by this toolset.
 

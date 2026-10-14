@@ -126,7 +126,11 @@ def configure(directory: Path) -> Path:
         elif len(names) == 1 and names[0] in PRESETS:
             values["YANDEX_TOOLSETS"] = resolve_toolsets(preset=names[0])
         else:
-            values["YANDEX_TOOLSETS"] = resolve_toolsets(names)
+            try:
+                values["YANDEX_TOOLSETS"] = resolve_toolsets(names)
+            except ValueError:
+                print("Unknown platform; keeping the default (all). Change it later with yandex_setup.")
+                values["YANDEX_TOOLSETS"] = "all"
     root.mkdir(parents=True, exist_ok=True)
     _private_directory(root / "secrets")
     for path, value in pending.items():
