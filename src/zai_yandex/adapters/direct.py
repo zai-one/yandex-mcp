@@ -37,9 +37,11 @@ EXTRA_READ_METHODS: dict[str, frozenset[str]] = {
     "keywordbids": frozenset({"get"}),
     "clients": frozenset({"get"}),
     "creatives": frozenset({"get"}),
-    "dictionaries": frozenset({"get"}),
+    # getGeoRegions: https://yandex.ru/dev/direct/doc/ru/dictionaries/getGeoRegions
+    "dictionaries": frozenset({"get", "getGeoRegions"}),
     "dynamictextadtargets": frozenset({"get"}),  # units + DynamicTextAdTargets service
-    "dynamicfeedadtargets": frozenset({"get"}),  # legacy: not in the current reference, read-only
+    "dynamicfeedadtargets": frozenset({"get"}),  # see LEGACY_REFERENCE_SERVICES
+    "vcards": frozenset({"get"}),
     "feeds": frozenset({"get"}),
     "leads": frozenset({"get"}),
     "negativekeywordsharedsets": frozenset({"get"}),
@@ -72,13 +74,21 @@ WRITE_METHODS: dict[str, frozenset[str]] = {
     "advideos": frozenset({"add"}),
     "negativekeywordsharedsets": frozenset({"add", "update", "delete"}),
     "feeds": frozenset({"add", "update", "delete"}),
-    # DynamicTextAdTargets / SmartAdTargets / DynamicFeedAdTargets and VCards are no longer
-    # in the current API reference (https://yandex.ru/dev/direct/doc/ru/), so no writes.
+    # Services whose method pages were dropped from the new reference navigation (2026) but which
+    # are neither announced as removed in the changelog (https://yandex.ru/dev/direct/doc/ru/changelog)
+    # nor unused by the current guides (best-practice/smart-ads still calls SmartAdTargets.add;
+    # concepts/contact-info maps business cards to the vCards service). Approval-only.
+    "vcards": frozenset({"add", "delete"}),
+    "dynamictextadtargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
+    "smartadtargets": frozenset({"add", "update", "delete", "suspend", "resume", "setBids"}),
+    "dynamicfeedadtargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
     "creatives": frozenset({"add"}),
     # v501 endpoint (service_url); https://yandex.ru/dev/direct/doc/ru/strategies/strategies
     "strategies": frozenset({"add", "update", "archive", "unarchive"}),
     # https://yandex.ru/dev/direct/doc/ru/agencyclients/update (agency accounts only; approval-gated)
-    "agencyclients": frozenset({"update"}),
+    # addPassportOrganizationMember invites one person into a Yandex ID organization
+    # (https://yandex.ru/dev/direct/doc/ru/agencyclients/addPassportOrganizationMember; 10 invites/day).
+    "agencyclients": frozenset({"update", "addPassportOrganizationMember"}),
     # https://yandex.ru/dev/direct/doc/ru/clients/update (the advertiser itself; approval-gated)
     "clients": frozenset({"update"}),
 }
@@ -89,7 +99,12 @@ UNIFIED_METHODS = frozenset({"add", "update"})
 # update items addressed by another key than ``Id`` (None: the authorized client itself).
 UPDATE_ID_FIELD: dict[str, str | None] = {"agencyclients": "ClientId", "clients": None}
 # Writes that only the approval-gated path (direct_prepare_write -> direct_apply_write) may run.
-APPROVAL_ONLY_WRITES: frozenset[str] = frozenset({"agencyclients", "clients", "strategies"})
+LEGACY_REFERENCE_SERVICES = frozenset(
+    {"vcards", "dynamictextadtargets", "smartadtargets", "dynamicfeedadtargets"}
+)
+APPROVAL_ONLY_WRITES: frozenset[str] = (
+    frozenset({"agencyclients", "clients", "strategies"}) | LEGACY_REFERENCE_SERVICES
+)
 # Upstream top-level payload key for object-based writes (add/update/set).
 SERVICE_PAYLOAD_KEY: dict[str, str] = {
     "campaigns": "Campaigns",
@@ -107,6 +122,10 @@ SERVICE_PAYLOAD_KEY: dict[str, str] = {
     "advideos": "AdVideos",
     "negativekeywordsharedsets": "NegativeKeywordSharedSets",
     "feeds": "Feeds",
+    "vcards": "VCards",
+    "dynamictextadtargets": "Webpages",
+    "smartadtargets": "SmartAdTargets",
+    "dynamicfeedadtargets": "DynamicFeedAdTargets",
     "creatives": "Creatives",
     "strategies": "Strategies",
     "agencyclients": "Clients",
@@ -432,8 +451,8 @@ class YandexDirectAdapter:
     @staticmethod
     def risk_tier(service: str, method: str) -> str:
         normalized_method = str(method).strip()
-        if normalized_method == "delete":
-            return "high"
+        if normalized_method in {"delete", "addPassportOrganizationMember"}:
+            return "high"  # irreversible / sends an invitation to a person
         if normalized_method in {"add"} or normalized_method in {"set", "setAuto"}:
             return "high" if str(service).strip("/").lower() in {"bids", "campaigns"} else "medium"
         return "medium"
@@ -458,6 +477,9 @@ class YandexDirectAdapter:
             raise ProviderError(f"Direct apply requires 1..{MAX_APPLY_ITEMS} items")
         needs_id = normalized_method in ID_BASED_METHODS or normalized_method == "update"
         id_field = UPDATE_ID_FIELD.get(normalized, "Id") if normalized_method == "update" else "Id"
+        if normalized_method == "addPassportOrganizationMember":
+            YandexDirectAdapter._validate_member_invite(items)
+            return normalized, normalized_method, [dict(items[0])]
         if normalized == "clients" and len(items) != 1:
             raise ProviderError("clients update takes exactly one item (the authorized client)")
         YandexDirectAdapter.is_unified(normalized, normalized_method, items)
@@ -472,6 +494,28 @@ class YandexDirectAdapter:
                 if isinstance(item_id, bool) or not isinstance(item_id, int):
                     raise ProviderError(f"this Direct method requires an integer {id_field} per item")
         return normalized, normalized_method, [dict(item) for item in items]
+
+    @staticmethod
+    def _validate_member_invite(items: list[Any]) -> None:
+        if len(items) != 1 or not isinstance(items[0], dict):
+            raise ProviderError("addPassportOrganizationMember takes exactly one object")
+        item = items[0]
+        if set(item) - {"PassportOrganizationLogin", "Role", "SendInviteTo"}:
+            raise ProviderError(
+                "addPassportOrganizationMember accepts PassportOrganizationLogin, Role, SendInviteTo"
+            )
+        login = item.get("PassportOrganizationLogin")
+        if not isinstance(login, str) or not login.strip():
+            raise ProviderError("PassportOrganizationLogin is required")
+        if item.get("Role") not in {"ADMIN", "USER"}:
+            raise ProviderError("Role must be ADMIN or USER")
+        target = item.get("SendInviteTo")
+        if not isinstance(target, dict) or len(target) != 1 or not set(target) <= {"Phone", "Email"}:
+            raise ProviderError("SendInviteTo needs exactly one of Phone or Email")
+        if "Phone" in target and not (isinstance(target["Phone"], str) and target["Phone"].isdigit()):
+            raise ProviderError("SendInviteTo.Phone must be digits only")
+        if "Email" in target and not (isinstance(target["Email"], str) and "@" in target["Email"]):
+            raise ProviderError("SendInviteTo.Email must be an email address")
 
     @staticmethod
     def is_unified(service: str, method: str, items: list[dict[str, Any]]) -> bool:
@@ -491,6 +535,8 @@ class YandexDirectAdapter:
 
     @staticmethod
     def _apply_params(service: str, method: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+        if method == "addPassportOrganizationMember":
+            return dict(items[0])  # params is the single invite object, not a list
         if (service, method) in HASH_BASED:
             return {"SelectionCriteria": {"AdImageHashes": [item["AdImageHash"] for item in items]}}
         if method in ID_BASED_METHODS:
@@ -540,6 +586,10 @@ class YandexDirectAdapter:
             "adextensions": ["Id", "Type", "Status"],
             "strategies": ["Id", "Name", "Type", "StatusArchived"],
             "creatives": ["Id", "Type", "Name"],
+            "vcards": ["Id", "CampaignId", "CompanyName"],
+            "dynamictextadtargets": ["Id", "AdGroupId", "CampaignId", "Name", "State"],
+            "smartadtargets": ["Id", "AdGroupId", "CampaignId", "Name", "State"],
+            "dynamicfeedadtargets": ["Id", "AdGroupId", "CampaignId", "Name", "State"],
         }
         if normalized == "clients":
             # clients.get has no SelectionCriteria: it returns the authorized client.

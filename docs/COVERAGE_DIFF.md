@@ -36,17 +36,19 @@ Legend: ✅ covered · ➕ covered only by us · — not offered · ⛔ intentio
 | AudienceTargets get / add / delete / suspend / resume / setBids | svecha, axisrow | ✅ `direct_list_audience_targets` + write |
 | RetargetingLists get / add / update / delete | svecha, skidd, axisrow | ✅ list + write |
 | Sitelinks, AdImages, AdExtensions (callouts) get/add/delete | all | ✅ lists + write (AdImages by hash) |
-| VCards | all | ⚠️ read only: VCards is absent from the current Direct reference, so no writes |
+| VCards get / add / delete | all | ✅ read + approval-only write (`direct_prepare_write` -> `direct_apply_write`); see *Legacy-reference services* below |
 | AdVideos, Creatives get / add | skidd, axisrow | ✅ lists + write |
 | Feeds get / add / update / delete | svecha, skidd, axisrow | ✅ `direct_list_feeds` + write |
 | NegativeKeywordSharedSets get / add / update / delete | skidd, axisrow | ✅ list + write |
-| DynamicTextAdTargets (webpages) get / add / delete / suspend / resume / setBids | webkoth, axisrow | ⚠️ list only (service absent from the current reference) |
-| DynamicFeedAdTargets get / add / delete / suspend / resume / setBids | axisrow | ⚠️ `direct_list_dynamic_feed_ad_targets` only (absent from the current reference) |
-| SmartAdTargets get / add / update / delete / suspend / resume / setBids | svecha, skidd, axisrow | ⚠️ list only (absent from the current reference) |
+| DynamicTextAdTargets (webpages) get / add / delete / suspend / resume / setBids | webkoth, axisrow | ✅ list + approval-only write (`direct_prepare_write` -> `direct_apply_write`); see *Legacy-reference services* below |
+| DynamicFeedAdTargets get / add / delete / suspend / resume / setBids | axisrow | ✅ `direct_list_dynamic_feed_ad_targets` + approval-only write (`direct_prepare_write` -> `direct_apply_write`); see *Legacy-reference services* below |
+| SmartAdTargets get / add / update / delete / suspend / resume / setBids | svecha, skidd, axisrow | ✅ list + approval-only write (`direct_prepare_write` -> `direct_apply_write`); see *Legacy-reference services* below |
 | Clients update; unified performance campaigns / groups add / update (v501) | — | ✅ `direct_prepare_write` -> `direct_apply_write` (approval-only, v501 routed) |
 | Strategies (v501) get / add / update / archive / unarchive | axisrow | ✅ `direct_list_strategies` + approval-only write |
 | AgencyClients get / update | skidd, axisrow | ✅ `direct_list_agency_clients` + approval-only update |
-| AgencyClients add / passport organisations | axisrow | ⛔ creates paying client accounts with personal data; do it in the Direct UI |
+| AgencyClients addPassportOrganizationMember | — | ✅ approval-only write, high risk (one invite: login, ADMIN/USER, Phone xor Email; 10/day) |
+| AgencyClients add / addPassportOrganization | axisrow | ⛔ `add` is no longer supported (changelog 16.06.2025); `addPassportOrganization` needs a second user's token in `Member-Authorization`, which this server never holds; do it in the Direct UI |
+| Dictionaries getGeoRegions | — | ✅ `direct_get_inventory(service="dictionaries", params={SelectionCriteria, FieldNames})` |
 | Clients get | all | ✅ `direct_get_client` (no phones by default) |
 | Dictionaries, Changes, TurboPages, Leads, Businesses | all | ✅ `direct_extra` |
 | Reports (custom, goals, attribution) | all | ✅ `direct_get_statistics`, `direct_get_goal_statistics` |
@@ -55,6 +57,37 @@ Legend: ✅ covered · ➕ covered only by us · — not offered · ⛔ intentio
 | Balance (Live v4 AccountManagement) | axisrow | ⛔ v4 Live only, token in request body; campaign Funds via `direct_get_campaign` |
 | "Masters" (Мастер кампаний) via browser automation | axisrow | ⛔ not a public API (Playwright scraping of the UI) |
 | Per-change history | axisrow | ⛔ no public v5 method; use Changes (`direct_check_changes`) |
+
+### Legacy-reference services (evidence, checked 2026-10-13)
+
+VCards, DynamicTextAdTargets, SmartAdTargets and DynamicFeedAdTargets have no method pages in
+the current reference navigation (`/dev/direct/doc/ru/<service>/add` -> 404; the old
+`ref-v5/<service>/add.html` URLs 301 there). They are **not** removed:
+
+- the changelog (https://yandex.ru/dev/direct/doc/ru/changelog) announces their introduction
+  (DynamicFeedAdTargets 23.06.2021, SmartAdTargets 16.03.2020) and no withdrawal, while it does
+  record other withdrawals (e.g. AgencyClients.add, 16.06.2025);
+- current guides still use them: best-practice/smart-ads ("метод SmartAdTargets.add"),
+  concepts/contact-info (business cards -> vCards service), ads/get (`VCardIds`,
+  `VCardModerationStatuses`), concepts/errors-list ("удалить визитку, которая используется");
+- a 2025-09-17 crawl of the official English reference still lists VCards add/get/delete with
+  the v5/v501 WSDL and JSON endpoints.
+
+A live probe was not possible (api.direct.yandex.com answers 204 to any unauthenticated request).
+So the writes are restored, but approval-only, with readback by Id.
+
+## Not available through an official API (checked 2026-10-13)
+
+| Area | Status | Source |
+|---|---|---|
+| Yandex Business organization cards (edit profile, hours, prices, photos) | ⛔ no public API; chains update via an XML/CSV file URL set in the cabinet | https://yandex.ru/support/business-priority/ru/branches/branches-xml |
+| Yandex Business reviews and replies | ⛔ replies only in the cabinet ("Отвечать на отзывы можно только в Личном кабинете"); third-party clients use session cookies, which we never do | https://yandex.ru/support/business-priority/ru/reviews/respond |
+| Promotion in Maps (former Geoadv / Business subscription) | ⚠️ through Direct only: unified campaigns (`Maps`, `SearchOrganizationList` fields, v501) and `BusinessId` in ads; profiles via `direct_list_businesses` | Direct changelog, https://yandex.ru/support/direct/ru/company-ads/create-upc |
+| Maps Places (Geosearch) API | ⚠️ official but a separate paid key for public search with display/storage restrictions; not account management, not added | https://yandex.ru/maps-api/docs/geosearch-api/ |
+| Yandex Business booking API | ⛔ an API Yandex calls on the partner, not one we call | https://yandex.ru/support/business-priority/ru/manage/booking-api-partners |
+| Turbo pages | ⛔ no longer shown in search since 2 April; only Direct `turbopages.get` / leads stay | https://yandex.ru/dev/turbo/doc/ru/ |
+| Webmaster original texts | ⛔ tool discontinued | https://yandex.ru/dev/webmaster/doc/ru/reference/host-original-texts-post |
+| Webmaster site quality / reviews | ✅ SQI history, summary, diagnostics already covered; there is no reviews resource in Webmaster v4 | https://yandex.ru/dev/webmaster/doc/ru/llms.txt |
 
 ## Metrika (Management, Reporting, Logs)
 

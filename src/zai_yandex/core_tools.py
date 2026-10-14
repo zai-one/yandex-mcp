@@ -231,6 +231,10 @@ def register_core_tools(server: Any, runtime: Any) -> None:
     async def direct_get_inventory(service: str, params: dict[str, Any]) -> dict[str, Any]:
         """Run a provider-native get against the explicit Direct inventory allowlist."""
         normalized = service.strip("/").lower()
+        if normalized == "dictionaries":
+            # dictionaries.get is direct_get_dictionaries; here only getGeoRegions (search by
+            # Name/RegionIds/ExactNames): https://yandex.ru/dev/direct/doc/ru/dictionaries/getGeoRegions
+            return await _direct_read(normalized, {"method": "getGeoRegions", "params": params})
         if normalized not in INVENTORY_READ_SERVICES:
             raise ValueError("Direct inventory service is not allowed")
         return await _direct_read(normalized, {"method": "get", "params": params})

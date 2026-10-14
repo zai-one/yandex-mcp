@@ -69,6 +69,7 @@ GUIDE_TOPICS = (
     "tool-map",
     "oauth",
     "management",
+    "business",
 )
 
 
@@ -96,6 +97,7 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     ("serp", "выдача, позиции, SERP", "yandex_serp_prepare", "", "tool-map"),
     ("audience", "аудитории, сегменты, пиксель", "audience_list_segments", "", "tool-map"),
     ("manage", "права, представители, метки, примечания, звонки, затраты, фид, хост", "metrika_manage_read", "yandex-account-admin", "management"),
+    ("business", "Бизнес, отзывы, геореклама", "", "", "business"),
     ("errors", "ошибка, баллы, лимит", "", "", "errors"),
 )  # fmt: skip
 
@@ -108,15 +110,15 @@ def build_instructions(
 ) -> str:
     mode = "read-only" if surface.read_only else "read+write"
     lines = [
-        f"Yandex MCP: Direct/Metrika/Webmaster/Wordstat/Search/Audience ({mode}; yandex://toolsets).",
-        "Intent: first tool; skill; yandex://guide/<topic>.",
+        f"Yandex MCP: Direct/Metrika/Webmaster/Wordstat/SERP/Audience ({mode}; yandex://toolsets).",
+        "Line: tool; skill; yandex://guide/<topic>.",
     ]
     for _, words, tool, skill, topic in ROUTES:
         # tool-map is named once on the "Unsure?" line below; repeating it per route only costs tokens.
         parts = (tool, skill, "" if topic == "tool-map" else topic)
         lines.append(f"- {words}: " + "; ".join(part for part in parts if part))
-    lines.append("Writes: prepare -> user approval -> apply(idempotency_key). Wordstat/SERP paid.")
-    lines.append("Unsure? yandex://playbook (skills), yandex://guide/tool-map (all tools).")
+    lines.append("Writes: prepare -> approval -> apply(idempotency_key). Wordstat/SERP paid.")
+    lines.append("Unsure: yandex://playbook, yandex://guide/tool-map.")
     if direct_sandbox:
         lines.append("Direct SANDBOX: test data only (api-sandbox); say so in answers.")
     if accounts:

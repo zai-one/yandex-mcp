@@ -276,10 +276,21 @@ def test_direct_parity_writes_use_documented_payload_keys():
     params = YandexDirectAdapter._apply_params
     assert params("audiencetargets", "setBids", [{"Id": 1}]) == {"Bids": [{"Id": 1}]}
     assert params("sitelinks", "add", [{"Sitelinks": []}]) == {"SitelinksSets": [{"Sitelinks": []}]}
-    for legacy in ("dynamictextadtargets", "smartadtargets", "dynamicfeedadtargets", "vcards"):
-        # Absent from the current Direct reference: no write path at all.
-        with pytest.raises(ProviderError):
-            YandexDirectAdapter.validate_apply(legacy, "add", [{"AdGroupId": 1}])
+    from zai_yandex.adapters.direct import APPROVAL_ONLY_WRITES
+
+    keys = {
+        "dynamictextadtargets": "Webpages",
+        "smartadtargets": "SmartAdTargets",
+        "dynamicfeedadtargets": "DynamicFeedAdTargets",
+        "vcards": "VCards",
+    }
+    for legacy, key in keys.items():
+        # Restored, but only through the approval-gated prepare/apply path.
+        assert legacy in APPROVAL_ONLY_WRITES
+        assert params(legacy, "add", [{"AdGroupId": 1}]) == {key: [{"AdGroupId": 1}]}
+    assert params("smartadtargets", "setBids", [{"Id": 1}]) == {"Bids": [{"Id": 1}]}
+    with pytest.raises(ProviderError):
+        YandexDirectAdapter.validate_apply("vcards", "update", [{"Id": 1}])  # vCards has no update
     assert params("adimages", "delete", [{"AdImageHash": "h"}]) == {
         "SelectionCriteria": {"AdImageHashes": ["h"]}
     }
@@ -762,3 +773,28 @@ def test_wordstat_matches_the_v2_proto():
         validate_regions([str(i) for i in range(101)])
     with pytest.raises(ValueError):
         validate_regions(["moscow"])
+
+
+def test_direct_member_invite_and_geo_regions_follow_the_docs():
+    from zai_yandex.adapters.direct import APPROVAL_ONLY_WRITES, YandexDirectAdapter
+
+    invite = {"PassportOrganizationLogin": "org", "Role": "USER", "SendInviteTo": {"Email": "a@b.ru"}}
+    service, method, items = YandexDirectAdapter.validate_apply(
+        "agencyclients", "addPassportOrganizationMember", [invite]
+    )
+    assert YandexDirectAdapter._apply_params(service, method, items) == invite
+    assert "agencyclients" in APPROVAL_ONLY_WRITES
+    assert YandexDirectAdapter.risk_tier(service, method) == "high"
+    for bad in (
+        [invite, invite],
+        [{**invite, "Role": "OWNER"}],
+        [{**invite, "SendInviteTo": {"Email": "a@b.ru", "Phone": "7999"}}],
+        [{**invite, "SendInviteTo": {"Phone": "+7 999"}}],
+        [{**invite, "Extra": 1}],
+    ):
+        with pytest.raises(ProviderError):
+            YandexDirectAdapter.validate_apply("agencyclients", "addPassportOrganizationMember", bad)
+    assert (
+        YandexDirectAdapter.validate_read("dictionaries", {"method": "getGeoRegions", "params": {}})[0]
+        == "dictionaries"
+    )

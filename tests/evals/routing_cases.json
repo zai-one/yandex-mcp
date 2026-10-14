@@ -183,5 +183,20 @@
     "request": "поменять ставки на объявления",
     "route": "direct_change",
     "tool": "direct_prepare_changes"
+  },
+  {
+    "request": "как ответить на отзывы о нашей организации в Яндекс Бизнесе",
+    "route": "business",
+    "tool": "direct_list_businesses"
+  },
+  {
+    "request": "хочу продвигать организацию, геореклама еще жива?",
+    "route": "business",
+    "tool": "direct_prepare_write"
+  },
+  {
+    "request": "в Яндекс Бизнесе поправь визитку и глянь новые отзывы",
+    "route": "business",
+    "tool": "direct_get_inventory"
   }
 ]
