@@ -36,10 +36,17 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         phrase: str, regions: list[str], num_phrases: int = 10, devices: list[str] | None = None
     ) -> dict[str, Any]:
         """Wordstat top requests + associations; num_phrases 1..2000; devices DEVICE_* list."""
-        from zai_yandex.wordstat import validate_devices, validate_num_phrases
+        from zai_yandex.wordstat import (
+            validate_devices,
+            validate_num_phrases,
+            validate_phrase,
+            validate_regions,
+        )
 
         validate_num_phrases(num_phrases)  # Validate before reserving any budget.
         validate_devices(devices)
+        validate_phrase(phrase)
+        validate_regions(regions)
         return await _wordstat_call(
             "wordstat_get_top",
             lambda: registry.yandex_search().wordstat_get_top(phrase, regions, num_phrases, devices),
@@ -109,7 +116,7 @@ def register_core_tools(server: Any, runtime: Any) -> None:
     async def yandex_wordstat_dynamics(
         phrase: str,
         from_date: str,
-        to_date: str,
+        to_date: str | None = None,
         period: str = "PERIOD_MONTHLY",
         regions: list[str] | None = None,
         devices: list[str] | None = None,
@@ -437,7 +444,9 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         try:
             adapter = registry.yandex_direct()
             norm_service, norm_method, items = adapter.validate_apply(service, method, campaigns)
-            if (norm_service, norm_method) != ("campaigns", "update"):
+            if (norm_service, norm_method) != ("campaigns", "update") or adapter.is_unified(
+                norm_service, norm_method, items
+            ):
                 # The draft hash covers only the items, so this path must not let an approval
                 # for one method execute another (e.g. update -> delete on the same Ids).
                 raise PermissionError(
@@ -482,7 +491,7 @@ def register_core_tools(server: Any, runtime: Any) -> None:
 
     def _autonomous_allowed(service: str, method: str, items: list[dict[str, Any]]) -> Any:
         validated = YandexDirectAdapter.validate_apply(service, method, items)
-        if validated[0] in APPROVAL_ONLY_WRITES:
+        if validated[0] in APPROVAL_ONLY_WRITES or YandexDirectAdapter.is_unified(*validated):
             raise ProviderError("this Direct service needs direct_prepare_write -> direct_apply_write")
         return validated
 

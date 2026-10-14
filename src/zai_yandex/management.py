@@ -37,6 +37,22 @@ Kind = Literal["read", "write", "upload"]
 MAX_CSV_BYTES = 8 * 1024 * 1024
 MAX_BODY_KEYS = 200
 LOGIN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._@-]{0,127}$")
+DATE = re.compile(r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:?\d{2})?)?$")
+# scheme://user:password@host -> scheme://***@host (feed URLs may embed credentials).
+URL_CREDENTIALS = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/\s@:]+:[^/\s@]*@")
+
+
+def mask_credentials(value: Any) -> Any:
+    """Recursively hide user:password in URLs (previews, results, durable ledger)."""
+    if isinstance(value, str):
+        return URL_CREDENTIALS.sub(r"\1***@", value)
+    if isinstance(value, dict):
+        return {key: mask_credentials(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [mask_credentials(item) for item in value]
+    return value
+
+
 RESOURCE_ID = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
 INT_ARGS = frozenset({"counter_id", "id", "label_id", "uploading_id", "segment_id", "pixel_id", "client_id"})
 
@@ -53,6 +69,11 @@ class Op:
     readback: str | None = None
     fixed_query: dict[str, str] = field(default_factory=dict)
     required_query: frozenset[str] = frozenset()
+    # Documented enumerations / integer ranges / repeatable keys for query values.
+    query_values: dict[str, frozenset[str]] = field(default_factory=dict)
+    query_ints: dict[str, tuple[int, int]] = field(default_factory=dict)
+    query_lists: frozenset[str] = frozenset()
+    upload_name: tuple[str, str] = ("data.csv", "text/csv")
 
     @property
     def path_args(self) -> tuple[str, ...]:
@@ -93,31 +114,33 @@ STAT_QUERY: dict[str, frozenset[str]] = {
     | _STAT_PERIOD
     | {"sort", "limit", "offset", "parent_id", "only_expandable_undefined"},
     "comparison": _STAT_COMMON | _STAT_AB | {"sort", "limit", "offset"},
+    # https://yandex.ru/dev/metrika/ru/stat/openapi/pivot
+    "pivot": _STAT_COMMON
+    | _STAT_PERIOD
+    | {"sort", "limit", "offset", "pivot_dimensions", "pivot_limit", "pivot_offset"},
     "comparison_drilldown": _STAT_COMMON
     | _STAT_AB
     | {"sort", "limit", "offset", "parent_id", "only_expandable_undefined"},
 }
 
 
-def _crud(prefix: str, coll: str, item: str, key: str, doc: str, *, counter: bool = True) -> dict[str, Op]:
+def _crud(
+    prefix: str, coll: str, item: str, key: str, docs: tuple[str, str, str, str, str], *, counter: bool = True
+) -> dict[str, Op]:
+    """docs: per-method reference slugs (list, get, create, update, delete)."""
     base = "/management/v1/counter/{counter_id}/" if counter else "/management/v1/"
+    d_list, d_get, d_create, d_update, d_delete = (M + slug for slug in docs)
     return {
-        f"{prefix}_list": Op("read", "GET", base + coll, f"{M}{doc}"),
-        f"{prefix}_get": Op("read", "GET", base + item + "/{id}", f"{M}{doc}"),
+        f"{prefix}_list": Op("read", "GET", base + coll, d_list),
+        f"{prefix}_get": Op("read", "GET", base + item + "/{id}", d_get),
         f"{prefix}_create": Op(
-            "write", "POST", base + coll, f"{M}{doc}", body=key, risk="medium", readback=f"{prefix}_list"
+            "write", "POST", base + coll, d_create, body=key, risk="medium", readback=f"{prefix}_list"
         ),
         f"{prefix}_update": Op(
-            "write",
-            "PUT",
-            base + item + "/{id}",
-            f"{M}{doc}",
-            body=key,
-            risk="medium",
-            readback=f"{prefix}_get",
+            "write", "PUT", base + item + "/{id}", d_update, body=key, risk="medium", readback=f"{prefix}_get"
         ),
         f"{prefix}_delete": Op(
-            "write", "DELETE", base + item + "/{id}", f"{M}{doc}", risk="high", readback=f"{prefix}_list"
+            "write", "DELETE", base + item + "/{id}", d_delete, risk="high", readback=f"{prefix}_list"
         ),
     }
 
@@ -154,13 +177,89 @@ METRIKA_OPS: dict[str, Op] = {
         risk="medium",
         readback="counter_get",
     ),
-    **_crud("filter", "filters", "filter", "filter", "filter/"),
-    **_crud("operation", "operations", "operation", "operation", "operation/"),
-    **_crud("segment", "apisegment/segments", "apisegment/segment", "segment", "segment/"),
-    **_crud("annotation", "chart_annotations", "chart_annotation", "chart_annotation", "chart_annotation/"),
-    **_crud("access_filter", "access_filters", "access_filter", "access_filter", "access_filter/"),
-    **_crud("label", "labels", "label", "label", "label/", counter=False),
-    "goal_get": Op("read", "GET", "/management/v1/counter/{counter_id}/goal/{id}", M + "goal/goal"),
+    **_crud(
+        "filter",
+        "filters",
+        "filter",
+        "filter",
+        ("filter/filters", "filter/filter", "filter/addFilter", "filter/editFilter", "filter/deleteFilter"),
+    ),
+    **_crud(
+        "operation",
+        "operations",
+        "operation",
+        "operation",
+        (
+            "operation/operations",
+            "operation/operation",
+            "operation/addOperation",
+            "operation/editOperation",
+            "operation/deleteOperation",
+        ),
+    ),
+    **_crud(
+        "segment",
+        "apisegment/segments",
+        "apisegment/segment",
+        "segment",
+        (
+            "segment/getSegmentsForCounter",
+            "segment/getSegment",
+            "segment/createSegment",
+            "segment/updateSegment",
+            "segment/deleteSegment",
+        ),
+    ),
+    **_crud(
+        "annotation",
+        "chart_annotations",
+        "chart_annotation",
+        "chart_annotation",
+        (
+            "chart_annotation/findAll_3",
+            "chart_annotation/get",
+            "chart_annotation/create",
+            "chart_annotation/update_1",
+            "chart_annotation/delete",
+        ),
+    ),
+    **_crud(
+        "access_filter",
+        "access_filters",
+        "access_filter",
+        "access_filter",
+        (
+            "access_filter/getAccessFiltersForCounter",
+            "access_filter/getAccessFilter",
+            "access_filter/createAccessFilter",
+            "access_filter/updateAccessFilter",
+            "access_filter/deleteAccessFilter",
+        ),
+    ),
+    **_crud(
+        "label",
+        "labels",
+        "label",
+        "label",
+        ("label/getLabels", "label/getLabel", "label/createLabel", "label/updateLabel", "label/deleteLabel"),
+        counter=False,
+    ),  # fmt: skip
+    # Goals https://yandex.ru/dev/metrika/ru/management/openapi/goal/
+    **_crud(
+        "goal",
+        "goals",
+        "goal",
+        "goal",
+        ("goal/goals", "goal/goal", "goal/addGoal", "goal/editGoal", "goal/deleteGoal"),
+    ),  # fmt: skip
+    "goal_list": Op(
+        "read",
+        "GET",
+        "/management/v1/counter/{counter_id}/goals",
+        M + "goal/goals",
+        query=frozenset({"useDeleted"}),
+        query_values={"useDeleted": frozenset({"true", "false"})},
+    ),
     "social_networks": Op("read", "GET", "/management/v1/social_networks", M + "goal/getSocialNetworks"),
     "messengers": Op("read", "GET", "/management/v1/messengers", M + "goal/getMessengers"),
     "counter_label_set": Op(
@@ -280,12 +379,40 @@ METRIKA_OPS: dict[str, Op] = {
         "/management/v1/counter/{counter_id}/offline_conversions/calls_uploading/{id}",
         M + "call/findCallUploadingById",
     ),
+    # Offline conversions, every documented type (BASIC/CALLS/CHATS) through one upload
+    # https://yandex.ru/dev/metrika/ru/management/openapi/offline_conversions/upload_1
+    "offline_conversions_upload": Op(
+        "upload",
+        "POST",
+        "/management/v1/counter/{counter_id}/offline_conversions/upload",
+        M + "offline_conversions/upload_1",
+        query=frozenset({"client_id_type", "comment", "type"}),
+        query_values={
+            "client_id_type": frozenset({"USER_ID", "CLIENT_ID", "YCLID"}),
+            "type": frozenset({"BASIC", "CALLS", "CHATS"}),
+        },
+        risk="medium",
+        readback="offline_conversions_uploadings",
+    ),
+    "offline_conversions_uploadings": Op(
+        "read",
+        "GET",
+        "/management/v1/counter/{counter_id}/offline_conversions/uploadings",
+        M + "offline_conversions/findAll_1",
+    ),
+    "offline_conversions_uploading": Op(
+        "read",
+        "GET",
+        "/management/v1/counter/{counter_id}/offline_conversions/uploading/{id}",
+        M + "offline_conversions/findById_1",
+    ),
     "chats_upload": Op(
         "upload",
         "POST",
         "/management/v1/counter/{counter_id}/offline_conversions/upload",
         M + "chats/upload_chats",
-        query=frozenset({"comment"}),
+        query=frozenset({"comment", "client_id_type"}),
+        query_values={"client_id_type": frozenset({"USER_ID", "CLIENT_ID", "YCLID"})},
         risk="medium",
         fixed_query={"type": "CHATS"},
     ),
@@ -364,6 +491,13 @@ METRIKA_OPS: dict[str, Op] = {
         "https://yandex.ru/dev/metrika/ru/stat/openapi/bytime",
         query=STAT_QUERY["bytime"],
     ),
+    "stat_pivot": Op(
+        "read",
+        "GET",
+        "/stat/v1/data/pivot",
+        "https://yandex.ru/dev/metrika/ru/stat/openapi/pivot",
+        query=STAT_QUERY["pivot"],
+    ),
     "stat_drilldown": Op(
         "read",
         "GET",
@@ -375,7 +509,7 @@ METRIKA_OPS: dict[str, Op] = {
         "read",
         "GET",
         "/stat/v1/data/comparison",
-        "https://yandex.ru/dev/metrika/ru/stat/openapi/comparison",
+        "https://yandex.ru/dev/metrika/ru/stat/openapi/comparison_",
         query=STAT_QUERY["comparison"],
     ),
     "stat_comparison_drilldown": Op(
@@ -388,6 +522,7 @@ METRIKA_OPS: dict[str, Op] = {
 }
 
 W = "https://yandex.ru/dev/webmaster/doc/ru/reference/"
+FEED_TYPES = frozenset({"REALTY", "VACANCY", "DOCTORS", "CARS", "SERVICES", "EDUCATION"})
 H = "{host}"  # replaced by /user/{uid}/hosts/{host_id}
 WEBMASTER_OPS: dict[str, Op] = {
     "host_add": Op("write", "POST", "{user}/hosts", W + "hosts-add-site", body="", risk="medium"),
@@ -399,6 +534,8 @@ WEBMASTER_OPS: dict[str, Op] = {
         W + "host-verification-post",
         query=frozenset({"verification_type"}),
         required_query=frozenset({"verification_type"}),
+        # Only the explicit, requestable types (ApiExplicitVerificationType).
+        query_values={"verification_type": frozenset({"DNS", "HTML_FILE", "META_TAG"})},
         risk="low",
     ),
     "sitemap_delete": Op(
@@ -426,6 +563,13 @@ WEBMASTER_OPS: dict[str, Op] = {
         H + "/search-queries/all/history",
         W + "host-search-queries-history-all",
         query=frozenset({"query_indicator", "device_type_indicator", "date_from", "date_to"}),
+        query_values={
+            "query_indicator": frozenset(
+                {"TOTAL_SHOWS", "TOTAL_CLICKS", "AVG_SHOW_POSITION", "AVG_CLICK_POSITION"}
+            ),
+            "device_type_indicator": frozenset({"ALL", "DESKTOP", "MOBILE_AND_TABLET", "MOBILE", "TABLET"}),
+        },
+        query_lists=frozenset({"query_indicator"}),
     ),
     "insearch_history": Op(
         "read",
@@ -440,6 +584,7 @@ WEBMASTER_OPS: dict[str, Op] = {
         H + "/search-urls/in-search/samples",
         W + "hosts-indexing-insearch-samples",
         query=frozenset({"offset", "limit"}),
+        query_ints={"offset": (0, 2**31 - 1), "limit": (1, 100)},
     ),
     "indexing_archive_create": Op(
         "write", "POST", H + "/indexing/archive/", W + "host-id-important-archive-all-pages", risk="low"
@@ -495,8 +640,42 @@ WEBMASTER_OPS: dict[str, Op] = {
         H + "/feeds/status/list",
         W + "feeds-status-list",
         query=frozenset({"offset", "limit", "orderBy", "orderDirection", "status", "type"}),
+        query_ints={"offset": (0, 2**31 - 1), "limit": (1, 100)},
+        query_values={
+            "status": frozenset(
+                {
+                    "IN_PROGRESS",
+                    "SUCCESS",
+                    "ERROR",
+                    "MODERATION_FAILED",
+                    "MODERATION_BANNED",
+                    "SETS_CHECK_FAILED",
+                    "EMPTY_FEED",
+                    "DOWNLOAD_FAILED",
+                }
+            ),
+            "type": FEED_TYPES,
+            "orderBy": frozenset(
+                {
+                    "ERRORS_COUNT",
+                    "WARNINGS_COUNT",
+                    "ADDED_TIME",
+                    "LAST_ACCESS_TIME",
+                    "STATUS",
+                    "MODERATION_REJECTED_OFFERS_COUNT",
+                }
+            ),
+            "orderDirection": frozenset({"ASC", "DESC"}),
+        },  # fmt: skip
     ),
-    "feeds_summary": Op("read", "GET", H + "/feeds/summary", W + "feeds-summary", query=frozenset({"type"})),
+    "feeds_summary": Op(
+        "read",
+        "GET",
+        H + "/feeds/summary",
+        W + "feeds-summary",
+        query=frozenset({"type"}),
+        query_values={"type": FEED_TYPES},
+    ),
     # The feed is the documented ``url`` query parameter (feeds-problems, rejected-offers).
     "feeds_problems": Op(
         "read",
@@ -505,6 +684,7 @@ WEBMASTER_OPS: dict[str, Op] = {
         W + "feeds-problems",
         query=frozenset({"url", "severity"}),
         required_query=frozenset({"url"}),
+        query_values={"severity": frozenset({"ERROR", "WARNING"})},
     ),
     "feeds_rejected_offers": Op(
         "read",
@@ -521,6 +701,27 @@ AUDIENCE_OPS: dict[str, Op] = {
     "segment_upload_csv": Op(
         "upload", "POST", "/segments/upload_csv_file", A + "segments/uploadCsvFile", risk="medium"
     ),
+    # A plain data file (one identifier per line), not CSV.
+    "segment_upload_file": Op(
+        "upload",
+        "POST",
+        "/segments/upload_file",
+        A + "segments/uploadFile",
+        risk="medium",
+        upload_name=("data.txt", "text/plain"),
+    ),
+    "segment_create_geo": Op(
+        "write", "POST", "/segments/create_geo", A + "segments/createGeo", body="segment", risk="medium"
+    ),
+    "segment_create_geo_polygon": Op(
+        "write",
+        "POST",
+        "/segments/create_geo_polygon",
+        A + "segments/createGeoPolygon",
+        body="segment",
+        risk="medium",
+    ),
+    "pixel_create": Op("write", "POST", "/pixels", A + "pixels/create", body="pixel", risk="medium"),
     "segment_confirm": Op(
         "write",
         "POST",
@@ -542,7 +743,12 @@ AUDIENCE_OPS: dict[str, Op] = {
         "POST",
         "/segment/{segment_id}/modify_data",
         A + "segments/modifyUploadingData",
-        query=frozenset({"modification_type"}),
+        query=frozenset({"modification_type", "check_size"}),
+        required_query=frozenset({"modification_type"}),
+        query_values={
+            "modification_type": frozenset({"addition", "subtraction", "replace"}),
+            "check_size": frozenset({"true", "false"}),
+        },
         risk="high",
     ),
     "segment_update_geo_points": Op(
@@ -706,8 +912,20 @@ def validate_args(provider: str, op: Op, args: dict[str, Any] | None) -> dict[st
     if not isinstance(query, dict) or set(query) - op.query:
         raise ValueError("query keys must be from: " + (", ".join(sorted(op.query)) or "none"))
     for key, value in query.items():
-        if isinstance(value, bool) or not isinstance(value, (str, int, float)) or len(str(value)) > 4096:
-            raise ValueError(f"query.{key} must be a bounded scalar")
+        items = value if key in op.query_lists and isinstance(value, list) else [value]
+        if not 1 <= len(items) <= 10:
+            raise ValueError(f"query.{key} takes 1..10 values")
+        for item in items:
+            if isinstance(item, bool) or not isinstance(item, (str, int, float)) or len(str(item)) > 4096:
+                raise ValueError(f"query.{key} must be a bounded scalar")
+            if key in op.query_values and str(item) not in op.query_values[key]:
+                raise ValueError(f"query.{key} must be one of: " + ", ".join(sorted(op.query_values[key])))
+            if key in op.query_ints:
+                low, high = op.query_ints[key]
+                if isinstance(item, bool) or not isinstance(item, int) or not low <= item <= high:
+                    raise ValueError(f"query.{key} must be an integer {low}..{high}")
+            if key in {"date_from", "date_to"} and not DATE.fullmatch(str(item)):
+                raise ValueError(f"query.{key} must be an ISO date or date-time")
         if key == "user_login" and not LOGIN.fullmatch(str(value)):
             raise ValueError("query.user_login must be a Yandex login")
     if "user_login" in op.query and op.method == "DELETE" and "user_login" not in query:
@@ -765,7 +983,7 @@ async def execute(provider: str, adapter: Any, name: str, op: Op, args: dict[str
             url,
             headers=headers,
             params=params,
-            files={"file": ("data.csv", args["csv"].encode("utf-8"), "text/csv")},
+            files={"file": (op.upload_name[0], args["csv"].encode("utf-8"), op.upload_name[1])},
         )
     elif provider == "yandex_webmaster":
         result = await adapter._request(
@@ -777,7 +995,7 @@ async def execute(provider: str, adapter: Any, name: str, op: Op, args: dict[str
         )
     if isinstance(result.get("errors"), list) and result["errors"]:
         raise ProviderError(f"Yandex returned an error envelope for {name}")
-    return {"operation": name, "result": result}
+    return {"operation": name, "result": mask_credentials(result)}
 
 
 def readback_args(op: Op, args: dict[str, Any]) -> dict[str, Any]:
@@ -941,7 +1159,7 @@ def _register(server: Any, runtime: Any, provider: str, prefix: str, scope: str)
     async def prepare_tool(operation: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         op, clean = checked(operation, args, ("write", "upload"))
         opened = await open_approval(runtime, provider, f"manage:{operation}", digest(operation, clean))
-        preview = {key: value for key, value in clean.items() if key != "csv"}
+        preview = mask_credentials({key: value for key, value in clean.items() if key != "csv"})
         if "csv" in clean:
             preview["csv_rows"] = clean["csv"].count("\n") + 1
         return {
@@ -1101,6 +1319,10 @@ def register_direct_governed_tools(server: Any, runtime: Any) -> None:
             "item_count": len(clean),
             "risk": YandexDirectAdapter.risk_tier(norm_service, norm_method),
             "sandbox": runtime.settings.effective().direct_sandbox,
+            "endpoint": "v501"
+            if YandexDirectAdapter.is_unified(norm_service, norm_method, clean)
+            or norm_service == "strategies"
+            else "v5",
             "next_gate": "user accepts the approval, then direct_apply_write with the same "
             "service/method/items, "
             "approval_id and a new idempotency_key",
@@ -1117,7 +1339,11 @@ def register_direct_governed_tools(server: Any, runtime: Any) -> None:
         norm_service, norm_method, clean = checked(service, method, items)
 
         async def readback(result: Any) -> Any:
-            return await runtime.registry.yandex_direct().readback(norm_service, _direct_ids(clean, result))
+            return await runtime.registry.yandex_direct().readback(
+                norm_service,
+                _direct_ids(clean, result),
+                v501=YandexDirectAdapter.is_unified(norm_service, norm_method, clean),
+            )
 
         return await governed_apply(
             runtime,

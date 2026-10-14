@@ -276,7 +276,10 @@ def test_direct_parity_writes_use_documented_payload_keys():
     params = YandexDirectAdapter._apply_params
     assert params("audiencetargets", "setBids", [{"Id": 1}]) == {"Bids": [{"Id": 1}]}
     assert params("sitelinks", "add", [{"Sitelinks": []}]) == {"SitelinksSets": [{"Sitelinks": []}]}
-    assert params("dynamictextadtargets", "add", [{"AdGroupId": 1}]) == {"Webpages": [{"AdGroupId": 1}]}
+    for legacy in ("dynamictextadtargets", "smartadtargets", "dynamicfeedadtargets", "vcards"):
+        # Absent from the current Direct reference: no write path at all.
+        with pytest.raises(ProviderError):
+            YandexDirectAdapter.validate_apply(legacy, "add", [{"AdGroupId": 1}])
     assert params("adimages", "delete", [{"AdImageHash": "h"}]) == {
         "SelectionCriteria": {"AdImageHashes": ["h"]}
     }
@@ -437,7 +440,7 @@ async def test_webmaster_feed_and_search_url_paths_match_the_reference(tmp_path)
         ("insearch_samples", {"query": {"offset": 0, "limit": 10}}),
         ("feeds_problems", {"query": {"url": "https://example.test/feed.yml", "severity": "ERROR"}}),
         ("feeds_rejected_offers", {"query": {"url": "https://example.test/feed.yml"}}),
-        ("feeds_status_list", {"query": {"offset": 0, "limit": 20, "status": "OK"}}),
+        ("feeds_status_list", {"query": {"offset": 0, "limit": 20, "status": "SUCCESS"}}),
         ("feeds_summary", {"query": {"type": "REALTY"}}),
         ("feeds_add_info", {"body": {"requestId": "c7fe80c0-36e3-11e6-8b2d-df96aa592c0a"}}),
     ]
@@ -551,3 +554,211 @@ async def test_reconcile_never_settles_a_write_that_is_still_running(tmp_path):
             )
         ).data
         assert late["status"] == "applied"
+
+
+def test_documented_value_validation_for_webmaster_and_audience():
+    web, aud = CATALOG["yandex_webmaster"], CATALOG["yandex_audience"]
+    host = {"host_id": HOST}
+    bad = [
+        (web["verification_start"], {**host, "query": {"verification_type": "WHOIS"}}),
+        (web["insearch_samples"], {**host, "query": {"limit": 500}}),
+        (web["feeds_status_list"], {**host, "query": {"orderDirection": "UP"}}),
+        (web["feeds_summary"], {**host, "query": {"type": "SHOES"}}),
+        (web["search_queries_all_history"], {**host, "query": {"date_from": "yesterday"}}),
+        (aud["segment_modify_data"], {"segment_id": 1, "csv": "x", "query": {"modification_type": "ADD"}}),
+        (aud["segment_modify_data"], {"segment_id": 1, "csv": "x"}),  # modification_type is required
+    ]
+    for op, args in bad:
+        with pytest.raises(ValueError):
+            validate_args("yandex_webmaster", op, args)
+    ok = validate_args(
+        "yandex_webmaster",
+        web["search_queries_all_history"],
+        {**host, "query": {"query_indicator": ["TOTAL_SHOWS", "TOTAL_CLICKS"], "date_from": "2026-01-01"}},
+    )
+    assert ok["query"]["query_indicator"] == ["TOTAL_SHOWS", "TOTAL_CLICKS"]
+    validate_args(
+        "yandex_audience",
+        aud["segment_modify_data"],
+        {"segment_id": 1, "csv": "x", "query": {"modification_type": "replace", "check_size": "false"}},
+    )
+
+
+def test_every_operation_links_its_own_reference_page():
+    docs = [op.doc for ops in CATALOG.values() for op in ops.values()]
+    assert not [doc for doc in docs if doc.endswith("/")], "section links instead of method pages"
+    metrika = CATALOG["yandex_metrika"]
+    assert metrika["goal_create"].path == "/management/v1/counter/{counter_id}/goals"
+    assert metrika["goal_update"].method == "PUT" and metrika["goal_delete"].method == "DELETE"
+    assert metrika["stat_pivot"].path == "/stat/v1/data/pivot"
+    assert {"pivot_dimensions", "pivot_limit", "pivot_offset"} <= metrika["stat_pivot"].query
+
+
+def test_feed_credentials_are_masked():
+    from zai_yandex.management import mask_credentials
+
+    value = {"feeds": [{"url": "https://yandex:WE9h4FfBml@example.com/feed.yml"}], "n": 1}
+    assert mask_credentials(value) == {"feeds": [{"url": "https://***@example.com/feed.yml"}], "n": 1}
+    assert mask_credentials("https://example.com/a@b") == "https://example.com/a@b"
+
+
+async def test_feed_credentials_never_reach_preview_or_ledger(tmp_path):
+    settings = config(tmp_path, yandex_webmaster_write_enabled=True)
+    secret = "WE9h4FfBml"
+
+    def handle(method, url, payload, params):
+        if url.endswith("/user"):
+            return {"user_id": 42}
+        return {"feeds": [{"url": f"https://yandex:{secret}@example.com/feed.yml"}]}
+
+    recorder = Recorder(handle)
+    args = {"host_id": HOST, "body": {"feeds": [{"url": f"https://yandex:{secret}@example.com/f.yml",
+                                                 "type": "REALTY", "regionIds": [225]}]}}  # fmt: skip
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        draft = (
+            await client.call_tool("webmaster_manage_prepare", {"operation": "feeds_batch_add", "args": args})
+        ).data
+        assert secret not in json.dumps(draft) and accept(settings, draft)
+        done = (
+            await client.call_tool(
+                "webmaster_manage_apply",
+                {
+                    "operation": "feeds_batch_add",
+                    "args": args,
+                    "approval_id": draft["approval_id"],
+                    "idempotency_key": "feeds-add-1",
+                },  # fmt: skip
+            )
+        ).data
+        assert secret not in json.dumps(done, default=str)
+    sent = [call for call in recorder.calls if call[1].endswith("/feeds/batch/add")]
+    assert secret in json.dumps(sent[0][2])  # the provider still receives the real URL
+    with StateStore(settings).connect() as db:
+        rows = [tuple(row) for row in db.execute("SELECT * FROM provider_writes")]
+    assert rows and secret not in json.dumps(rows, default=str)
+
+
+async def test_offline_conversions_and_audience_uploads(tmp_path):
+    settings = config(tmp_path, yandex_metrika_write_enabled=True, yandex_audience_write_enabled=True)
+    files = []
+
+    class Multi(Calls):
+        def handle(self, method, url, payload, params):
+            if isinstance(payload, dict) and "files" in payload:
+                files.append((url, payload["files"]["file"][0], payload["files"]["file"][2], params))
+            return super().handle(method, url, payload, params)
+
+    recorder = Multi()
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        for provider, operation, args in (
+            ("metrika", "offline_conversions_upload",
+             {"counter_id": 9, "csv": "ClientId,Target,DateTime\n1,t,1\n",
+              "query": {"type": "CALLS", "client_id_type": "CLIENT_ID"}}),
+            ("audience", "segment_upload_file", {"csv": "a@b.c\nd@e.f\n"}),
+            ("audience", "pixel_create", {"body": {"name": "p"}}),
+            ("audience", "segment_create_geo",
+             {"body": {"name": "g", "radius": 500, "points": [{"latitude": 55.7, "longitude": 37.6}],
+                       "geo_segment_type": "REGULAR"}}),
+        ):  # fmt: skip
+            draft = (
+                await client.call_tool(f"{provider}_manage_prepare", {"operation": operation, "args": args})
+            ).data
+            assert accept(settings, draft)
+            await client.call_tool(
+                f"{provider}_manage_apply",
+                {
+                    "operation": operation,
+                    "args": args,
+                    "approval_id": draft["approval_id"],
+                    "idempotency_key": f"{operation}-1",
+                },  # fmt: skip
+            )
+        with pytest.raises(ToolError):
+            await client.call_tool(
+                "metrika_manage_prepare",
+                {"operation": "offline_conversions_upload",
+                 "args": {"counter_id": 9, "csv": "x", "query": {"type": "SALES"}}},
+            )  # fmt: skip
+    posts = [call for call in recorder.calls if call[0] == "POST"]
+    urls = [call[1] for call in posts]
+    assert urls[0].endswith("/counter/9/offline_conversions/upload")
+    assert urls[1].endswith("/v1/management/segments/upload_file")
+    assert urls[2].endswith("/v1/management/pixels") and posts[2][2] == {"pixel": {"name": "p"}}
+    assert urls[3].endswith("/segments/create_geo") and "segment" in posts[3][2]
+    assert files[0][3] == {"type": "CALLS", "client_id_type": "CLIENT_ID"}
+    assert files[1][1:3] == ("data.txt", "text/plain")  # a data file, not CSV
+
+
+async def _governed(client, settings, service, method, items, key):
+    draft = (
+        await client.call_tool("direct_prepare_write", {"service": service, "method": method, "items": items})
+    ).data
+    assert accept(settings, draft)
+    return draft, (
+        await client.call_tool(
+            "direct_apply_write",
+            {
+                "service": service,
+                "method": method,
+                "items": items,
+                "approval_id": draft["approval_id"],
+                "idempotency_key": key,
+            },
+        )  # fmt: skip
+    ).data
+
+
+async def test_direct_unified_clients_and_readbacks(tmp_path):
+    from zai_yandex.adapters.direct import YandexDirectAdapter
+
+    settings = config(tmp_path, yandex_direct_write_enabled=True)
+
+    def handle(method, url, payload, params):
+        if payload.get("method") == "add":
+            return {"result": {"AddResults": [{"Id": 31}]}}
+        return {"result": {"ok": True}}
+
+    recorder = Recorder(handle)
+    unified = [{"Name": "UC", "StartDate": "2026-11-01", "UnifiedCampaign": {"BiddingStrategy": {}}}]
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        draft, done = await _governed(client, settings, "campaigns", "add", unified, "uc-add-1")
+        assert draft["endpoint"] == "v501" and done["readback"]["confirmed"]
+        await _governed(client, settings, "clients", "update", [{"Phone": "+70000000000"}], "client-upd-1")
+        await _governed(
+            client, settings, "bidmodifiers", "add", [{"CampaignId": 5, "MobileAdjustment": {}}], "bm-add-1"
+        )
+        with pytest.raises(ToolError):  # unified writes are approval-only
+            await client.call_tool(
+                "direct_write",
+                {"service": "campaigns", "method": "add", "items": unified, "idempotency_key": "auto-uc-1"},
+            )
+    posts = [(call[1], call[2]) for call in recorder.calls if call[0] == "POST"]
+    assert posts[0][0].endswith("/json/v501/campaigns") and posts[0][1]["method"] == "add"
+    assert posts[1][0].endswith("/json/v501/campaigns") and posts[1][1]["method"] == "get"
+    assert posts[2][0].endswith("/json/v5/clients") and posts[2][1]["params"] == {
+        "Clients": [{"Phone": "+70000000000"}]
+    }
+    assert posts[3][0].endswith("/json/v5/clients") and posts[3][1]["method"] == "get"
+    bm_get = posts[5][1]["params"]
+    assert bm_get["SelectionCriteria"] == {"Ids": [31], "Levels": ["CAMPAIGN", "AD_GROUP"]}
+    with pytest.raises(ProviderError):  # mixed unified / text items
+        YandexDirectAdapter.validate_apply("adgroups", "add", [{"UnifiedAdGroup": {}}, {"TextAdGroup": {}}])
+    with pytest.raises(ProviderError):  # agency clients are addressed by ClientId
+        YandexDirectAdapter.validate_apply("agencyclients", "update", [{"Id": 1}])
+    YandexDirectAdapter.validate_apply("agencyclients", "update", [{"ClientId": 1, "Phone": "+7"}])
+    with pytest.raises(ProviderError):
+        YandexDirectAdapter.validate_apply("clients", "update", [{"Phone": "1"}, {"Phone": "2"}])
+
+
+def test_wordstat_matches_the_v2_proto():
+    # yandex-cloud/cloudapi yandex/cloud/searchapi/v2/wordstat_service.proto
+    from zai_yandex.wordstat import request_body, validate_phrase, validate_regions
+
+    body = request_body("dynamics", {"phrase": "x", "from_date": "2026-01-01", "period": "PERIOD_WEEKLY"})
+    assert "toDate" not in body and body["fromDate"] == "2026-01-01T00:00:00Z"
+    with pytest.raises(ValueError):
+        validate_phrase("x" * 401)
+    with pytest.raises(ValueError):
+        validate_regions([str(i) for i in range(101)])
+    with pytest.raises(ValueError):
+        validate_regions(["moscow"])

@@ -35,13 +35,15 @@ Legend: ✅ covered · ➕ covered only by us · — not offered · ⛔ intentio
 | BidModifiers get / add / set / delete | svecha, skidd, axisrow | ✅ `direct_get_bid_modifiers` + write |
 | AudienceTargets get / add / delete / suspend / resume / setBids | svecha, axisrow | ✅ `direct_list_audience_targets` + write |
 | RetargetingLists get / add / update / delete | svecha, skidd, axisrow | ✅ list + write |
-| Sitelinks, VCards, AdImages, AdExtensions (callouts) get/add/delete | all | ✅ lists + write (AdImages by hash) |
+| Sitelinks, AdImages, AdExtensions (callouts) get/add/delete | all | ✅ lists + write (AdImages by hash) |
+| VCards | all | ⚠️ read only: VCards is absent from the current Direct reference, so no writes |
 | AdVideos, Creatives get / add | skidd, axisrow | ✅ lists + write |
 | Feeds get / add / update / delete | svecha, skidd, axisrow | ✅ `direct_list_feeds` + write |
 | NegativeKeywordSharedSets get / add / update / delete | skidd, axisrow | ✅ list + write |
-| DynamicTextAdTargets (webpages) get / add / delete / suspend / resume / setBids | webkoth, axisrow | ✅ list + write |
-| DynamicFeedAdTargets get / add / delete / suspend / resume / setBids | axisrow | ✅ `direct_list_dynamic_feed_ad_targets` + write |
-| SmartAdTargets get / add / update / delete / suspend / resume / setBids | svecha, skidd, axisrow | ✅ list + write |
+| DynamicTextAdTargets (webpages) get / add / delete / suspend / resume / setBids | webkoth, axisrow | ⚠️ list only (service absent from the current reference) |
+| DynamicFeedAdTargets get / add / delete / suspend / resume / setBids | axisrow | ⚠️ `direct_list_dynamic_feed_ad_targets` only (absent from the current reference) |
+| SmartAdTargets get / add / update / delete / suspend / resume / setBids | svecha, skidd, axisrow | ⚠️ list only (absent from the current reference) |
+| Clients update; unified performance campaigns / groups add / update (v501) | — | ✅ `direct_prepare_write` -> `direct_apply_write` (approval-only, v501 routed) |
 | Strategies (v501) get / add / update / archive / unarchive | axisrow | ✅ `direct_list_strategies` + approval-only write |
 | AgencyClients get / update | skidd, axisrow | ✅ `direct_list_agency_clients` + approval-only update |
 | AgencyClients add / passport organisations | axisrow | ⛔ creates paying client accounts with personal data; do it in the Direct UI |
@@ -60,7 +62,9 @@ Legend: ✅ covered · ➕ covered only by us · — not offered · ⛔ intentio
 |---|---|---|
 | Counters list / get | all | ✅ `metrika_list_counters`, `metrika_manage_read counter_get` |
 | Counter create / update / delete / undelete | svecha, skidd | ✅ `metrika_manage_*` (undelete ➕) |
-| Goals CRUD | all | ✅ `metrika_list_goals`, `metrika_apply_goal`, `goal_get` |
+| Goals CRUD | all | ✅ `metrika_list_goals`, `metrika_apply_goal`, `goal_list/get/create/update/delete` |
+| Pivot report; offline conversions (BASIC/CALLS/CHATS) | — | ✅ `stat_pivot`, `offline_conversions_upload` + uploadings |
+| Audience pixel create, geo circle/polygon segments, data-file upload | — | ✅ `pixel_create`, `segment_create_geo(_polygon)`, `segment_upload_file` |
 | Filters, Operations, Segments CRUD | svecha, skidd | ✅ catalogue |
 | Grants list/get/create/update/delete, public grants, my_grant | svecha, skidd | ✅ catalogue (login as `user_login` query per docs; competitors put it in the path) |
 | Labels CRUD, link/unlink counter | svecha, skidd | ✅ catalogue |

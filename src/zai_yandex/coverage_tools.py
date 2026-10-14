@@ -61,7 +61,7 @@ DIRECT_LISTS: dict[str, tuple[str, list[str], dict[str, list[str]], tuple[str, .
     "direct_list_dynamic_text_ad_targets": ("dynamictextadtargets",
                                             ["Id", "AdGroupId", "CampaignId", "Name", "State", "Status"], {},
                                             ("Ids", "AdGroupIds", "CampaignIds")),
-    # https://yandex.ru/dev/direct/doc/ru/dynamicfeedadtargets/get
+    # Legacy service: absent from the current reference; read-only (no writes).
     "direct_list_dynamic_feed_ad_targets": ("dynamicfeedadtargets",
                                             ["Id", "AdGroupId", "CampaignId", "Name", "State", "Status"], {},
                                             ("Ids", "AdGroupIds", "CampaignIds")),
@@ -176,7 +176,10 @@ PRO_EXPORT_APPROVAL = "pro_export_paid"
 
 def register_coverage_tools(server: Any, runtime: Any) -> None:
     registry, require_scopes, read, write = (
-        runtime.registry, runtime.require_scopes, runtime.read, runtime.write
+        runtime.registry,
+        runtime.require_scopes,
+        runtime.read,
+        runtime.write,
     )
     settings = runtime.settings
 
@@ -213,7 +216,11 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
 
         def build() -> dict[str, Any]:
             allowed = {"MERGE_DUPLICATES", "ELIMINATE_OVERLAPPING"}
-            if not keywords or len(keywords) > 10_000 or not all(isinstance(k, str) and k.strip() for k in keywords):
+            if (
+                not keywords
+                or len(keywords) > 10_000
+                or not all(isinstance(k, str) and k.strip() for k in keywords)
+            ):
                 raise ValueError("keywords must be 1..10000 non-empty phrases")
             chosen = list(dict.fromkeys(operations or sorted(allowed)))
             if not set(chosen) <= allowed:
@@ -518,9 +525,7 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
                 raise ValueError("dates must contain 1..100 YYYY-MM-DD strings")
             if any(not isinstance(d, str) or len(d) != 10 for d in dates):
                 raise ValueError("each date must be YYYY-MM-DD")
-            if paths is not None and (
-                not isinstance(paths, list) or not 1 <= len(paths) <= 100
-            ):
+            if paths is not None and (not isinstance(paths, list) or not 1 <= len(paths) <= 100):
                 raise ValueError("paths must contain 1..100 strings")
             if region_ids is not None:
                 _ids(region_ids, "region_ids")
