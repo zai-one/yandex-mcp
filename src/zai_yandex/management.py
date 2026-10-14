@@ -22,7 +22,9 @@ https://yandex.ru/dev/audience/ru/ref/openapi/ .
 
 from __future__ import annotations
 
+import asyncio
 import re
+import sqlite3
 import string
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -31,10 +33,12 @@ from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from zai_yandex.models import ApprovalRecord
-from zai_yandex.transport import ProviderError, request_hash
+from zai_yandex.transport import MAX_REQUEST_BYTES, ProviderError, request_hash
 
 Kind = Literal["read", "write", "upload"]
-MAX_CSV_BYTES = 8 * 1024 * 1024
+# The provider HTTP client refuses larger multipart bodies, so refuse them at prepare/apply time,
+# before an approval is consumed or an idempotency key reserved.
+MAX_CSV_BYTES = MAX_REQUEST_BYTES
 MAX_BODY_KEYS = 200
 LOGIN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._@-]{0,127}$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:?\d{2})?)?$")
@@ -952,7 +956,7 @@ def validate_args(provider: str, op: Op, args: dict[str, Any] | None) -> dict[st
         if not isinstance(csv, str) or not csv.strip() or "\x00" in csv:
             raise ValueError("csv must be non-empty CSV text")
         if len(csv.encode("utf-8")) > MAX_CSV_BYTES:
-            raise ValueError("csv exceeds 8 MiB; split the upload")
+            raise ValueError(f"csv exceeds {MAX_CSV_BYTES // (1024 * 1024)} MiB; split the upload")
         clean["csv"] = csv
     return clean
 
@@ -1022,14 +1026,25 @@ async def open_approval(runtime: Any, provider: str, operation: str, request: st
     }
 
 
-# (principal, provider, idempotency_key) of governed writes dispatched by this process
-# and not yet settled. Reconcile must not settle these: a slow but successful write
-# would otherwise be recorded as unconfirmed and invite a duplicate re-send.
-_IN_FLIGHT: set[tuple[str, str, str]] = set()
+# Governed writes hold a lease in the shared SQLite state while they execute, renewed by a heartbeat.
+# Reconcile must not settle a leased write: a slow but successful write (possibly in another server
+# process on the same state file) would otherwise be recorded as unconfirmed and invite a duplicate
+# re-send. A crashed executor stops renewing, so its lease expires and reconcile can settle the write.
+WRITE_LEASE_TTL_S = 90.0
+WRITE_LEASE_RENEW_S = 20.0
 
 
-def in_flight(principal: Any, provider: str, key: str) -> bool:
-    return (str(principal), provider, key) in _IN_FLIGHT
+async def in_flight(store: Any, principal: Any, provider: str, key: str) -> bool:
+    return bool(await store.provider_write_leased(principal, provider, key))
+
+
+async def _renew_lease(store: Any, principal: Any, provider: str, key: str, owner: str) -> None:
+    while True:
+        await asyncio.sleep(WRITE_LEASE_RENEW_S)
+        try:
+            await store.provider_write_lease(principal, provider, key, owner, WRITE_LEASE_TTL_S)
+        except sqlite3.Error:
+            continue  # transient lock: the next renewal retries well before the lease expires
 
 
 def ledger_hash(provider: str, operation: str, request: str) -> str:
@@ -1083,12 +1098,16 @@ async def governed_apply(
             or approval.expires_at <= datetime.now(UTC)
         ):
             raise PermissionError("an accepted approval matching this exact request and account is required")
+        owner = uuid4().hex
+        # Lease before consuming the approval: a write already executing elsewhere is refused unspent.
+        if not await store.provider_write_lease(principal, provider, key, owner, WRITE_LEASE_TTL_S):
+            raise ProviderError("this idempotency key is being executed by another request")
         if not await store.consume_approval(UUID(str(approval_id))):
+            await store.provider_write_release(principal, provider, key, owner)
             raise PermissionError("approval is not accepted or was already consumed")
     except (ProviderError, PermissionError, ValueError) as exc:
         raise runtime.safe_error(provider, exc) from None
-    marker = (str(principal), provider, key)
-    _IN_FLIGHT.add(marker)
+    heartbeat = asyncio.create_task(_renew_lease(store, principal, provider, key, owner))
     try:
         result = await runtime.write(
             provider,
@@ -1101,7 +1120,8 @@ async def governed_apply(
             readback_fn=readback_fn,
         )
     finally:
-        _IN_FLIGHT.discard(marker)
+        heartbeat.cancel()
+        await store.provider_write_release(principal, provider, key, owner)
     return {**result, "request_hash": request, "approval_id": str(approval_id)}
 
 
@@ -1218,7 +1238,7 @@ def _register(server: Any, runtime: Any, provider: str, prefix: str, scope: str)
             return {"status": "applied", "result": cached["result"]}
         if cached["status"] == "failed":
             return {"status": "settled_unconfirmed", "result": cached["result"]}
-        if in_flight(principal, provider, key):
+        if await in_flight(store, principal, provider, key):
             return {"status": "in_flight", "next": "the write is still running; call reconcile again later"}
         observed = None
         if op.readback is not None:
@@ -1232,6 +1252,9 @@ def _register(server: Any, runtime: Any, provider: str, prefix: str, scope: str)
             "prepare a new approval and use a new idempotency_key.",
         }
         await store.provider_write_settle(principal, provider, key, status="failed", result=payload)
+        settled = await store.provider_write_lookup(principal, provider, key)
+        if settled is not None and settled["status"] == "applied":  # the owner finished meanwhile
+            return {"status": "applied", "result": settled["result"]}
         return payload
 
     read_tool.__doc__ = (

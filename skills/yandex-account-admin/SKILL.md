@@ -26,4 +26,4 @@ Toolsets: `YANDEX_TOOLSETS=default,metrika_manage,webmaster_manage,audience_mana
    never resend.
 
 Guardrails: one object change per approval; never edit args after approval (hash mismatch fails
-closed); uploads are CSV text <= 8 MiB; grants/delegates only for logins the user named.
+closed); uploads are CSV text <= 2 MiB; grants/delegates only for logins the user named.

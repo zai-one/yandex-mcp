@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Security: `maps_search_organizations` / `maps_search_places` now enforce the same account-bound identity as every provider tool; over HTTP a token signed for another `account_id` is refused even with `yandex_search:read`, so it cannot spend this server's Geosearch quota.
+- Security: feed URLs with embedded `user:password` sent as a query value (`feeds_problems`, `feeds_rejected_offers`, `webmaster_get_feed`) are masked in httpx/httpcore request logs, raw and percent-encoded; the provider still receives the real URL.
+- Fix: `*_manage_apply` / `direct_apply_write` hold a heartbeat-renewed execution lease in the shared SQLite state, and `*_manage_reconcile` returns `in_flight` while any server process on that state file is still running the write (previously only the same process was seen, so another process could settle a running write as unconfirmed and lose its success). A crashed executor's lease expires after 90 s; a second apply with a key that is already executing is refused before its approval is consumed.
+- Fix: management CSV uploads are limited to 2 MiB (was advertised as 8 MiB, while the HTTP client refuses multipart bodies over 2 MiB after the approval was consumed); larger files are refused at prepare/apply time.
 - Security: deletes and bid changes are never autonomous. `direct_write` no longer runs `delete` (campaigns, ad groups, ads, keywords) or `bids.set` / `bids.setAuto`; they go through `direct_prepare_write` -> accepted approval -> `direct_apply_write`. `metrika_apply_goal` no longer deletes goals; use `metrika_manage_prepare(operation='goal_delete')` -> approval -> `metrika_manage_apply`. An agent can pick the wrong id or be steered into a delete, so a human confirms it.
 - `YANDEX_TOOLSETS=all` (and the unset default) now also exposes the new opt-in toolsets (`*_manage`, `maps_geosearch` with its key, ...). Their writes still need approval; set an explicit list if you relied on `all` meaning the previous surface.
 

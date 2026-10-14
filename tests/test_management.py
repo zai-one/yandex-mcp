@@ -567,6 +567,77 @@ async def test_reconcile_never_settles_a_write_that_is_still_running(tmp_path):
         assert late["status"] == "applied"
 
 
+async def test_reconcile_from_another_process_never_settles_a_running_write(tmp_path, monkeypatch):
+    """Two servers on one state file: B must see A's running write through the shared ledger,
+    not through A's process memory, and A's success must land in the ledger."""
+    import asyncio
+
+    from zai_yandex import management
+
+    settings = config(tmp_path, yandex_webmaster_write_enabled=True)
+    gate, seen = asyncio.Event(), asyncio.Event()
+
+    async def handle(method, url, payload, params):
+        if url.endswith("/user"):
+            return {"user_id": 42}
+        if method == "DELETE":
+            seen.set()
+            await gate.wait()
+        return {"ok": True}
+
+    recorder = Recorder(handle)
+    args = {"host_id": HOST}
+    reconcile = {"operation": "host_delete", "args": args, "idempotency_key": "host-delete-cross"}
+    server_a = create_server(settings, transport="stdio", http_factory=recorder.factory)
+    server_b = create_server(settings, transport="stdio", http_factory=recorder.factory)
+    async with Client(server_a) as a, Client(server_b) as b:
+        prepare = {"operation": "host_delete", "args": args}
+        draft = (await a.call_tool("webmaster_manage_prepare", prepare)).data
+        assert accept(settings, draft)
+        apply = asyncio.create_task(
+            a.call_tool(
+                "webmaster_manage_apply",
+                {**reconcile, "approval_id": draft["approval_id"]},
+            )
+        )
+        await asyncio.wait_for(seen.wait(), 5)
+        # Process B has its own memory: nothing of A's in-process bookkeeping is visible to it.
+        monkeypatch.setattr(management, "_IN_FLIGHT", set(), raising=False)
+        early = (await b.call_tool("webmaster_manage_reconcile", reconcile)).data
+        assert early["status"] == "in_flight"
+        gate.set()
+        assert (await apply).data["applied"]
+        late = (await b.call_tool("webmaster_manage_reconcile", reconcile)).data
+        assert late["status"] == "applied"
+
+
+async def test_reconcile_settles_a_write_whose_executor_lease_expired(tmp_path):
+    """A crashed executor stops renewing its lease; reconcile may then settle the pending write."""
+    from zai_yandex.management import ledger_hash
+
+    settings = config(tmp_path, yandex_webmaster_write_enabled=True)
+    store = StateStore(settings)
+    args = {"host_id": HOST}
+    async with Client(create_server(settings, transport="stdio", http_factory=Recorder().factory)) as client:
+        draft = (
+            await client.call_tool("webmaster_manage_prepare", {"operation": "host_delete", "args": args})
+        ).data
+        principal = settings.principal_id
+        key = "host-delete-crashed"
+        digest = ledger_hash("yandex_webmaster", "manage:host_delete", draft["request_hash"])
+        await store.provider_write_reserve(
+            principal, "yandex_webmaster", key, tool="manage:host_delete", request_hash=digest
+        )
+        assert await store.provider_write_lease(principal, "yandex_webmaster", key, "crashed", -1)
+        assert not await store.provider_write_leased(principal, "yandex_webmaster", key)
+        assert await store.provider_write_lease(principal, "yandex_webmaster", key, "other", 60)
+        assert not await store.provider_write_lease(principal, "yandex_webmaster", key, "third", 60)
+        await store.provider_write_release(principal, "yandex_webmaster", key, "other")
+        reconcile = {"operation": "host_delete", "args": args, "idempotency_key": key}
+        settled = (await client.call_tool("webmaster_manage_reconcile", reconcile)).data
+        assert settled["status"] == "settled_unconfirmed"
+
+
 def test_documented_value_validation_for_webmaster_and_audience():
     web, aud = CATALOG["yandex_webmaster"], CATALOG["yandex_audience"]
     host = {"host_id": HOST}
@@ -887,3 +958,77 @@ async def test_autonomous_direct_write_never_deletes_or_changes_bids(tmp_path):
         ).data
         assert draft["status"] == "approval_required"
     assert not [call for call in recorder.calls if call[0] == "POST"]
+
+
+async def test_feed_credentials_in_query_never_reach_http_logs(caplog, monkeypatch):
+    """feeds_problems / feeds_rejected_offers send the feed URL as a query value: the upstream request
+    keeps it, but httpx request logging must not record the embedded user:password."""
+    import functools
+
+    import httpx
+
+    from zai_yandex.management import execute
+    from zai_yandex.transport import JsonHttpClient
+
+    secret = "s3cr@t-feed-pass"
+    feed = f"https://feeduser:{secret}@shop.example/feed.xml?region=1"
+    sent = []
+
+    def handler(request):
+        sent.append(request.url.params["url"])
+        return httpx.Response(200, json={"problems": []})
+
+    monkeypatch.setattr(
+        httpx, "AsyncClient", functools.partial(httpx.AsyncClient, transport=httpx.MockTransport(handler))
+    )
+
+    class Adapter:
+        base_url = "https://api.webmaster.yandex.net/v4"
+        http = JsonHttpClient()
+
+        @staticmethod
+        def _headers():
+            return {}
+
+        async def _host_path(self, host_id):
+            return f"/user/42/hosts/{host_id}"
+
+        async def _uid(self):
+            return 42
+
+        async def _request(self, method, url, *, headers, params, payload):
+            return await self.http.request(method, url, headers=headers, params=params, payload=payload)
+
+    caplog.set_level("DEBUG")
+    for name in ("feeds_problems", "feeds_rejected_offers"):
+        op = CATALOG["yandex_webmaster"][name]
+        args = validate_args("yandex_webmaster", op, {"host_id": HOST, "query": {"url": feed}})
+        await execute("yandex_webmaster", Adapter(), name, op, args)
+    assert sent == [feed, feed]  # the provider still receives the real feed URL ...
+    assert "feeds/problems" in caplog.text and "feeds/moderation/rejected-offers" in caplog.text
+    assert secret not in caplog.text and "s3cr%40t" not in caplog.text  # ... but it is never logged
+    assert "feeduser" not in caplog.text
+
+
+async def test_upload_limit_matches_the_transport_and_is_checked_before_any_approval(tmp_path):
+    """A CSV the provider HTTP client would refuse must be refused at prepare time, not after an
+    approval has been consumed and an idempotency key reserved."""
+    from zai_yandex.transport import JsonHttpClient
+
+    limit = JsonHttpClient().max_request_bytes
+    op = CATALOG["yandex_metrika"]["calls_upload"]
+    validate_args("yandex_metrika", op, {"counter_id": 1, "csv": "x" * limit})
+    too_big = "x" * (limit + 1)
+    with pytest.raises(ValueError, match="split the upload"):
+        validate_args("yandex_metrika", op, {"counter_id": 1, "csv": too_big})
+    settings = config(tmp_path, yandex_metrika_write_enabled=True)
+    recorder = Recorder()
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        with pytest.raises(ToolError):
+            await client.call_tool(
+                "metrika_manage_prepare",
+                {"operation": "calls_upload", "args": {"counter_id": 1, "csv": "x" * (3 * 1024 * 1024)}},
+            )
+    with StateStore(settings).connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM approvals").fetchone()[0] == 0
+    assert not recorder.calls

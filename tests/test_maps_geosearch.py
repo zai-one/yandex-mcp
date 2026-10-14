@@ -176,3 +176,31 @@ async def test_key_never_reaches_http_logs(caplog):
     await client.search(geo.build_params("biz", text="кафе"))
     assert "search-maps.yandex.ru" in caplog.text and "apikey=***" in caplog.text
     assert KEY not in caplog.text  # ... but never logged
+
+
+async def test_http_maps_tools_enforce_the_account_boundary(tmp_path, pair, monkeypatch):
+    """A signed token for another account with yandex_search:read must not reach Geosearch."""
+    from conftest import connection, token
+
+    calls = []
+
+    async def fake_search(self, params):
+        calls.append(params)
+        return BIZ
+
+    monkeypatch.setattr(geo.GeosearchClient, "search", fake_search)
+    server = create_server(
+        replace(config(tmp_path, public_key=pair.public_key), maps_geosearch_api_key=KEY),
+        transport="http",
+        surface=build_surface("default", maps_key=True),
+    )
+    async with connection(server, token(pair, scopes=["yandex_search:read"], account="other")) as client:
+        with pytest.raises(ToolError):
+            await client.call_tool("maps_search_organizations", {"text": "кафе"})
+        with pytest.raises(ToolError):
+            await client.call_tool("maps_search_places", {"text": "Москва"})
+    assert not calls
+    async with connection(server, token(pair, scopes=["yandex_search:read"])) as client:
+        result = await client.call_tool("maps_search_organizations", {"text": "кафе"})
+        assert result.structured_content["results"][0]["name"] == "Кафе Б"
+    assert len(calls) == 1
