@@ -152,6 +152,8 @@ class StateStore:
             ).fetchone()
             if row is None or (row["cost"] > 0 and not self._paid_gate(row)):
                 return False
+            if row["provider"] != self._scope(row["provider"].split("|", 1)[0]):
+                return False  # Prepared for another named account or Direct endpoint.
             db.execute(
                 "UPDATE approvals SET status='accepted' WHERE account=? AND id=?",
                 (self.account, str(approval_id)),
@@ -160,6 +162,11 @@ class StateStore:
         return True
 
     def _consume(self, db: sqlite3.Connection, approval_id: str) -> bool:
+        row = db.execute(
+            "SELECT provider FROM approvals WHERE account=? AND id=?", (self.account, approval_id)
+        ).fetchone()
+        if row is None or row["provider"] != self._scope(row["provider"].split("|", 1)[0]):
+            return False  # Never consume an approval bound to another account/endpoint.
         changed = db.execute(
             "UPDATE approvals SET status='consumed' WHERE account=? AND id=? "
             "AND status='accepted' AND expires>?",

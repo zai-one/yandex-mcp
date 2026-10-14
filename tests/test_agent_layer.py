@@ -8,6 +8,7 @@ from fastmcp import Client
 
 from zai_yandex.agent_layer import GUIDE_TOPICS, guide
 from zai_yandex.errors import safe_provider_error
+from zai_yandex.maps_geosearch import MAPS_TOOLS  # key-gated: absent without a Geosearch key
 from zai_yandex.server import create_server
 from zai_yandex.tool_annotations import TOOL_ANNOTATIONS
 from zai_yandex.toolsets import ALL_TOOLS, build_surface, surface_from_env
@@ -22,9 +23,11 @@ async def names(tmp_path, surface):
 
 
 async def test_unset_env_keeps_every_tool(tmp_path, monkeypatch):
-    for key in ("YANDEX_TOOLSETS", "YANDEX_READ_ONLY", "YANDEX_TOOLS", "YANDEX_DISABLED_TOOLS"):
+    for key in ("YANDEX_TOOLSETS", "YANDEX_READ_ONLY", "YANDEX_TOOLS", "YANDEX_DISABLED_TOOLS",
+                "YANDEX_MAPS_GEOSEARCH_API_KEY", "YANDEX_MAPS_GEOSEARCH_API_KEY_FILE"):  # fmt: skip
         monkeypatch.delenv(key, raising=False)
-    assert await names(tmp_path, surface_from_env()) == set(TOOL_ANNOTATIONS) - {"yandex_list_accounts"}
+    expected = set(TOOL_ANNOTATIONS) - {"yandex_list_accounts", *MAPS_TOOLS}
+    assert await names(tmp_path, surface_from_env()) == expected
 
 
 async def test_read_only_hides_every_non_read_tool(tmp_path):
@@ -60,7 +63,7 @@ def test_toolsets_cover_every_reviewed_tool():
 
 async def test_router_resources_and_prompts(tmp_path):
     server = create_server(config(tmp_path), transport="stdio", surface=build_surface("default"))
-    assert len(server.instructions) <= 1600 and "direct-safe-change" in server.instructions
+    assert len(server.instructions) <= 1800 and "direct-safe-change" in server.instructions
     async with Client(server) as client:
         toolsets = json.loads((await client.read_resource("yandex://toolsets"))[0].text)
         assert (
@@ -69,7 +72,7 @@ async def test_router_resources_and_prompts(tmp_path):
         assert "Units" in (await client.read_resource("yandex://guide/api-units"))[0].text
         assert "yandex://guide/errors" in (await client.read_resource("yandex://playbook"))[0].text
         prompts = {prompt.name for prompt in await client.list_prompts()}
-        assert prompts == {"campaign_audit", "weekly_report", "seo_audit", "budget_scaling"}
+        assert prompts == {"campaign_audit", "weekly_report", "seo_audit", "budget_scaling", "yandex_setup"}
         rendered = await client.get_prompt("budget_scaling", {"target_cpa": "900 RUB"})
         assert "Do not apply" in rendered.messages[0].content.text
 

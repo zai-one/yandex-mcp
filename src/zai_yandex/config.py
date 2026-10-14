@@ -29,6 +29,10 @@ def secret_file(name: str) -> str:
     value = os.environ.get(name, "")
     if not value:
         return ""
+    return read_secret_path(value)
+
+
+def read_secret_path(value: str) -> str:
     path = Path(value)
     if not path.is_file() or path.stat().st_size > 65536:
         raise ValueError("credential file missing or too large")
@@ -38,6 +42,12 @@ def secret_file(name: str) -> str:
     if not result:
         raise ValueError("credential file empty")
     return result
+
+
+def _maps_key() -> str:
+    from zai_yandex.maps_geosearch import load_key
+
+    return load_key()
 
 
 ACCOUNT_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -156,6 +166,8 @@ class ServiceConfig:
     search_folder_id: str = ""
     webmaster_token: str = field(default="", repr=False)
     audience_token: str = field(default="", repr=False)
+    # Opt-in Maps organization search (Geosearch) key; tools exist only when it is set.
+    maps_geosearch_api_key: str = field(default="", repr=False)
     public_key: str = ""
     issuer: str = "yandex-operator"
     audience: str = "yandex-mcp"
@@ -215,6 +227,7 @@ class ServiceConfig:
             self.search_api_key,
             self.webmaster_token,
             self.audience_token,
+            self.maps_geosearch_api_key,
             *(getattr(profile, key) for profile in self.accounts for key in PROFILE_TOKENS),
         )
 
@@ -292,6 +305,7 @@ class ServiceConfig:
             search_folder_id=os.environ.get("YANDEX_SEARCH_FOLDER_ID", ""),
             webmaster_token=secret_file("YANDEX_WEBMASTER_TOKEN_FILE"),
             audience_token=secret_file("YANDEX_AUDIENCE_TOKEN_FILE"),
+            maps_geosearch_api_key=_maps_key(),
             public_key=Path(public_path).read_text(encoding="utf-8") if public_path else "",
             issuer=os.environ.get("YANDEX_MCP_ISSUER", "yandex-operator"),
             audience=os.environ.get("YANDEX_MCP_AUDIENCE", "yandex-mcp"),

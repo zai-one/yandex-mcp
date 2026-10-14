@@ -138,5 +138,90 @@
     "request": "какие Pro limits в вебмастере на enhanced export по URL",
     "route": "seo",
     "tool": "webmaster_get_pro_limits"
+  },
+  {
+    "request": "выдай права подрядчику, пусть будет представителем",
+    "route": "manage",
+    "tool": "metrika_manage_prepare"
+  },
+  {
+    "request": "добавь представителя, ему нужны права на редактирование",
+    "route": "manage",
+    "tool": "metrika_manage_apply"
+  },
+  {
+    "request": "загрузи звонки из коллтрекинга и затраты на рекламу ВК",
+    "route": "manage",
+    "tool": "metrika_manage_prepare"
+  },
+  {
+    "request": "залей затраты по ВК и звонки за сентябрь",
+    "route": "manage",
+    "tool": "metrika_manage_read"
+  },
+  {
+    "request": "поставь примечание на график и метку на счётчик",
+    "route": "manage",
+    "tool": "metrika_manage_prepare"
+  },
+  {
+    "request": "новый хост добавь и права на него подтверди через DNS",
+    "route": "manage",
+    "tool": "webmaster_manage_prepare"
+  },
+  {
+    "request": "удали старый фид товаров с этого хоста",
+    "route": "manage",
+    "tool": "webmaster_manage_read"
+  },
+  {
+    "request": "поменяй метки у счётчиков, а примечания оставь",
+    "route": "manage",
+    "tool": "metrika_manage_reconcile"
+  },
+  {
+    "request": "поменять ставки на объявления",
+    "route": "direct_change",
+    "tool": "direct_prepare_changes"
+  },
+  {
+    "request": "как ответить на отзывы о нашей организации в Яндекс Бизнесе",
+    "route": "business",
+    "tool": "direct_list_businesses"
+  },
+  {
+    "request": "хочу продвигать организацию, геореклама еще жива?",
+    "route": "business",
+    "tool": "direct_prepare_write"
+  },
+  {
+    "request": "в Яндекс Бизнесе поправь визитку и глянь новые отзывы",
+    "route": "business",
+    "tool": "direct_get_inventory"
+  },
+  {
+    "request": "найди кафе рядом с метро Таганская, нужен адрес и телефон",
+    "route": "maps",
+    "tool": "maps_search_organizations"
+  },
+  {
+    "request": "какой телефон у компании Ромашка в Казани",
+    "route": "maps",
+    "tool": "maps_search_organizations"
+  },
+  {
+    "request": "геопоиск: где находится улица Ленина 10 в Твери",
+    "route": "maps",
+    "tool": "maps_search_places"
+  },
+  {
+    "request": "только поставил сервер, хочу оставить лишь Директ и Метрику, чтобы сэкономить токены",
+    "route": "setup",
+    "tool": "yandex_setup_toolsets"
+  },
+  {
+    "request": "помоги с настройкой: какие платформы яндекса включить?",
+    "route": "setup",
+    "tool": "yandex_setup_toolsets"
   }
 ]

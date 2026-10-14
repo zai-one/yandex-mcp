@@ -6,9 +6,18 @@
 
 **Bring Yandex advertising, analytics and search data into one conversation.**
 
-> MCP server for Yandex Direct, Metrika (incl. Logs API and offline conversions), Webmaster, Wordstat, Search API and Audience: 97 tools in one server, with toolsets, read-only mode and guarded writes.
+> MCP server for Yandex Direct, Metrika (incl. Logs API and offline conversions), Webmaster, Wordstat, Search API and Audience: 127 tools in one server, with toolsets, read-only mode and guarded writes.
 
 Review Direct campaigns, examine Metrika statistics, build bounded Audience segments, explore search demand and investigate Webmaster diagnostics with the same assistant. Yandex MCP connects six API groups; configure the services relevant to your work and add others as you need them.
+
+**Default: every tool (`all`, 127 tools, ~22k tokens per session start).** To save tokens, pick platforms with `YANDEX_TOOLSETS` - the setup wizard (`yandex-mcp-setup`) or the `yandex_setup` prompt asks which you need and writes it for you. Measured tools/list + router cost (no Geosearch key):
+
+| Preset | Platforms | Tools | ~Tokens |
+|---|---|---|---|
+| `everything` (default) | all | 127 | 21,986 |
+| `seo` | webmaster, wordstat, serp | 55 | 8,971 |
+| `direct-only` | direct | 40 | 8,055 |
+| `analytics` | metrika, audience | 30 | 5,786 |
 
 [Quick start](#quick-start) · [Connect your assistant](#connect-your-assistant) · [Issues](https://github.com/zai-one/yandex-mcp/issues)
 
@@ -31,10 +40,25 @@ Try asking your assistant:
 
 ## Why this MCP
 
+- Optional lazy tool loading: set `YANDEX_TOOL_LOADING=lazy` (or choose it in the setup wizard) to start with a small core and enable toolsets on demand; see [Lazy tool loading](#lazy-tool-loading).
 - Six Yandex API groups in one process; enable only the toolsets you need (`YANDEX_TOOLSETS`, `YANDEX_READ_ONLY`).
 - Writes (Direct changes, Audience creates, Metrika uploads and Logs requests) are off until enabled by an env flag and use confirmation hashes or idempotency keys.
-- Agent layer: router instructions, 4 prompts, `yandex://playbook` and guide resources, self-contained skills, structured errors with `hint`.
+- Agent layer: router instructions, 5 prompts (incl. `yandex_setup`), `yandex://playbook` and guide resources, self-contained skills, structured errors with `hint`.
 - Compared with other Yandex MCP servers on GitHub: [SvechaPVL/yandex-mcp](https://github.com/SvechaPVL/yandex-mcp) (132 tools), [skiddgoddamn/yandex-marketing-mcp](https://github.com/skiddgoddamn/yandex-marketing-mcp) (153 tools) and [webkoth/yandex-mcp](https://github.com/webkoth/yandex-mcp) (125 tools) still expose more *total* endpoints (often one tool per add/update/delete); this server matches them on documented Direct+Webmaster **read** methods that matter, keeps writes behind per-service gates, and ships bounded typed responses with CI on Linux and Windows.
+
+## Lazy tool loading
+
+Optional lazy tool loading: `YANDEX_TOOL_LOADING=lazy` starts with a small core plus `yandex_enable_toolsets` and adds toolsets on demand (`tools/list_changed`). Startup cost (tools/list + instructions, ≈chars/4): eager ≈21872 tokens, lazy ≈2574 tokens (−88%). Default `eager` is unchanged; if your client ignores `tools/list_changed`, keep `eager` or reconnect after enabling. Scope: enablement is per MCP session (FastMCP session visibility), so one client's enabled toolsets never appear for another. The HTTP transport here is stateless (every request is its own session), so `lazy` is stdio only: an HTTP server refuses to start with it; use `eager` or `YANDEX_TOOLSETS` there.
+
+Clients and `notifications/tools/list_changed` (verified against official docs, changelogs or maintainer statements, 2026-10):
+
+| Client | `tools/list_changed` | Source |
+|---|---|---|
+| Claude Code | Supported (interactive: tools, prompts, resources; `-p`/Agent SDK: tools) | [docs: Dynamic tool updates](https://code.claude.com/docs/en/mcp) |
+| VS Code (GitHub Copilot) | Supported (dynamic tool discovery); new tools may reach the agent only on the next turn | [docs](https://code.visualstudio.com/api/extension-guides/ai/mcp), [#303012](https://github.com/microsoft/vscode/issues/303012) |
+| Gemini CLI | Supported (refreshes the tool registry) | [PR #14375](https://github.com/google-gemini/gemini-cli/pull/14375), [PR #21050](https://github.com/google-gemini/gemini-cli/pull/21050) |
+| Cursor | Unreliable: staff confirm a regression in 3.12.x; restart Cursor after enabling | [forum](https://forum.cursor.com/t/mcp-server-regression-does-not-reload-tools-disconnect-does-nothing-ignores-mcp-json-changes-etc/166216) |
+| Claude Desktop, Windsurf, Codex CLI, Cline, Zed, Continue | Unverified: no official statement found; use `eager` or reconnect after enabling | — |
 
 ## Maintained and up to date
 
@@ -45,7 +69,15 @@ Try asking your assistant:
 
 ## Quick start
 
-**In one minute** (Python 3.12+ and uv installed, a Metrika OAuth token at hand):
+**Zero config** (uv installed; no clone, no config file, no absolute paths):
+
+```sh
+claude mcp add yandex -- uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@main" yandex-mcp
+```
+
+Then ask: *"Подключи Яндекс Метрику"*. The assistant runs `yandex_auth_start` (OAuth device flow: open the link, enter the code), then `yandex_auth_finish`; the token is stored in a private file under your user profile and used immediately and after restarts. It needs your Yandex OAuth app `client_id` once (pass it in chat or set `YANDEX_OAUTH_CLIENT_ID`; [OAuth guide](src/zai_yandex/resources/guide/oauth.md)). Without `--config` the server reads `YANDEX_MCP_CONFIG` or `mcp.local.json` in the per-user directory if present, and keeps state there (`%APPDATA%\zai-yandex-mcp` on Windows, `~/Library/Application Support/zai-yandex-mcp` on macOS, `~/.config/zai-yandex-mcp` elsewhere; override with `YANDEX_MCP_HOME`). The same `uvx` command works in Cursor, Codex and Claude Desktop.
+
+**Wizard** (Python 3.12+ and uv installed, a Metrika OAuth token at hand):
 
 ```sh
 git clone https://github.com/zai-one/yandex-mcp.git && cd yandex-mcp
@@ -110,7 +142,7 @@ If tools do not appear, check the absolute path, whether the client can find `uv
 ### Other clients
 
 ```bash
-# Claude Code (MCP only)
+# Claude Code (MCP only); --config is optional (see Zero config above)
 claude mcp add yandex -- uvx --from "zai-yandex-mcp[standalone] @ git+https://github.com/zai-one/yandex-mcp@v0.6.0" yandex-mcp --config /ABSOLUTE/PATH/mcp.local.json
 # Claude Code plugin (MCP + skills) from this repository; set YANDEX_MCP_CONFIG to your mcp.local.json
 /plugin marketplace add zai-one/yandex-mcp
@@ -130,11 +162,11 @@ Cursor `.cursor/mcp.json` and Claude Desktop use the `mcpServers` block above (o
 
 ## Toolsets and read-only mode
 
-Unset = every tool (previous behaviour). `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics).
+Unset = every tool (127; previous behaviour). Platforms: `yandex_setup_toolsets(platforms|preset, write=true)` (stdio) sets only `YANDEX_TOOLSETS` in the active `mcp.local.json` (it wins over client env; restart to apply) - opt-in toolsets below are opt-in only relative to `default`. `YANDEX_TOOLSETS=default` keeps the read toolsets (direct_read, direct_reports, metrika, webmaster, wordstat, audience) plus `account` - about 30% fewer tool tokens. It is not strictly read-only: `account` includes the OAuth self-setup tools `yandex_auth_start` / `yandex_auth_finish`, which write local token files (stdio only); add `YANDEX_READ_ONLY=1` (or `YANDEX_DISABLED_TOOLS=yandex_auth_start,yandex_auth_finish`) to hide them. The quota- and write-related `metrika_logs` and `metrika_offline` toolsets are opt-in: add them explicitly, e.g. `YANDEX_TOOLSETS=default,metrika_logs`. Rare reads live in opt-in `direct_extra` (client, dictionaries, Changes, keyword bids, bid modifiers, audience targets, retargeting lists, feeds, creatives, callouts, turbo pages, leads, videos, negative keyword sets) and `webmaster_extra` (owners, feeds, regions, query analytics). Administration lives in opt-in `metrika_manage`, `webmaster_manage` and `audience_manage` (grants, delegates, counters, filters, segments, labels, annotations, uploads, hosts, feeds, Audience segments; catalogue in `yandex://guide/management`), all writes through prepare -> approval -> apply. Yandex Maps organization search (`maps_geosearch`: `maps_search_organizations`, `maps_search_places`) is added only when `YANDEX_MAPS_GEOSEARCH_API_KEY` (or `YANDEX_MAPS_GEOSEARCH_API_KEY_FILE`, owner-private) is set - a separate Geosearch key from the developer cabinet; results are not cached and keep Yandex attribution per the Maps API terms (`yandex://guide/maps-geosearch`).
 
 | Variable | Effect |
 |---|---|
-| `YANDEX_TOOLSETS` | `all`, `default` or a comma list of `account`, `direct_read`, `direct_extra`, `direct_reports`, `direct_write`, `metrika`, `metrika_logs`, `metrika_logs_write`, `metrika_offline`, `metrika_write`, `webmaster`, `webmaster_extra`, `webmaster_write`, `wordstat`, `search`, `audience`, `audience_write`. Also `--toolsets`. |
+| `YANDEX_TOOLSETS` | `all`, `default` or a comma list of `account`, `direct_read`, `direct_extra`, `direct_reports`, `direct_write`, `metrika`, `metrika_logs`, `metrika_logs_write`, `metrika_offline`, `metrika_write`, `webmaster`, `webmaster_extra`, `webmaster_write`, `wordstat`, `search`, `audience`, `audience_write`, `audience_manage`, `metrika_manage`, `webmaster_manage`, `maps_geosearch` (needs its key). Also `--toolsets`. |
 | `YANDEX_TOOLS` / `YANDEX_DISABLED_TOOLS` | Add or hide individual tools. |
 | `YANDEX_READ_ONLY=1` | Hide every prepare/apply/write/paid-submit tool (also `--read-only`). |
 

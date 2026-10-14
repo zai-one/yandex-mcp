@@ -77,6 +77,15 @@ def _required(prompt: str, *, hidden: bool = False) -> str:
     return value
 
 
+def _tool_loading() -> str:
+    """Ask eager vs lazy tool loading; anything but lazy keeps the eager default."""
+    answer = input(
+        "Tool loading: eager = every tool at start (default), lazy = small core, enable toolsets on "
+        "demand; needs a client with tools/list_changed [eager/lazy]: "
+    )
+    return "lazy" if answer.strip().lower() in {"lazy", "l"} else "eager"
+
+
 def configure(directory: Path) -> Path:
     """Create new local files only; never modify existing client or provider settings."""
     root = directory.expanduser().resolve()
@@ -113,6 +122,25 @@ def configure(directory: Path) -> Path:
             values[key] = str(source.resolve())
         else:
             values[key] = _required(key + ": ")
+    if SERVICE == "yandex":
+        from .setup_toolsets import PLATFORMS, PRESET_COST, PRESETS, resolve_toolsets
+
+        print("Default is every tool (all). Pick platforms to save tokens (measured ~tokens per preset):")
+        for name, cost in PRESET_COST.items():
+            print(f"  {name}: {', '.join(PRESETS[name])} - {cost['tools']} tools, ~{cost['tokens']} tokens")
+        answer = input(f"Preset or comma list of {', '.join(PLATFORMS)} [everything]: ").strip()
+        names = [item.strip() for item in answer.split(",") if item.strip()]
+        if not names or names == ["everything"]:
+            values["YANDEX_TOOLSETS"] = "all"
+        elif len(names) == 1 and names[0] in PRESETS:
+            values["YANDEX_TOOLSETS"] = resolve_toolsets(preset=names[0])
+        else:
+            try:
+                values["YANDEX_TOOLSETS"] = resolve_toolsets(names)
+            except ValueError:
+                print("Unknown platform; keeping the default (all). Change it later with yandex_setup.")
+                values["YANDEX_TOOLSETS"] = "all"
+    values[f"{SERVICE.upper()}_TOOL_LOADING"] = _tool_loading()
     root.mkdir(parents=True, exist_ok=True)
     _private_directory(root / "secrets")
     for path, value in pending.items():

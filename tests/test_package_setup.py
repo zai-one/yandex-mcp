@@ -29,9 +29,10 @@ def test_setup_works_outside_checkout_and_keeps_tokens_out_of_client_config(tmp_
     private = tmp_path / "existing-provider.env"
     private.write_text("SYNTHETIC_PRIVATE_MARKER=local-only", encoding="utf-8")
     private.chmod(0o600)
-    monkeypatch.setattr(
-        "builtins.input", lambda prompt: str(private) if "_SECRET_FILE" in prompt else "12345"
-    )
+    def answer(prompt):
+        return str(private) if "_SECRET_FILE" in prompt else "seo" if "Preset" in prompt else "12345"
+
+    monkeypatch.setattr("builtins.input", answer)
     monkeypatch.setattr(setup.getpass, "getpass", lambda _: "synthetic-token-local-only")
     unrelated = tmp_path / "elsewhere"
     unrelated.mkdir()
@@ -40,6 +41,7 @@ def test_setup_works_outside_checkout_and_keeps_tokens_out_of_client_config(tmp_
     config = setup.configure(root)
     values = json.loads(config.read_text(encoding="utf-8"))["env"]
     assert all("synthetic" not in value.lower() for value in values.values())
+    assert values["YANDEX_TOOLSETS"].startswith("account,webmaster")
     config_text = (root / "mcp-client.json").read_text(encoding="utf-8")
     snippet = json.loads(config_text)["mcpServers"][setup.SERVICE]
     assert snippet["command"] == sys.executable
@@ -112,3 +114,17 @@ def test_packaged_template_matches_documented_template():
     repo = Path(__file__).resolve().parents[1]
     bundled = json.loads(files(setup.PACKAGE).joinpath("setup.example.json").read_text(encoding="utf-8"))
     assert bundled == json.loads((repo / "mcp.example.json").read_text(encoding="utf-8"))
+
+
+def test_setup_unknown_platform_keeps_default_all(tmp_path, monkeypatch):
+    private = tmp_path / "p.env"
+    private.write_text("X=1", encoding="utf-8")
+    private.chmod(0o600)
+
+    def answer(prompt):
+        return str(private) if "_SECRET_FILE" in prompt else "12345"
+
+    monkeypatch.setattr("builtins.input", answer)
+    monkeypatch.setattr(setup.getpass, "getpass", lambda _: "synthetic-token-local-only")
+    config = setup.configure(tmp_path / "cfg")
+    assert json.loads(config.read_text(encoding="utf-8"))["env"]["YANDEX_TOOLSETS"] == "all"

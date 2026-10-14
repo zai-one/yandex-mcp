@@ -33,6 +33,25 @@ def validate_num_phrases(value: Any) -> int:
     return value
 
 
+def validate_phrase(phrase: Any) -> str:
+    """GetTopRequest/GetDynamicsRequest/GetRegionsDistributionRequest: phrase required, <=400."""
+    if not isinstance(phrase, str) or not phrase.strip() or len(phrase) > 400:
+        raise ValueError("phrase must contain 1-400 characters")
+    return phrase
+
+
+def validate_regions(regions: Any) -> list[str]:
+    """``regions``: up to 100 numeric region ids (searchapi/v2/wordstat_service.proto)."""
+    regions = regions or []
+    if (
+        not isinstance(regions, list)
+        or len(regions) > 100
+        or any(not isinstance(value, str) or re.fullmatch(r"[0-9]{1,18}", value) is None for value in regions)
+    ):
+        raise ValueError("invalid Wordstat region IDs")
+    return list(regions)
+
+
 def request_body(operation: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if operation == "getRegionsTree":
         if arguments:
@@ -40,9 +59,7 @@ def request_body(operation: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return {}
     if operation not in {"dynamics", "regions"}:
         raise ValueError("unknown Wordstat operation")
-    phrase = arguments["phrase"]
-    if not isinstance(phrase, str) or not phrase.strip() or len(phrase) > 400:
-        raise ValueError("phrase must contain 1-400 characters")
+    phrase = validate_phrase(arguments.get("phrase"))
     devices = validate_devices(arguments.get("devices"))
     payload = {"phrase": phrase, "devices": devices}
     if operation == "regions":
@@ -53,25 +70,22 @@ def request_body(operation: str, arguments: dict[str, Any]) -> dict[str, Any]:
     period = arguments["period"]
     if period not in PERIODS:
         raise ValueError("invalid Wordstat aggregation period")
+    # from_date is required, to_date optional (GetDynamicsRequest).
     dates = []
     for name in ("from_date", "to_date"):
-        value = arguments[name]
+        value = arguments.get(name)
+        if value is None and name == "to_date":
+            continue
         if not isinstance(value, str) or re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is None:
             raise ValueError("dates must use YYYY-MM-DD")
         dates.append(date.fromisoformat(value))
-    if dates[1] < dates[0]:
+    if len(dates) == 2 and dates[1] < dates[0]:
         raise ValueError("end date precedes start date")
-    regions = arguments.get("regions") or []
-    if (
-        not isinstance(regions, list)
-        or len(regions) > 100
-        or any(not isinstance(value, str) or re.fullmatch(r"[0-9]{1,18}", value) is None for value in regions)
-    ):
-        raise ValueError("invalid Wordstat region IDs")
+    regions = validate_regions(arguments.get("regions"))
     return {
         **payload,
         "period": period,
         "fromDate": dates[0].isoformat() + "T00:00:00Z",
-        "toDate": dates[1].isoformat() + "T00:00:00Z",
+        **({"toDate": dates[1].isoformat() + "T00:00:00Z"} if len(dates) == 2 else {}),
         "regions": regions,
     }

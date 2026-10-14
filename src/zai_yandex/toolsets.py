@@ -15,13 +15,17 @@ from dataclasses import dataclass
 from typing import Any
 
 from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
+from zai_yandex.management import MANAGEMENT_TOOLS
+from zai_yandex.maps_geosearch import MAPS_TOOLS
+from zai_yandex.maps_geosearch import configured as maps_configured
 from zai_yandex.tool_annotations import TOOL_ANNOTATIONS
 
 TOOLSETS: dict[str, dict[str, Any]] = {
     "account": {
         "description": (
             "Update check, named accounts (yandex_list_accounts when YANDEX_ACCOUNTS_FILE is set), "
-            "OAuth self-setup (start/finish write local token files; stdio only)."
+            "OAuth self-setup (start/finish write local token files; stdio only), platform picker "
+            "yandex_setup_toolsets (writes YANDEX_TOOLSETS to mcp.local.json; stdio only)."
         ),
         "tools": (
             "yandex_check_update",
@@ -29,6 +33,7 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             "yandex_auth_status",
             "yandex_auth_start",
             "yandex_auth_finish",
+            "yandex_setup_toolsets",
         ),
     },
     "direct_read": {
@@ -51,8 +56,14 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         "tools": ("direct_get_statistics", "direct_get_goal_statistics"),
     },
     "direct_write": {
-        "description": "Direct changes: prepare -> human approval -> apply; generic direct_write.",
-        "tools": ("direct_prepare_changes", "direct_apply_changes", "direct_write"),
+        "description": "Direct changes: prepare -> human approval -> apply (any allowlisted service/method); generic direct_write.",
+        "tools": (
+            "direct_prepare_changes",
+            "direct_apply_changes",
+            "direct_write",
+            "direct_prepare_write",
+            "direct_apply_write",
+        ),
     },
     "metrika": {
         "description": "Metrika counters, goals, Reporting API and period comparison.",
@@ -96,6 +107,7 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             if name.startswith("webmaster_")
             and TOOL_ANNOTATIONS[name].readOnlyHint
             and name not in WEBMASTER_EXTRA_TOOLS
+            and name not in MANAGEMENT_TOOLS["webmaster"]
         ),
     },
     "webmaster_extra": {
@@ -151,6 +163,35 @@ TOOLSETS: dict[str, dict[str, Any]] = {
             "audience_reconcile_create",
         ),
     },
+    "metrika_manage": {
+        "description": (
+            "Opt-in Metrika management: counters, filters, operations, segments, grants, labels, "
+            "annotations, access filters, delegates; calls/expenses/user params/CRM uploads; "
+            "bytime/drilldown/comparison reports. Writes: prepare -> approval -> apply -> reconcile."
+        ),
+        "tools": MANAGEMENT_TOOLS["metrika"],
+    },
+    "webmaster_manage": {
+        "description": (
+            "Opt-in Webmaster management: add/delete host, start verification, delete/recrawl sitemaps, "
+            "feeds, indexing archive, in-search and all-queries history. prepare -> approval -> apply."
+        ),
+        "tools": MANAGEMENT_TOOLS["webmaster"],
+    },
+    "audience_manage": {
+        "description": (
+            "Opt-in Audience management: CSV upload + confirm, lookalike/Metrika/AppMetrica segments, "
+            "update/delete/reprocess, grants, delegates, pixels. prepare -> approval -> apply."
+        ),
+        "tools": MANAGEMENT_TOOLS["audience"],
+    },
+    "maps_geosearch": {
+        "description": (
+            "Opt-in Yandex Maps organization/place search (Geosearch API, read-only). Present only when "
+            "YANDEX_MAPS_GEOSEARCH_API_KEY_FILE or YANDEX_MAPS_GEOSEARCH_API_KEY is set; nothing cached."
+        ),
+        "tools": MAPS_TOOLS,
+    },
 }
 
 DEFAULT_TOOLSETS = (
@@ -204,6 +245,8 @@ class Surface:
                 "YANDEX_TOOLS": "extra tool names",
                 "YANDEX_DISABLED_TOOLS": "tool names to hide",
                 "YANDEX_READ_ONLY": "1 hides every prepare/apply/write/paid-submit tool",
+                "YANDEX_TOOL_LOADING": "eager (default) | lazy: core tools + yandex_enable_toolsets",
+                "YANDEX_MAPS_GEOSEARCH_API_KEY_FILE": "Geosearch key file; maps_geosearch tools exist only with a key",
             },
         }
 
@@ -217,6 +260,7 @@ def build_surface(
     extra_tools: Iterable[str] = (),
     disabled_tools: Iterable[str] = (),
     read_only: bool = False,
+    maps_key: bool = False,
 ) -> Surface:
     if toolsets is None or (isinstance(toolsets, str) and toolsets.strip() in {"", "all"}):
         names = list(ALL_TOOLSETS)
@@ -234,6 +278,15 @@ def build_surface(
         if tool not in ALL_TOOLS:
             raise ValueError(f"unknown Yandex tool: {tool}")
         tools.add(tool)
+    # Geosearch tools exist only with a configured key; the key itself is the opt-in, so a key
+    # adds them to any selection (hide with YANDEX_DISABLED_TOOLS), and no key removes them.
+    if maps_key:
+        tools |= set(MAPS_TOOLS)
+        if "maps_geosearch" not in names:
+            names.append("maps_geosearch")
+    else:
+        tools -= set(MAPS_TOOLS)
+        names = [name for name in names if name != "maps_geosearch"]
     tools -= set(disabled_tools)
     if read_only:
         tools = {tool for tool in tools if is_read_only(tool)}
@@ -250,4 +303,33 @@ def surface_from_env(
         disabled_tools=_split(env.get("YANDEX_DISABLED_TOOLS")),
         read_only=cli_read_only
         or env.get("YANDEX_READ_ONLY", "").strip().lower() in {"1", "true", "yes", "on"},
+        maps_key=maps_configured(env),
     )
+
+
+@dataclass(frozen=True)
+class LazyProfile:
+    """What lazy_loading.install needs: toolsets, one-line notes and the start core."""
+
+    service: str = "yandex"
+    env: str = "YANDEX"
+    lazy_core: tuple[str, ...] = (
+        *TOOLSETS["account"]["tools"],
+        "direct_list_campaigns",
+        "direct_get_statistics",
+        "metrika_list_counters",
+        "metrika_report",
+        "webmaster_list_hosts",
+        "webmaster_get_summary",
+    )
+
+    @property
+    def toolsets(self) -> dict[str, tuple[str, ...]]:
+        return {name: tuple(spec["tools"]) for name, spec in TOOLSETS.items()}
+
+    @property
+    def toolset_notes(self) -> dict[str, str]:
+        return {name: spec["description"] for name, spec in TOOLSETS.items()}
+
+
+LAZY_PROFILE = LazyProfile()

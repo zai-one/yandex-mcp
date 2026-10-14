@@ -16,6 +16,7 @@ from fastmcp.exceptions import ToolError
 
 from zai_yandex.config import ServiceConfig
 from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
+from zai_yandex.management import MANAGEMENT_TOOLS
 from zai_yandex.runtime import Runtime
 from zai_yandex.server import create_server
 from zai_yandex.state import StateStore
@@ -44,6 +45,9 @@ AUDIENCE_TOOLS = {
 ADDED_TOOLS = (
     set(DIRECT_EXTRA_TOOLS)
     | set(WEBMASTER_EXTRA_TOOLS)
+    | {name for names in MANAGEMENT_TOOLS.values() for name in names}
+    | {"yandex_setup_toolsets"}
+    | {"direct_prepare_write", "direct_apply_write"}
     | {
         "metrika_report",
         "yandex_wordstat_dynamics",
