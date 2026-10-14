@@ -5,7 +5,7 @@ from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
 from zai_yandex.adapters.direct import (
-    APPROVAL_ONLY_WRITES,
+    AUTONOMOUS_WRITE_METHODS,
     INVENTORY_READ_SERVICES,
     YandexDirectAdapter,
     build_statistics_request,
@@ -495,8 +495,10 @@ def register_core_tools(server: Any, runtime: Any) -> None:
 
     def _autonomous_allowed(service: str, method: str, items: list[dict[str, Any]]) -> Any:
         validated = YandexDirectAdapter.validate_apply(service, method, items)
-        if validated[0] in APPROVAL_ONLY_WRITES or YandexDirectAdapter.is_unified(*validated):
-            raise ProviderError("this Direct service needs direct_prepare_write -> direct_apply_write")
+        if validated[1] not in AUTONOMOUS_WRITE_METHODS.get(validated[0], ()) or (
+            YandexDirectAdapter.is_unified(*validated)
+        ):
+            raise ProviderError("this Direct method needs direct_prepare_write -> direct_apply_write")
         return validated
 
     def _direct_readback_ids(items: list[dict[str, Any]], result: Any) -> list[int]:

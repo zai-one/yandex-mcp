@@ -408,7 +408,7 @@ def test_approvals_cli_requires_the_prepared_account(tmp_path):
     assert done.returncode == 0 and json.loads(done.stdout)["named_account"] == "client-a"
 
 
-async def test_axisrow_parity_direct_services(tmp_path):
+async def test_extended_direct_services(tmp_path):
     settings = config(tmp_path, yandex_direct_write_enabled=True)
     recorder = Recorder()
     async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
@@ -798,3 +798,55 @@ def test_direct_member_invite_and_geo_regions_follow_the_docs():
         YandexDirectAdapter.validate_read("dictionaries", {"method": "getGeoRegions", "params": {}})[0]
         == "dictionaries"
     )
+
+
+async def test_autonomous_direct_write_keeps_the_060_allowlist(tmp_path):
+    """Bid changes and deletes added after 0.6.0 never run without an accepted approval."""
+    from zai_yandex.adapters.direct import AUTONOMOUS_WRITE_METHODS, WRITE_METHODS
+
+    settings = config(tmp_path, yandex_direct_write_enabled=True)
+    recorder = Recorder(lambda *_: {"result": {"SetResults": [], "DeleteResults": []}})
+    blocked = [
+        ("keywordbids", "set", [{"KeywordId": 1, "SearchBid": 10_000_000}]),
+        ("bidmodifiers", "set", [{"Id": 1, "BidModifier": 200}]),
+        ("audiencetargets", "setBids", [{"Id": 1, "ContextBid": 10_000_000}]),
+        ("retargetinglists", "delete", [{"Id": 1}]),
+        ("feeds", "delete", [{"Id": 1}]),
+        ("sitelinks", "delete", [{"Id": 1}]),
+        ("adimages", "delete", [{"AdImageHash": "abc"}]),
+        ("negativekeywordsharedsets", "delete", [{"Id": 1}]),
+        ("ads", "unarchive", [{"Id": 1}]),
+    ]
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        for number, (service, method, items) in enumerate(blocked):
+            with pytest.raises(ToolError):
+                await client.call_tool(
+                    "direct_write",
+                    {
+                        "service": service,
+                        "method": method,
+                        "items": items,
+                        "idempotency_key": f"auto-{number}-x",
+                    },
+                )
+        # Still reachable through the approval-gated path.
+        draft = (
+            await client.call_tool(
+                "direct_prepare_write",
+                {"service": "keywordbids", "method": "set", "items": blocked[0][2]},
+            )
+        ).data
+        assert draft["status"] == "approval_required"
+        # The 0.6.0 autonomous allowlist is unchanged.
+        await client.call_tool(
+            "direct_write",
+            {
+                "service": "bids",
+                "method": "set",
+                "items": [{"KeywordId": 1, "Bid": 1}],
+                "idempotency_key": "bids-ok-1",
+            },
+        )
+    assert not any(call[0] == "POST" and "keywordbids" in call[1] for call in recorder.calls)
+    assert all(AUTONOMOUS_WRITE_METHODS[s] <= WRITE_METHODS[s] for s in AUTONOMOUS_WRITE_METHODS)
+    assert set(AUTONOMOUS_WRITE_METHODS) == {"campaigns", "adgroups", "ads", "keywords", "bids"}
