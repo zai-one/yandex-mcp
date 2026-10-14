@@ -69,3 +69,19 @@ async def test_tool_writes_active_config_and_prompt_exists(tmp_path, monkeypatch
     assert result.data["restart_required"] and "secret" not in json.dumps(result.data).lower()
     assert json.loads(target.read_text())["env"]["YANDEX_TOOLSETS"] == resolve_toolsets(preset="analytics")
     assert "yandex_setup" in prompts
+
+
+def test_write_never_reuses_a_stale_temp_file(tmp_path):
+    path = tmp_path / "mcp.local.json"
+    elsewhere = tmp_path / "elsewhere.json"
+    elsewhere.write_text("untouched", encoding="utf-8")
+    stale = path.with_name(path.name + ".tmp")
+    if os.name != "nt":
+        stale.symlink_to(elsewhere)
+    else:
+        stale.write_text("stale", encoding="utf-8")
+    write_toolsets(path, "all")
+    assert json.loads(path.read_text(encoding="utf-8")) == {"env": {"YANDEX_TOOLSETS": "all"}}
+    assert elsewhere.read_text(encoding="utf-8") == "untouched" and not stale.exists()
+    if os.name != "nt":
+        assert path.stat().st_mode & 0o077 == 0

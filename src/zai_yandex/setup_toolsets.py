@@ -87,7 +87,8 @@ def write_toolsets(path: Path, value: str, tool_loading: str | None = None) -> N
         data["env"]["YANDEX_TOOL_LOADING"] = tool_loading
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
-    descriptor = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    tmp.unlink(missing_ok=True)  # never reuse a stale file (or symlink) and its permissions
+    descriptor = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
         stream.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     os.replace(tmp, path)
