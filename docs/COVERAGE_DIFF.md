@@ -14,8 +14,8 @@ the prepare -> approval -> apply -> reconcile flow for every write.
 
 | | zai-one (this change) | SvechaPVL | skiddgoddamn | webkoth | axisrow |
 |---|---|---|---|---|---|
-| MCP tools (all / default) | 127 / 53 | ~122 | ~150 | ~85 registered | ~110 |
-| Callable documented methods | 127 tools + 114 catalogue operations + 75 Direct write methods | ≈ tools | ≈ tools | ≈ tools | ≈ tools |
+| MCP tools (all / default) | 126 / 52 (+2 Geosearch with key) | ~122 | ~150 | ~85 registered | ~110 |
+| Callable documented methods | 126 tools + 126 catalogue operations + 77 Direct write methods | ≈ tools | ≈ tools | ≈ tools | ≈ tools |
 | Human approval bound to account + exact request | yes (all writes) | no | no | no | no |
 | Idempotency ledger, readback, reconcile | yes | no | no | no | no |
 | Zero-config start + OAuth device flow | yes | no | partial (token env) | no | yes (plugin OAuth) |

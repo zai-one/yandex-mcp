@@ -20,6 +20,7 @@ from zai_yandex.coverage_tools import register_coverage_tools
 from zai_yandex.defaults import apply_defaults, default_config_file
 from zai_yandex.expansion_tools import register_expansion_tools
 from zai_yandex.management import register_direct_governed_tools, register_management_tools
+from zai_yandex.maps_geosearch import MAPS_TOOLS, register_maps_tools
 from zai_yandex.metrika_reports import register_reports
 from zai_yandex.offline_conversions import register_offline_conversion_tools
 from zai_yandex.onboarding import check_config, load_config
@@ -182,6 +183,10 @@ def create_server(
     register_coverage_tools(registrar, runtime)
     register_management_tools(registrar, runtime)
     register_direct_governed_tools(registrar, runtime)
+    if config.maps_geosearch_api_key and any(surface.exposes(name) for name in MAPS_TOOLS):
+        # Separate API with its own key and pacing: registered outside the Yandex provider policies
+        # (no execution rows in the state DB); responses are never stored (Maps API terms).
+        register_maps_tools(server, runtime, key=config.maps_geosearch_api_key, surface=surface)
     register_update_tool(server, config, transport, surface)
     register_accounts_tool(server, config, transport, surface)
     register_auth_tools(server, config, transport, surface, runtime=runtime)

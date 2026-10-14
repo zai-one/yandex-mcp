@@ -70,6 +70,7 @@ GUIDE_TOPICS = (
     "oauth",
     "management",
     "business",
+    "maps-geosearch",
 )
 
 
@@ -98,8 +99,13 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     ("audience", "аудитории, сегменты, пиксель", "audience_list_segments", "", "tool-map"),
     ("manage", "права, представители, метки, примечания, звонки, затраты, фид, хост", "metrika_manage_read", "yandex-account-admin", "management"),
     ("business", "Бизнес, отзывы, геореклама", "", "", "business"),
+    # Shown only when a Geosearch key exposes the maps tools (default/all routers stay unchanged).
+    ("maps", "найти кафе/фирму рядом, адрес и телефон компании, геопоиск", "maps_search_organizations", "", "maps-geosearch"),
     ("errors", "ошибка, баллы, лимит", "", "", "errors"),
 )  # fmt: skip
+
+
+KEY_GATED_ROUTES = frozenset({"maps"})
 
 
 def build_instructions(
@@ -113,7 +119,9 @@ def build_instructions(
         f"Yandex MCP: Direct/Metrika/Webmaster/Wordstat/SERP/Audience ({mode}; yandex://toolsets).",
         "Line: tool; skill; yandex://guide/<topic>.",
     ]
-    for _, words, tool, skill, topic in ROUTES:
+    for rid, words, tool, skill, topic in ROUTES:
+        if rid in KEY_GATED_ROUTES and not surface.exposes(tool):
+            continue
         # tool-map is named once on the "Unsure?" line below; repeating it per route only costs tokens.
         parts = (tool, skill, "" if topic == "tool-map" else topic)
         lines.append(f"- {words}: " + "; ".join(part for part in parts if part))

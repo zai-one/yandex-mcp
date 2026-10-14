@@ -10,6 +10,7 @@ from mcp.types import ToolAnnotations
 
 from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
 from zai_yandex.management import MANAGEMENT_TOOLS
+from zai_yandex.maps_geosearch import MAPS_TOOLS
 
 _MANAGE = MANAGEMENT_TOOLS.values()
 
@@ -44,6 +45,8 @@ _GROUPS: tuple[tuple[ToolAnnotations, tuple[str, ...]], ...] = (
     (
         READ,
         (
+            # Geosearch: licensed per request but nothing changes; no server-side cost ledger.
+            *MAPS_TOOLS,
             "direct_list_campaigns",
             "direct_get_campaign",
             "direct_get_inventory",

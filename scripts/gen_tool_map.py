@@ -29,8 +29,13 @@ async def build() -> str:
     from zai_yandex.toolsets import DEFAULT_TOOLSETS, TOOLSETS, build_surface
 
     with tempfile.TemporaryDirectory() as tmp:
-        config = ServiceConfig(state_path=Path(tmp) / "s.sqlite", direct_token="x", webmaster_token="x")
-        server = create_server(config, transport="stdio", surface=build_surface("all"))
+        config = ServiceConfig(
+            state_path=Path(tmp) / "s.sqlite",
+            direct_token="x",
+            webmaster_token="x",
+            maps_geosearch_api_key="x",
+        )
+        server = create_server(config, transport="stdio", surface=build_surface("all", maps_key=True))
         async with Client(server) as client:
             descriptions = {tool.name: tool.description or "" for tool in await client.list_tools()}
     lines = [

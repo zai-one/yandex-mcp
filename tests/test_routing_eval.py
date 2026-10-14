@@ -44,7 +44,7 @@ def test_eval_has_enough_realistic_cases():
 
 @pytest.mark.parametrize("case", CASES, ids=[c["request"][:40] for c in CASES])
 def test_request_routes_to_skill_guide_and_tool(case):
-    instructions = build_instructions(build_surface("all"))
+    instructions = build_instructions(build_surface("all", maps_key=True))
     rid = route_for(case["request"])
     assert rid == case["route"]
     _, intent, first_tool, skill, topic = next(r for r in ROUTES if r[0] == rid)

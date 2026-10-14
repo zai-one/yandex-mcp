@@ -198,5 +198,20 @@
     "request": "в Яндекс Бизнесе поправь визитку и глянь новые отзывы",
     "route": "business",
     "tool": "direct_get_inventory"
+  },
+  {
+    "request": "найди кафе рядом с метро Таганская, нужен адрес и телефон",
+    "route": "maps",
+    "tool": "maps_search_organizations"
+  },
+  {
+    "request": "какой телефон у компании Ромашка в Казани",
+    "route": "maps",
+    "tool": "maps_search_organizations"
+  },
+  {
+    "request": "геопоиск: где находится улица Ленина 10 в Твери",
+    "route": "maps",
+    "tool": "maps_search_places"
   }
 ]

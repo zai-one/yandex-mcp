@@ -189,3 +189,8 @@ Opt-in Audience management: CSV upload + confirm, lookalike/Metrika/AppMetrica s
 - `audience_manage_prepare` - Open an approval for one allowlisted Audience write/upload (args: ids, query, body, csv).
 - `audience_manage_apply` - Execute an accepted Audience write once (write flag, approval_id, idempotency_key), then read back.
 - `audience_manage_reconcile` - Settle an uncertain Audience management write by reading the provider
+
+## maps_geosearch
+Opt-in Yandex Maps organization/place search (Geosearch API, read-only). Present only when YANDEX_MAPS_GEOSEARCH_API_KEY_FILE or YANDEX_MAPS_GEOSEARCH_API_KEY is set; nothing cached.
+- `maps_search_organizations` - Find organizations on Yandex Maps by name, category, phone or address (Geosearch type=biz).
+- `maps_search_places` - Find places/addresses (toponyms) on Yandex Maps via Geosearch type=geo: name, full address, kind, precision, coordinates [lon,lat].

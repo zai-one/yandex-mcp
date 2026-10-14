@@ -4,6 +4,7 @@ import pytest
 from conftest import config
 from fastmcp import Client
 
+from zai_yandex.maps_geosearch import MAPS_TOOLS  # key-gated: absent without a Geosearch key
 from zai_yandex.server import create_server
 from zai_yandex.tool_annotations import TOOL_ANNOTATIONS, annotations_for
 
@@ -29,7 +30,7 @@ WRITE_TOOLS = {
 async def test_every_tool_exposes_reviewed_annotations(tmp_path) -> None:
     async with Client(create_server(config(tmp_path), transport="stdio")) as client:
         tools = {tool.name: tool for tool in await client.list_tools()}
-    assert set(tools) == set(TOOL_ANNOTATIONS) - {"yandex_list_accounts"}
+    assert set(tools) == set(TOOL_ANNOTATIONS) - {"yandex_list_accounts", *MAPS_TOOLS}
     for name, tool in tools.items():
         hints = tool.annotations
         assert hints is not None, name

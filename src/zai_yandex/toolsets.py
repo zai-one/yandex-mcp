@@ -16,6 +16,8 @@ from typing import Any
 
 from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
 from zai_yandex.management import MANAGEMENT_TOOLS
+from zai_yandex.maps_geosearch import MAPS_TOOLS
+from zai_yandex.maps_geosearch import configured as maps_configured
 from zai_yandex.tool_annotations import TOOL_ANNOTATIONS
 
 TOOLSETS: dict[str, dict[str, Any]] = {
@@ -181,6 +183,13 @@ TOOLSETS: dict[str, dict[str, Any]] = {
         ),
         "tools": MANAGEMENT_TOOLS["audience"],
     },
+    "maps_geosearch": {
+        "description": (
+            "Opt-in Yandex Maps organization/place search (Geosearch API, read-only). Present only when "
+            "YANDEX_MAPS_GEOSEARCH_API_KEY_FILE or YANDEX_MAPS_GEOSEARCH_API_KEY is set; nothing cached."
+        ),
+        "tools": MAPS_TOOLS,
+    },
 }
 
 DEFAULT_TOOLSETS = (
@@ -234,6 +243,7 @@ class Surface:
                 "YANDEX_TOOLS": "extra tool names",
                 "YANDEX_DISABLED_TOOLS": "tool names to hide",
                 "YANDEX_READ_ONLY": "1 hides every prepare/apply/write/paid-submit tool",
+                "YANDEX_MAPS_GEOSEARCH_API_KEY_FILE": "Geosearch key file; maps_geosearch tools exist only with a key",
             },
         }
 
@@ -247,6 +257,7 @@ def build_surface(
     extra_tools: Iterable[str] = (),
     disabled_tools: Iterable[str] = (),
     read_only: bool = False,
+    maps_key: bool = False,
 ) -> Surface:
     if toolsets is None or (isinstance(toolsets, str) and toolsets.strip() in {"", "all"}):
         names = list(ALL_TOOLSETS)
@@ -264,6 +275,15 @@ def build_surface(
         if tool not in ALL_TOOLS:
             raise ValueError(f"unknown Yandex tool: {tool}")
         tools.add(tool)
+    # Geosearch tools exist only with a configured key; the key itself is the opt-in, so a key
+    # adds them to any selection (hide with YANDEX_DISABLED_TOOLS), and no key removes them.
+    if maps_key:
+        tools |= set(MAPS_TOOLS)
+        if "maps_geosearch" not in names:
+            names.append("maps_geosearch")
+    else:
+        tools -= set(MAPS_TOOLS)
+        names = [name for name in names if name != "maps_geosearch"]
     tools -= set(disabled_tools)
     if read_only:
         tools = {tool for tool in tools if is_read_only(tool)}
@@ -280,4 +300,5 @@ def surface_from_env(
         disabled_tools=_split(env.get("YANDEX_DISABLED_TOOLS")),
         read_only=cli_read_only
         or env.get("YANDEX_READ_ONLY", "").strip().lower() in {"1", "true", "yes", "on"},
+        maps_key=maps_configured(env),
     )

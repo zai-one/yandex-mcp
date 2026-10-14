@@ -1,7 +1,8 @@
 """Token budget for the agent-facing surface (enforced in CI via tests/test_agent_layer.py).
 
-Checks: router instructions <= 1700 chars, each tool description <= 300 chars, tools/list
-JSON per preset <= BUDGET_BYTES, skills frontmatter and file references valid.
+Checks: router instructions <= 1700 chars (1800 with the key-gated Geosearch line), each tool
+description <= 300 chars, tools/list JSON per preset <= BUDGET_BYTES, skills frontmatter and
+file references valid.
 Usage: python scripts/token_budget.py
 """
 
@@ -12,13 +13,15 @@ import json
 import re
 import sys
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BUDGET_BYTES = {"default": 34_000, "all": 92_000}
+BUDGET_BYTES = {"default": 34_000, "all": 92_000, "default+maps": 37_000}
 # Estimated tokens an agent pays at startup: instructions + tools/list + every skill frontmatter.
-STARTUP_TOKENS = {"default": 9_500, "all": 24_500}
-INSTRUCTIONS_CHARS = 1700
+STARTUP_TOKENS = {"default": 9_500, "all": 24_500, "default+maps": 10_500}
+# default/all stay at 1700; the Geosearch router line exists only with a key (default+maps).
+INSTRUCTIONS_CHARS = {"default": 1700, "all": 1700, "default+maps": 1800}
 
 
 def estimate_tokens(text: str) -> int:
@@ -69,7 +72,12 @@ async def surface_sizes(config) -> dict[str, dict]:
 
     out = {}
     for preset in BUDGET_BYTES:
-        server = create_server(config, transport="stdio", surface=build_surface(preset))
+        toolsets, maps = preset.split("+")[0], preset.endswith("+maps")
+        server = create_server(
+            replace(config, maps_geosearch_api_key="synthetic" if maps else ""),
+            transport="stdio",
+            surface=build_surface(toolsets, maps_key=maps),
+        )
         async with Client(server) as client:
             tools = await client.list_tools()
         payload = json.dumps([tool.model_dump(mode="json", exclude_none=True) for tool in tools])
@@ -102,8 +110,9 @@ def main() -> int:
     for preset, info in sizes.items():
         if info["bytes"] > BUDGET_BYTES[preset]:
             problems.append(f"{preset}: tools/list {info['bytes']} B > {BUDGET_BYTES[preset]} B")
-        if info["instructions"] > INSTRUCTIONS_CHARS:
-            problems.append(f"{preset}: instructions {info['instructions']} > {INSTRUCTIONS_CHARS} chars")
+        if info["instructions"] > INSTRUCTIONS_CHARS[preset]:
+            limit = INSTRUCTIONS_CHARS[preset]
+            problems.append(f"{preset}: instructions {info['instructions']} > {limit} chars")
         if info["startup_tokens"] > STARTUP_TOKENS[preset]:
             problems.append(f"{preset}: startup ~{info['startup_tokens']} tokens > {STARTUP_TOKENS[preset]}")
         problems += [f"{preset}: description over 300 chars: {name}" for name in info["long_descriptions"]]
