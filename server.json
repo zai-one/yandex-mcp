@@ -4,12 +4,12 @@
   "title": "Yandex MCP",
   "description": "Yandex Direct, Metrika, Webmaster, Wordstat/Search and Audience for AI assistants, with toolsets, read-only mode and approval-gated writes.",
   "repository": {"url": "https://github.com/zai-one/yandex-mcp", "source": "github"},
-  "version": "0.6.0",
+  "version": "0.7.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "zai-yandex-mcp",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "transport": {"type": "stdio"},
       "environmentVariables": [
         {"name": "YANDEX_METRIKA_TOKEN_FILE", "description": "File with a Metrika OAuth token", "isRequired": false, "format": "filepath"},
@@ -19,7 +19,8 @@
         {"name": "YANDEX_SEARCH_API_KEY_FILE", "description": "File with a Yandex Cloud Search API key", "isRequired": false, "format": "filepath"},
         {"name": "YANDEX_SEARCH_FOLDER_ID", "description": "Yandex Cloud folder id for Search API", "isRequired": false},
         {"name": "YANDEX_STATE_PATH", "description": "SQLite state path", "isRequired": false, "format": "filepath"},
-        {"name": "YANDEX_TOOLSETS", "description": "all (default), default (read toolsets) or comma list", "isRequired": false},
+        {"name": "YANDEX_TOOLSETS", "description": "all (default, 127 tools ~22k tokens), default, or comma list; pick via yandex_setup prompt", "isRequired": false},
+        {"name": "YANDEX_MAPS_GEOSEARCH_API_KEY", "description": "Optional Yandex Maps Geosearch key; enables maps_geosearch tools", "isRequired": false, "isSecret": true},
         {"name": "YANDEX_READ_ONLY", "description": "1 hides every write/prepare/paid-submit tool", "isRequired": false}
       ]
     }

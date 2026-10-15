@@ -4,6 +4,8 @@ import asyncio
 import contextvars
 import hashlib
 import json
+import logging
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, NoReturn
@@ -113,6 +115,38 @@ class RawHttpResponse:
     body: str
 
 
+# userinfo of a URL, raw (scheme://user:pass@host) or percent-encoded inside a query value
+# (scheme%3A%2F%2Fuser%3Apass%40host), up to the last @ of the authority.
+URL_USERINFO_RAW = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/\s?#\"']*@")
+URL_USERINFO_ENCODED = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*%3A%2F%2F)(?:(?!%2F|%3F|%23)[^&\s#\"'])*%40")
+
+
+class RedactUrlCredentials(logging.Filter):
+    """httpx logs every request URL at INFO. Feed URLs passed as a query value (Webmaster
+    feeds problems/rejected offers/info) may embed user:password; mask it before any handler."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:  # noqa: BLE001 - never break logging over a malformed record
+            return True
+        masked = URL_USERINFO_ENCODED.sub(r"\1***%40", URL_USERINFO_RAW.sub(r"\1***@", message))
+        if masked != message:
+            record.msg, record.args = masked, ()
+        return True
+
+
+def redact_http_logs() -> None:
+    for name in ("httpx", "httpcore"):
+        logger = logging.getLogger(name)
+        if not any(isinstance(item, RedactUrlCredentials) for item in logger.filters):
+            logger.addFilter(RedactUrlCredentials())
+
+
+# Default request body cap; a multipart upload counts its file contents against it.
+MAX_REQUEST_BYTES = 2 * 1024 * 1024
+
+
 class JsonHttpClient:
     ERROR_PREVIEW_MAX_BYTES = 8 * 1024
     ERROR_SANITIZER_LIMITS = SanitizerLimits(
@@ -127,11 +161,12 @@ class JsonHttpClient:
         *,
         timeout: float = 60.0,
         retry: RetryPolicy | None = None,
-        max_request_bytes: int = 2 * 1024 * 1024,
+        max_request_bytes: int = MAX_REQUEST_BYTES,
         max_response_bytes: int = 16 * 1024 * 1024,
     ) -> None:
         self.timeout = timeout
         self.retry = retry or RetryPolicy()
+        redact_http_logs()
         if max_request_bytes <= 0 or max_response_bytes <= 0:
             raise ValueError("HTTP byte limits must be positive")
         self.max_request_bytes = max_request_bytes

@@ -16,6 +16,7 @@ from fastmcp.exceptions import ToolError
 
 from zai_yandex.config import ServiceConfig
 from zai_yandex.coverage_tools import DIRECT_EXTRA_TOOLS, WEBMASTER_EXTRA_TOOLS
+from zai_yandex.management import MANAGEMENT_TOOLS
 from zai_yandex.runtime import Runtime
 from zai_yandex.server import create_server
 from zai_yandex.state import StateStore
@@ -44,6 +45,9 @@ AUDIENCE_TOOLS = {
 ADDED_TOOLS = (
     set(DIRECT_EXTRA_TOOLS)
     | set(WEBMASTER_EXTRA_TOOLS)
+    | {name for names in MANAGEMENT_TOOLS.values() for name in names}
+    | {"yandex_setup_toolsets"}
+    | {"direct_prepare_write", "direct_apply_write"}
     | {
         "metrika_report",
         "yandex_wordstat_dynamics",
@@ -184,6 +188,18 @@ async def test_metrika_write_runs_real_apply_and_readback(tmp_path):
         assert result["applied"] and result["result"]["goal_id"] == 9
     assert [call[0] for call in recorder.calls] == ["POST", "GET"]
 
+
+async def test_metrika_goal_delete_needs_approval(tmp_path):
+    """metrika_apply_goal never deletes a goal on its own, even with the write flag on."""
+    recorder = Recorder()
+    settings = config(tmp_path, yandex_metrika_write_enabled=True)
+    async with Client(create_server(settings, transport="stdio", http_factory=recorder.factory)) as client:
+        with pytest.raises(ToolError, match="metrika_manage_prepare"):
+            await client.call_tool(
+                "metrika_apply_goal",
+                {"operation": "delete_goal", "counter_id": 7, "goal_id": 9, "idempotency_key": "goal-del-1"},
+            )
+    assert not recorder.calls
 
 async def test_direct_approval_is_exact_actor_bound_and_consumed_once(tmp_path, pair):
     recorder = Recorder()

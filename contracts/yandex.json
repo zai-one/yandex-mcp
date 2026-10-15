@@ -410,7 +410,7 @@
         "additionalProperties": true,
         "type": "object"
       },
-      "description": "Generic idempotent Direct API write (service, method, items) behind the server write flag and audit log. Prefer `direct_prepare_changes` -> `direct_apply_changes` for campaign changes. Writes; spends units; confirm with the user first."
+      "description": "Idempotent non-destructive Direct write (no deletes or bid changes: use direct_prepare_write) behind the server write flag and audit log. Prefer `direct_prepare_changes` -> `direct_apply_changes` for campaign changes. Writes; spends units; confirm with the user first."
     },
     "metrika_list_counters": {
       "inputSchema": {
@@ -518,7 +518,7 @@
         "additionalProperties": true,
         "type": "object"
       },
-      "description": "Autonomously create, update or delete a Metrika goal (idempotent, readback)."
+      "description": "Autonomously create or update a Metrika goal (idempotent, readback).\n\nDeleting a goal needs a human approval: metrika_manage_prepare(operation='goal_delete')."
     },
     "webmaster_get_user": {
       "inputSchema": {

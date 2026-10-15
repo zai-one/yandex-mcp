@@ -478,7 +478,8 @@ def public_token_locations(
             locations[service] = path.relative_to(base).as_posix()
         except ValueError:
             locations[service] = path.name
-        persistent[service] = False
+        # The base account's default file is auto-loaded at start (zai_yandex.defaults).
+        persistent[service] = not account and path == secrets_dir(state_path) / f"{service}.token"
     return locations, persistent
 
 

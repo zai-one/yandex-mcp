@@ -37,8 +37,11 @@ EXTRA_READ_METHODS: dict[str, frozenset[str]] = {
     "keywordbids": frozenset({"get"}),
     "clients": frozenset({"get"}),
     "creatives": frozenset({"get"}),
-    "dictionaries": frozenset({"get"}),
+    # getGeoRegions: https://yandex.ru/dev/direct/doc/ru/dictionaries/getGeoRegions
+    "dictionaries": frozenset({"get", "getGeoRegions"}),
     "dynamictextadtargets": frozenset({"get"}),  # units + DynamicTextAdTargets service
+    "dynamicfeedadtargets": frozenset({"get"}),  # see LEGACY_REFERENCE_SERVICES
+    "vcards": frozenset({"get"}),
     "feeds": frozenset({"get"}),
     "leads": frozenset({"get"}),
     "negativekeywordsharedsets": frozenset({"get"}),
@@ -57,9 +60,60 @@ READ_SERVICES = INVENTORY_READ_SERVICES | {"keywordsresearch", "agencyclients"} 
 WRITE_METHODS: dict[str, frozenset[str]] = {
     "campaigns": frozenset({"update", "add", "suspend", "resume", "archive", "unarchive", "delete"}),
     "adgroups": frozenset({"add", "update", "delete"}),
-    "ads": frozenset({"add", "update", "delete", "moderate", "suspend", "resume", "archive"}),
+    "ads": frozenset({"add", "update", "delete", "moderate", "suspend", "resume", "archive", "unarchive"}),
     "keywords": frozenset({"add", "update", "delete", "suspend", "resume"}),
     "bids": frozenset({"set", "setAuto"}),
+    # Parity writes, each a documented method (https://yandex.ru/dev/direct/doc/ru/<service>/<method>).
+    "keywordbids": frozenset({"set", "setAuto"}),
+    "bidmodifiers": frozenset({"add", "set", "delete"}),
+    "audiencetargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
+    "retargetinglists": frozenset({"add", "update", "delete"}),
+    "sitelinks": frozenset({"add", "delete"}),
+    "adimages": frozenset({"add", "delete"}),
+    "adextensions": frozenset({"add", "delete"}),
+    "advideos": frozenset({"add"}),
+    "negativekeywordsharedsets": frozenset({"add", "update", "delete"}),
+    "feeds": frozenset({"add", "update", "delete"}),
+    # Services whose method pages were dropped from the new reference navigation (2026) but which
+    # are neither announced as removed in the changelog (https://yandex.ru/dev/direct/doc/ru/changelog)
+    # nor unused by the current guides (best-practice/smart-ads still calls SmartAdTargets.add;
+    # concepts/contact-info maps business cards to the vCards service). Approval-only.
+    "vcards": frozenset({"add", "delete"}),
+    "dynamictextadtargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
+    "smartadtargets": frozenset({"add", "update", "delete", "suspend", "resume", "setBids"}),
+    "dynamicfeedadtargets": frozenset({"add", "delete", "suspend", "resume", "setBids"}),
+    "creatives": frozenset({"add"}),
+    # v501 endpoint (service_url); https://yandex.ru/dev/direct/doc/ru/strategies/strategies
+    "strategies": frozenset({"add", "update", "archive", "unarchive"}),
+    # https://yandex.ru/dev/direct/doc/ru/agencyclients/update (agency accounts only; approval-gated)
+    # addPassportOrganizationMember invites one person into a Yandex ID organization
+    # (https://yandex.ru/dev/direct/doc/ru/agencyclients/addPassportOrganizationMember; 10 invites/day).
+    "agencyclients": frozenset({"update", "addPassportOrganizationMember"}),
+    # https://yandex.ru/dev/direct/doc/ru/clients/update (the advertiser itself; approval-gated)
+    "clients": frozenset({"update"}),
+}
+# Unified performance campaigns/groups are served only by the v501 endpoint
+# (https://yandex.ru/dev/direct/doc/ru/campaigns/add-unified-campaign, adgroups/add).
+UNIFIED_KEYS: dict[str, str] = {"campaigns": "UnifiedCampaign", "adgroups": "UnifiedAdGroup"}
+UNIFIED_METHODS = frozenset({"add", "update"})
+# update items addressed by another key than ``Id`` (None: the authorized client itself).
+UPDATE_ID_FIELD: dict[str, str | None] = {"agencyclients": "ClientId", "clients": None}
+# Writes that only the approval-gated path (direct_prepare_write -> direct_apply_write) may run.
+LEGACY_REFERENCE_SERVICES = frozenset(
+    {"vcards", "dynamictextadtargets", "smartadtargets", "dynamicfeedadtargets"}
+)
+APPROVAL_ONLY_WRITES: frozenset[str] = (
+    frozenset({"agencyclients", "clients", "strategies"}) | LEGACY_REFERENCE_SERVICES
+)
+# The autonomous ``direct_write`` path (write flag + idempotency, no human approval) covers only
+# non-destructive edits of campaigns, ad groups, ads and keywords. Deletes and bid changes are never
+# autonomous (an agent can pick the wrong id or be steered into it); they and every other
+# service/method run only through direct_prepare_write -> accepted approval -> direct_apply_write.
+AUTONOMOUS_WRITE_METHODS: dict[str, frozenset[str]] = {
+    "campaigns": frozenset({"update", "add", "suspend", "resume", "archive", "unarchive"}),
+    "adgroups": frozenset({"add", "update"}),
+    "ads": frozenset({"add", "update", "moderate", "suspend", "resume", "archive"}),
+    "keywords": frozenset({"add", "update", "suspend", "resume"}),
 }
 # Upstream top-level payload key for object-based writes (add/update/set).
 SERVICE_PAYLOAD_KEY: dict[str, str] = {
@@ -68,12 +122,34 @@ SERVICE_PAYLOAD_KEY: dict[str, str] = {
     "ads": "Ads",
     "keywords": "Keywords",
     "bids": "Bids",
+    "keywordbids": "KeywordBids",
+    "bidmodifiers": "BidModifiers",
+    "audiencetargets": "AudienceTargets",
+    "retargetinglists": "RetargetingLists",
+    "sitelinks": "SitelinksSets",
+    "adimages": "AdImages",
+    "adextensions": "AdExtensions",
+    "advideos": "AdVideos",
+    "negativekeywordsharedsets": "NegativeKeywordSharedSets",
+    "feeds": "Feeds",
+    "vcards": "VCards",
+    "dynamictextadtargets": "Webpages",
+    "smartadtargets": "SmartAdTargets",
+    "dynamicfeedadtargets": "DynamicFeedAdTargets",
+    "creatives": "Creatives",
+    "strategies": "Strategies",
+    "agencyclients": "Clients",
+    "clients": "Clients",
 }
+# Per-method payload key overrides: setBids takes "Bids"; set on bidmodifiers keeps BidModifiers.
+METHOD_PAYLOAD_KEY: dict[str, str] = {"setBids": "Bids"}
 # Methods that target existing objects by id via SelectionCriteria.Ids instead
 # of a full object payload.
 ID_BASED_METHODS: frozenset[str] = frozenset(
     {"suspend", "resume", "archive", "unarchive", "delete", "moderate"}
 )
+# AdImages are addressed by hash, not by integer id (adimages/delete).
+HASH_BASED: frozenset[tuple[str, str]] = frozenset({("adimages", "delete")})
 MAX_APPLY_ITEMS = 100
 
 READ_METHODS = {
@@ -88,7 +164,8 @@ READ_METHODS = {
     "businesses": frozenset({"get"}),
     "adimages": frozenset({"get"}),
     "strategies": frozenset({"get"}),
-    "keywordsresearch": frozenset({"hasSearchVolume"}),
+    # https://yandex.ru/dev/direct/doc/ru/keywordsresearch/deduplicate (local-effect utility, no writes)
+    "keywordsresearch": frozenset({"hasSearchVolume", "deduplicate"}),
     **EXTRA_READ_METHODS,
 }
 DIRECT_REPORT_TYPES = frozenset(
@@ -384,8 +461,8 @@ class YandexDirectAdapter:
     @staticmethod
     def risk_tier(service: str, method: str) -> str:
         normalized_method = str(method).strip()
-        if normalized_method == "delete":
-            return "high"
+        if normalized_method in {"delete", "addPassportOrganizationMember"}:
+            return "high"  # irreversible / sends an invitation to a person
         if normalized_method in {"add"} or normalized_method in {"set", "setAuto"}:
             return "high" if str(service).strip("/").lower() in {"bids", "campaigns"} else "medium"
         return "medium"
@@ -409,20 +486,72 @@ class YandexDirectAdapter:
         if not isinstance(items, list) or not 1 <= len(items) <= MAX_APPLY_ITEMS:
             raise ProviderError(f"Direct apply requires 1..{MAX_APPLY_ITEMS} items")
         needs_id = normalized_method in ID_BASED_METHODS or normalized_method == "update"
+        id_field = UPDATE_ID_FIELD.get(normalized, "Id") if normalized_method == "update" else "Id"
+        if normalized_method == "addPassportOrganizationMember":
+            YandexDirectAdapter._validate_member_invite(items)
+            return normalized, normalized_method, [dict(items[0])]
+        if normalized == "clients" and len(items) != 1:
+            raise ProviderError("clients update takes exactly one item (the authorized client)")
+        YandexDirectAdapter.is_unified(normalized, normalized_method, items)
         for item in items:
             if not isinstance(item, dict) or not item:
                 raise ProviderError("each Direct apply item must be a non-empty object")
-            if needs_id:
-                item_id = item.get("Id")
+            if (normalized, normalized_method) in HASH_BASED:
+                if not isinstance(item.get("AdImageHash"), str) or not item["AdImageHash"]:
+                    raise ProviderError("adimages delete requires an AdImageHash per item")
+            elif needs_id and id_field is not None:
+                item_id = item.get(id_field)
                 if isinstance(item_id, bool) or not isinstance(item_id, int):
-                    raise ProviderError("this Direct method requires an integer Id per item")
+                    raise ProviderError(f"this Direct method requires an integer {id_field} per item")
         return normalized, normalized_method, [dict(item) for item in items]
 
     @staticmethod
+    def _validate_member_invite(items: list[Any]) -> None:
+        if len(items) != 1 or not isinstance(items[0], dict):
+            raise ProviderError("addPassportOrganizationMember takes exactly one object")
+        item = items[0]
+        if set(item) - {"PassportOrganizationLogin", "Role", "SendInviteTo"}:
+            raise ProviderError(
+                "addPassportOrganizationMember accepts PassportOrganizationLogin, Role, SendInviteTo"
+            )
+        login = item.get("PassportOrganizationLogin")
+        if not isinstance(login, str) or not login.strip():
+            raise ProviderError("PassportOrganizationLogin is required")
+        if item.get("Role") not in {"ADMIN", "USER"}:
+            raise ProviderError("Role must be ADMIN or USER")
+        target = item.get("SendInviteTo")
+        if not isinstance(target, dict) or len(target) != 1 or not set(target) <= {"Phone", "Email"}:
+            raise ProviderError("SendInviteTo needs exactly one of Phone or Email")
+        if "Phone" in target and not (isinstance(target["Phone"], str) and target["Phone"].isdigit()):
+            raise ProviderError("SendInviteTo.Phone must be digits only")
+        if "Email" in target and not (isinstance(target["Email"], str) and "@" in target["Email"]):
+            raise ProviderError("SendInviteTo.Email must be an email address")
+
+    @staticmethod
+    def is_unified(service: str, method: str, items: list[dict[str, Any]]) -> bool:
+        """True when every item is a UnifiedCampaign/UnifiedAdGroup (v501); mixed batches fail."""
+        key = UNIFIED_KEYS.get(service)
+        if key is None or method not in UNIFIED_METHODS:
+            return False
+        flags = {isinstance(item, dict) and key in item for item in items}
+        if len(flags) > 1:
+            raise ProviderError(f"do not mix {key} items with other types in one call")
+        return flags == {True}
+
+    def endpoint(self, service: str, *, v501: bool = False) -> str:
+        if v501 and self.base_url.endswith("/v5"):
+            return f"{self.base_url[: -len('/v5')]}/v501/{service}"
+        return self.service_url(service)
+
+    @staticmethod
     def _apply_params(service: str, method: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+        if method == "addPassportOrganizationMember":
+            return dict(items[0])  # params is the single invite object, not a list
+        if (service, method) in HASH_BASED:
+            return {"SelectionCriteria": {"AdImageHashes": [item["AdImageHash"] for item in items]}}
         if method in ID_BASED_METHODS:
             return {"SelectionCriteria": {"Ids": [item["Id"] for item in items]}}
-        return {SERVICE_PAYLOAD_KEY[service]: items}
+        return {METHOD_PAYLOAD_KEY.get(method, SERVICE_PAYLOAD_KEY[service]): items}
 
     async def apply_changes(self, service: str, method: str, items: list[dict[str, Any]]) -> dict[str, Any]:
         """Execute one allowlisted Direct write for any writable service."""
@@ -435,7 +564,7 @@ class YandexDirectAdapter:
         # A production mutation is never coalesced or retried blindly.
         response = await self.http.request(
             "POST",
-            f"{self.base_url}/{normalized}",
+            self.endpoint(normalized, v501=self.is_unified(normalized, normalized_method, validated)),
             headers=headers,
             payload={
                 "method": normalized_method,
@@ -445,7 +574,7 @@ class YandexDirectAdapter:
         self.raise_for_error(response)
         return response
 
-    async def readback(self, service: str, ids: list[int]) -> dict[str, Any]:
+    async def readback(self, service: str, ids: list[int], *, v501: bool = False) -> dict[str, Any]:
         """Re-read written objects of one service to confirm the applied state.
 
         Services without a get endpoint (bids) return an unconfirmed ack rather
@@ -457,18 +586,54 @@ class YandexDirectAdapter:
             "adgroups": ["Id", "Name", "CampaignId", "Status"],
             "ads": ["Id", "AdGroupId", "State", "Status"],
             "keywords": ["Id", "Keyword", "AdGroupId", "State", "Status", "Bid"],
+            # FieldNames from each service's documented get (https://yandex.ru/dev/direct/doc/ru/<s>/get)
+            "retargetinglists": ["Id", "Name", "Type", "IsAvailable"],
+            "sitelinks": ["Id", "Sitelinks"],
+            "negativekeywordsharedsets": ["Id", "Name", "NegativeKeywords"],
+            "feeds": ["Id", "Name", "SourceType", "Status"],
+            "audiencetargets": ["Id", "AdGroupId", "CampaignId", "RetargetingListId", "InterestId", "State"],
+            "bidmodifiers": ["Id", "CampaignId", "AdGroupId", "Level", "Type"],
+            "adextensions": ["Id", "Type", "Status"],
+            "strategies": ["Id", "Name", "Type", "StatusArchived"],
+            "creatives": ["Id", "Type", "Name"],
+            "vcards": ["Id", "CampaignId", "CompanyName"],
+            "dynamictextadtargets": ["Id", "AdGroupId", "CampaignId", "Name", "State"],
+            "smartadtargets": ["Id", "AdGroupId", "CampaignId", "Name", "State"],
+            "dynamicfeedadtargets": ["Id", "AdGroupId", "CampaignId", "Name", "State"],
         }
+        if normalized == "clients":
+            # clients.get has no SelectionCriteria: it returns the authorized client.
+            result = await self.read(
+                "clients",
+                {"method": "get", "params": {"FieldNames": ["ClientId", "Login", "ClientInfo", "Phone"]}},
+            )
+            return {"service": normalized, "confirmed": True, "ids": [], "result": result}
         if not ids or normalized not in field_map:
             return {"service": normalized, "confirmed": False, "ids": ids, "result": None}
-        field_names = field_map[normalized]
-        result = await self.read(
-            normalized,
-            {
-                "method": "get",
-                "params": {"SelectionCriteria": {"Ids": ids}, "FieldNames": field_names},
-            },
-        )
+        criteria: dict[str, Any] = {"Ids": ids}
+        if normalized == "bidmodifiers":
+            criteria["Levels"] = ["CAMPAIGN", "AD_GROUP"]  # required by bidmodifiers/get
+        params = {"SelectionCriteria": criteria, "FieldNames": field_map[normalized]}
+        if v501:
+            result = await self._read_v501(normalized, params)
+        else:
+            result = await self.read(normalized, {"method": "get", "params": params})
         return {"service": normalized, "confirmed": True, "ids": ids, "result": result}
+
+    async def _read_v501(self, service: str, params: dict[str, Any]) -> dict[str, Any]:
+        """get on the v501 endpoint (unified campaigns/groups readback)."""
+        self.validate_read(service, {"method": "get", "params": params})
+        headers = {"Authorization": f"Bearer {self.token}", "Accept-Language": "ru"}
+        if self.client_login:
+            headers["Client-Login"] = self.client_login
+        response = await self.http.request(
+            "POST",
+            self.endpoint(service, v501=True),
+            headers=headers,
+            payload={"method": "get", "params": params},
+        )
+        self.raise_for_error(response)
+        return response
 
     async def readback_campaigns(self, campaign_ids: list[int]) -> dict[str, Any]:
         """Backward-compatible campaign readback for the approval-gated apply path."""

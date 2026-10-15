@@ -55,6 +55,10 @@ class StateStore:
                     account TEXT NOT NULL, actor TEXT NOT NULL, provider TEXT NOT NULL,
                     key TEXT NOT NULL, tool TEXT NOT NULL, digest TEXT NOT NULL,
                     status TEXT NOT NULL, result TEXT, PRIMARY KEY(account, actor, provider, key));
+                CREATE TABLE IF NOT EXISTS write_leases(
+                    account TEXT NOT NULL, actor TEXT NOT NULL, provider TEXT NOT NULL,
+                    key TEXT NOT NULL, owner TEXT NOT NULL, expires REAL NOT NULL,
+                    PRIMARY KEY(account, actor, provider, key));
                 CREATE TABLE IF NOT EXISTS jobs(
                     account TEXT NOT NULL, id TEXT NOT NULL, actor TEXT NOT NULL,
                     provider TEXT NOT NULL, operation TEXT NOT NULL, payload TEXT NOT NULL,
@@ -152,6 +156,8 @@ class StateStore:
             ).fetchone()
             if row is None or (row["cost"] > 0 and not self._paid_gate(row)):
                 return False
+            if row["provider"] != self._scope(row["provider"].split("|", 1)[0]):
+                return False  # Prepared for another named account or Direct endpoint.
             db.execute(
                 "UPDATE approvals SET status='accepted' WHERE account=? AND id=?",
                 (self.account, str(approval_id)),
@@ -160,6 +166,11 @@ class StateStore:
         return True
 
     def _consume(self, db: sqlite3.Connection, approval_id: str) -> bool:
+        row = db.execute(
+            "SELECT provider FROM approvals WHERE account=? AND id=?", (self.account, approval_id)
+        ).fetchone()
+        if row is None or row["provider"] != self._scope(row["provider"].split("|", 1)[0]):
+            return False  # Never consume an approval bound to another account/endpoint.
         changed = db.execute(
             "UPDATE approvals SET status='consumed' WHERE account=? AND id=? "
             "AND status='accepted' AND expires>?",
@@ -312,6 +323,46 @@ class StateStore:
             ).rowcount
             if changed:
                 self._event(db, hash_request([str(principal), provider, key]), "write_" + status, provider)
+
+    async def provider_write_lease(
+        self, principal: Any, provider: str, key: str, owner: str, ttl: float
+    ) -> bool:
+        """Take or renew the execution lease of one write. Shared by every process on this state file,
+        so reconcile can tell a running write from an abandoned one. False if another owner holds it."""
+        now = time.time()
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT owner, expires FROM write_leases "
+                "WHERE account=? AND actor=? AND provider=? AND key=?",
+                (self.account, str(principal), self._scope(provider), key),
+            ).fetchone()
+            if row is not None and row["owner"] != owner and row["expires"] > now:
+                return False
+            db.execute(
+                "INSERT OR REPLACE INTO write_leases VALUES(?,?,?,?,?,?)",
+                (self.account, str(principal), self._scope(provider), key, owner, now + ttl),
+            )
+        return True
+
+    async def provider_write_release(self, principal: Any, provider: str, key: str, owner: str) -> None:
+        with self.connect() as db:
+            db.execute(
+                "DELETE FROM write_leases WHERE account=? AND actor=? AND provider=? AND key=? AND owner=?",
+                (self.account, str(principal), self._scope(provider), key, owner),
+            )
+
+    async def provider_write_leased(self, principal: Any, provider: str, key: str) -> bool:
+        """True while some live execution (in any process) holds this write's lease."""
+        with self.connect() as db:
+            return (
+                db.execute(
+                    "SELECT 1 FROM write_leases WHERE account=? AND actor=? AND provider=? AND key=? "
+                    "AND expires>?",
+                    (self.account, str(principal), self._scope(provider), key, time.time()),
+                ).fetchone()
+                is not None
+            )
 
     async def provider_write_checkpoint(
         self, principal: Any, provider: str, key: str, digest: str, checkpoint: dict[str, Any]

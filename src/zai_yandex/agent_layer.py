@@ -25,8 +25,8 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "units. Fails closed without approval."
     ),
     "direct_write": (
-        "Generic idempotent Direct API write (service, method, items) behind the server write flag and "
-        "audit log. Prefer `direct_prepare_changes` -> `direct_apply_changes` for campaign changes. "
+        "Idempotent non-destructive Direct write (no deletes or bid changes: use direct_prepare_write) "
+        "behind the server write flag and audit log. Prefer `direct_prepare_changes` -> `direct_apply_changes` for campaign changes. "
         "Writes; spends units; confirm with the user first."
     ),
     "metrika_report": (
@@ -41,6 +41,11 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "yandex_check_update": (
         "Check GitHub for a newer zai-yandex-mcp release and suggest the update command. Suggest-only, "
         "24h cache unless force=true; never calls Yandex."
+    ),
+    "yandex_setup_toolsets": (
+        "Pick Yandex platforms (direct, metrika, webmaster, audience, wordstat, serp, maps, manage) or a preset "
+        "(direct-only, analytics, seo, everything) and tool_loading eager|lazy -> YANDEX_TOOLSETS + token cost. "
+        "write=true saves to mcp.local.json (stdio). No secrets."
     ),
     "yandex_auth_status": (
         "Show which Yandex OAuth services have tokens (never values). Pending device-flow user_code if any. Local."
@@ -68,6 +73,9 @@ GUIDE_TOPICS = (
     "accounts",
     "tool-map",
     "oauth",
+    "management",
+    "business",
+    "maps-geosearch",
 )
 
 
@@ -83,10 +91,11 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     # (route id, intent words, first tool, skill or "", guide topic)
     ("direct_audit", "аудит Директа, CPA вырос, сливаем", "direct_list_campaigns", "yandex-direct-audit", "audit-checklist"),
     ("direct_stats", "статистика Директа, расход, потратили, клики, запросы", "direct_get_statistics", "yandex-direct-audit", "api-units"),
-    ("direct_change", "изменить ставки/бюджет, пауза кампании, минус-слова", "direct_prepare_changes", "direct-safe-change", "prepare-apply"),
+    ("direct_change", "изменить ставки/бюджет, пауза кампании, минус-слова, объявления", "direct_prepare_changes", "direct-safe-change", "prepare-apply"),
     ("direct_extra", "ставки фраз, аукцион, быстрые ссылки, картинки, фиды, лиды, Changes", "direct_get_keyword_bids", "", "tool-map"),
     ("agency", "агентство, клиенты, аккаунты, песочница, потестить", "direct_list_agency_clients", "yandex-agency-accounts", "accounts"),
     ("auth", "подключить, OAuth, токен, connect", "yandex_auth_start", "", "oauth"),
+    ("setup", "настройка, выбрать платформы, сэкономить токены (default=all), setup", "yandex_setup_toolsets", "", "tool-map"),
     ("metrika_compare", "Метрика, трафик, цели, сравнить периоды", "metrika_list_counters", "metrika-compare-periods", "metrics-dimensions"),
     ("metrika_logs", "сырые визиты, выгрузка логов", "metrika_logs_evaluate", "", "tool-map"),
     ("offline", "офлайн-конверсии, CRM, CSV", "metrika_validate_offline_conversions", "metrika-offline-conversions", "offline-conversions"),
@@ -94,8 +103,15 @@ ROUTES: tuple[tuple[str, str, str, str, str], ...] = (
     ("wordstat", "Wordstat, спрос, частотность, семантика", "yandex_wordstat_get_top", "wordstat-demand-research", "wordstat-operators"),
     ("serp", "выдача, позиции, SERP", "yandex_serp_prepare", "", "tool-map"),
     ("audience", "аудитории, сегменты, пиксель", "audience_list_segments", "", "tool-map"),
+    ("manage", "права, представители, метки, примечания, звонки, затраты, фид, хост", "metrika_manage_read", "yandex-account-admin", "management"),
+    ("business", "Бизнес, отзывы, геореклама", "", "", "business"),
+    # Shown only when a Geosearch key exposes the maps tools (default/all routers stay unchanged).
+    ("maps", "найти кафе/фирму рядом, адрес и телефон компании, геопоиск", "maps_search_organizations", "", "maps-geosearch"),
     ("errors", "ошибка, баллы, лимит", "", "", "errors"),
 )  # fmt: skip
+
+
+KEY_GATED_ROUTES = frozenset({"maps"})
 
 
 def build_instructions(
@@ -106,13 +122,17 @@ def build_instructions(
 ) -> str:
     mode = "read-only" if surface.read_only else "read+write"
     lines = [
-        f"Yandex MCP: Direct, Metrika, Webmaster, Wordstat, Search, Audience ({mode}; yandex://toolsets).",
-        "Intent -> first tool; skill; yandex://guide/<topic>.",
+        f"Yandex MCP: Direct/Metrika/Webmaster/Wordstat/SERP/Audience ({mode}; yandex://toolsets).",
+        "Line: tool; skill; yandex://guide/<topic>.",
     ]
-    for _, words, tool, skill, topic in ROUTES:
-        lines.append(f"- {words}: " + "; ".join(part for part in (tool, skill, topic) if part))
-    lines.append("Writes: prepare -> user approval -> apply + idempotency_key. Wordstat/SERP are paid.")
-    lines.append("Unsure? yandex://playbook (skills) or yandex://guide/tool-map (all tools, toolsets).")
+    for rid, words, tool, skill, topic in ROUTES:
+        if rid in KEY_GATED_ROUTES and not surface.exposes(tool):
+            continue
+        # tool-map is named once on the "Unsure?" line below; repeating it per route only costs tokens.
+        parts = (tool, skill, "" if topic == "tool-map" else topic)
+        lines.append(f"- {words}: " + "; ".join(part for part in parts if part))
+    lines.append("Writes: prepare -> approval -> apply(idempotency_key). Wordstat/SERP paid.")
+    lines.append("Unsure: yandex://playbook, yandex://guide/tool-map.")
     if direct_sandbox:
         lines.append("Direct SANDBOX: test data only (api-sandbox); say so in answers.")
     if accounts:

@@ -114,4 +114,15 @@ class Recorder:
                     return await result
                 return result
 
+            async def request_multipart(
+                self, method: str, url: str, *, files, headers=None, params=None
+            ) -> Any:
+                if not getattr(recorder, "multipart", False):
+                    return await super().request_multipart(
+                        method, url, files=files, headers=headers, params=params
+                    )
+                await self._admit_attempt(1)
+                recorder.calls.append((method, url, {"files": sorted(files), "params": params}, actor, False))
+                return recorder.handler(method, url, {"files": files}, params)
+
         return Http(policy, execution_id, actor)

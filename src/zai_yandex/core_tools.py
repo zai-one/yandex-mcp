@@ -5,12 +5,14 @@ from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
 from zai_yandex.adapters.direct import (
+    AUTONOMOUS_WRITE_METHODS,
     INVENTORY_READ_SERVICES,
     YandexDirectAdapter,
     build_statistics_request,
     prepare_changes,
 )
 from zai_yandex.adapters.metrika import YandexMetrikaAdapter
+from zai_yandex.errors import approval_required_error
 from zai_yandex.sanitizer import DURABLE_SANITIZER_LIMITS, sanitize_provider_response
 from zai_yandex.transport import ProviderAdmissionDenied, ProviderError, ProviderRateLimited, request_hash
 
@@ -35,10 +37,17 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         phrase: str, regions: list[str], num_phrases: int = 10, devices: list[str] | None = None
     ) -> dict[str, Any]:
         """Wordstat top requests + associations; num_phrases 1..2000; devices DEVICE_* list."""
-        from zai_yandex.wordstat import validate_devices, validate_num_phrases
+        from zai_yandex.wordstat import (
+            validate_devices,
+            validate_num_phrases,
+            validate_phrase,
+            validate_regions,
+        )
 
         validate_num_phrases(num_phrases)  # Validate before reserving any budget.
         validate_devices(devices)
+        validate_phrase(phrase)
+        validate_regions(regions)
         return await _wordstat_call(
             "wordstat_get_top",
             lambda: registry.yandex_search().wordstat_get_top(phrase, regions, num_phrases, devices),
@@ -108,7 +117,7 @@ def register_core_tools(server: Any, runtime: Any) -> None:
     async def yandex_wordstat_dynamics(
         phrase: str,
         from_date: str,
-        to_date: str,
+        to_date: str | None = None,
         period: str = "PERIOD_MONTHLY",
         regions: list[str] | None = None,
         devices: list[str] | None = None,
@@ -223,6 +232,10 @@ def register_core_tools(server: Any, runtime: Any) -> None:
     async def direct_get_inventory(service: str, params: dict[str, Any]) -> dict[str, Any]:
         """Run a provider-native get against the explicit Direct inventory allowlist."""
         normalized = service.strip("/").lower()
+        if normalized == "dictionaries":
+            # dictionaries.get is direct_get_dictionaries; here only getGeoRegions (search by
+            # Name/RegionIds/ExactNames): https://yandex.ru/dev/direct/doc/ru/dictionaries/getGeoRegions
+            return await _direct_read(normalized, {"method": "getGeoRegions", "params": params})
         if normalized not in INVENTORY_READ_SERVICES:
             raise ValueError("Direct inventory service is not allowed")
         return await _direct_read(normalized, {"method": "get", "params": params})
@@ -436,6 +449,14 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         try:
             adapter = registry.yandex_direct()
             norm_service, norm_method, items = adapter.validate_apply(service, method, campaigns)
+            if (norm_service, norm_method) != ("campaigns", "update") or adapter.is_unified(
+                norm_service, norm_method, items
+            ):
+                # The draft hash covers only the items, so this path must not let an approval
+                # for one method execute another (e.g. update -> delete on the same Ids).
+                raise PermissionError(
+                    "direct_apply_changes executes Campaigns.update only; use direct_prepare_write"
+                )
             digest = request_hash(campaigns)
             approval = await store.get_approval(UUID(approval_id))
             if (
@@ -473,6 +494,18 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         except (ProviderError, PermissionError, ValueError) as exc:
             raise safe_provider_error("yandex_direct", exc) from None
 
+    def _autonomous_allowed(service: str, method: str, items: list[dict[str, Any]]) -> Any:
+        validated = YandexDirectAdapter.validate_apply(service, method, items)
+        if validated[1] not in AUTONOMOUS_WRITE_METHODS.get(validated[0], ()) or (
+            YandexDirectAdapter.is_unified(*validated)
+        ):
+            raise approval_required_error(
+                "yandex_direct",
+                "Deletes, bid changes and this service/method need direct_prepare_write -> accepted "
+                "approval -> direct_apply_write.",
+            )
+        return validated
+
     def _direct_readback_ids(items: list[dict[str, Any]], result: Any) -> list[int]:
         ids = [int(i["Id"]) for i in items if isinstance(i, dict) and isinstance(i.get("Id"), int)]
         if ids:
@@ -497,10 +530,11 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         items: list[dict[str, Any]],
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        """Autonomously apply a Direct write across campaigns/adgroups/ads/keywords/bids.
+        """Autonomously apply a non-destructive Direct write to campaigns/adgroups/ads/keywords.
 
-        Allowlisted service/method only (add/update/delete/suspend/resume/archive/
-        moderate, bids set/setAuto). Idempotent, with a post-write readback of the
+        Allowlisted service/method only (add/update/suspend/resume/archive/moderate).
+        Deletes and bid changes need direct_prepare_write -> approval -> direct_apply_write.
+        Idempotent, with a post-write readback of the
         affected objects. campaigns:update also has an approval-gated path
         (direct_apply_changes) for a stricter human gate.
         """
@@ -514,7 +548,7 @@ def register_core_tools(server: Any, runtime: Any) -> None:
                 {"service": service, "method": method, "items": items},
                 idempotency_key,
                 enabled=settings.yandex_direct_write_enabled,
-                validate=lambda: adapter.validate_apply(service, method, items),
+                validate=lambda: _autonomous_allowed(service, method, items),
                 apply_fn=lambda: adapter.apply_changes(service, method, items),
                 readback_fn=lambda result: adapter.readback(
                     norm_service, _direct_readback_ids(items, result)
@@ -559,7 +593,16 @@ def register_core_tools(server: Any, runtime: Any) -> None:
         goal_id: int | None = None,
         idempotency_key: str | None = None,
     ) -> dict[str, Any]:
-        """Autonomously create, update or delete a Metrika goal (idempotent, readback)."""
+        """Autonomously create or update a Metrika goal (idempotent, readback).
+
+        Deleting a goal needs a human approval: metrika_manage_prepare(operation='goal_delete').
+        """
+        if str(operation).strip() == "delete_goal":
+            raise approval_required_error(
+                "yandex_metrika",
+                "Deleting a goal needs metrika_manage_prepare(operation='goal_delete', counter_id, id) "
+                "-> accepted approval -> metrika_manage_apply.",
+            )
         adapter = registry.yandex_metrika()
         payload = params or {}
         return cast(

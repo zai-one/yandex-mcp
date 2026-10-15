@@ -22,7 +22,7 @@ uv run python -m zai_yandex --transport stdio
 ```
 
 Для установки локального wheel используйте `pip install
-'./dist/zai_yandex_mcp-0.6.0-py3-none-any.whl[standalone]'`.
+'./dist/zai_yandex_mcp-0.7.0-py3-none-any.whl[standalone]'`.
 
 Базовый пакет содержит адаптеры и регистрацию инструментов. Extra `standalone`
 закрепляет FastMCP 3.4.4 для собственного сервера. Платформа устанавливает базовый
@@ -60,8 +60,14 @@ Prepare создаёт непринятое согласование на точ
 ```sh
 uv run python -m zai_yandex.approvals --state-path state/yandex.sqlite \
   --account default --principal local-operator --approval-id UUID \
-  --request-hash SHA256 --accept
+  --request-hash SHA256 [--named-account NAME] --accept
 ```
+
+Согласование привязано к аккаунту: для изменения, подготовленного с `account=<name>`,
+укажите тот же `--named-account` (для аккаунта по умолчанию — не указывайте). Иначе
+принятие отклоняется; apply на другом аккаунте или эндпоинте (sandbox/production) тоже
+отклоняется. Direct `direct_prepare_write` связывает service, method и items; строгий
+`direct_apply_changes` выполняет только Campaigns.update.
 
 После этого вызывается соответствующий исходный apply/submit tool с теми же
 аргументами и ключом идемпотентности. Для платного Search CLI и сервер используют

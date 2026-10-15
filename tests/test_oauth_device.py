@@ -249,8 +249,8 @@ async def test_auth_tools_flow_pending_then_success(tmp_path, monkeypatch):
         # No absolute server paths: the location is relative to the state directory.
         assert done["files"]["metrika"] == "secrets/metrika.token"
         assert str(tmp_path) not in json.dumps(done)
-        assert done["kept_after_restart"] == {"metrika": False}
-        assert "YANDEX_METRIKA_TOKEN_FILE" in done["restart_hint"]
+        # The default secrets/metrika.token is auto-loaded at the next start (zai_yandex.defaults).
+        assert done["kept_after_restart"] == {"metrika": True} and "restart_hint" not in done
         metrika_path = settings.state_path.parent / done["files"]["metrika"]
         with open(metrika_path, encoding="utf-8") as handle:  # noqa: ASYNC230
             assert handle.read() == ACCESS

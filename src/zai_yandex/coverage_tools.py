@@ -61,6 +61,10 @@ DIRECT_LISTS: dict[str, tuple[str, list[str], dict[str, list[str]], tuple[str, .
     "direct_list_dynamic_text_ad_targets": ("dynamictextadtargets",
                                             ["Id", "AdGroupId", "CampaignId", "Name", "State", "Status"], {},
                                             ("Ids", "AdGroupIds", "CampaignIds")),
+    # Legacy service: absent from the current reference; read-only (no writes).
+    "direct_list_dynamic_feed_ad_targets": ("dynamicfeedadtargets",
+                                            ["Id", "AdGroupId", "CampaignId", "Name", "State", "Status"], {},
+                                            ("Ids", "AdGroupIds", "CampaignIds")),
 }  # fmt: skip
 PARAM_FOR = {
     "Ids": "ids",
@@ -76,6 +80,7 @@ DIRECT_EXTRA_TOOLS = (
     "direct_get_bid_modifiers",
     "direct_get_bids",
     "direct_list_ad_images",
+    "direct_deduplicate_keywords",
     *DIRECT_LISTS,
 )
 WEBMASTER_EXTRA_TOOLS = (
@@ -105,6 +110,7 @@ LIST_DOCS = {
     "direct_list_businesses": "Yandex Business profiles (Id, Name, IsPublished, Rubric); no Phone/Address by default.",
     "direct_list_smart_ad_targets": "Smart-banner feed filters (SmartAdTargets) by campaign/group/id.",
     "direct_list_dynamic_text_ad_targets": "Dynamic text ad targeting conditions by campaign/group/id.",
+    "direct_list_dynamic_feed_ad_targets": "Dynamic feed ad filters (DynamicFeedAdTargets) by campaign/group/id.",
 }  # fmt: skip
 
 
@@ -170,7 +176,10 @@ PRO_EXPORT_APPROVAL = "pro_export_paid"
 
 def register_coverage_tools(server: Any, runtime: Any) -> None:
     registry, require_scopes, read, write = (
-        runtime.registry, runtime.require_scopes, runtime.read, runtime.write
+        runtime.registry,
+        runtime.require_scopes,
+        runtime.read,
+        runtime.write,
     )
     settings = runtime.settings
 
@@ -198,6 +207,30 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
     async def direct_get_client() -> dict[str, Any]:
         """Own Direct account info (Login, ClientId, currency, type) via Clients.get; no phones/representatives. Agencies: `direct_list_agency_clients`. Read-only."""
         return await direct("clients", lambda: {"method": "get", "params": {"FieldNames": CLIENT_FIELDS}})
+
+    @server.tool(auth=require_scopes("yandex_direct:read"))
+    async def direct_deduplicate_keywords(
+        keywords: list[str], operations: list[str] | None = None
+    ) -> dict[str, Any]:
+        """Merge duplicate phrases and add cross-negatives via KeywordsResearch.deduplicate before adding keywords. Up to 10000 phrases; nothing is saved. Read-only."""
+
+        def build() -> dict[str, Any]:
+            allowed = {"MERGE_DUPLICATES", "ELIMINATE_OVERLAPPING"}
+            if (
+                not keywords
+                or len(keywords) > 10_000
+                or not all(isinstance(k, str) and k.strip() for k in keywords)
+            ):
+                raise ValueError("keywords must be 1..10000 non-empty phrases")
+            chosen = list(dict.fromkeys(operations or sorted(allowed)))
+            if not set(chosen) <= allowed:
+                raise ValueError("operations must be from: " + ", ".join(sorted(allowed)))
+            return {
+                "method": "deduplicate",
+                "params": {"Keywords": [{"Keyword": k.strip()} for k in keywords], "Operation": chosen},
+            }
+
+        return await direct("keywordsresearch", build)
 
     @server.tool(auth=require_scopes("yandex_direct:read"))
     async def direct_get_dictionaries(names: list[str]) -> dict[str, Any]:
@@ -492,9 +525,7 @@ def register_coverage_tools(server: Any, runtime: Any) -> None:
                 raise ValueError("dates must contain 1..100 YYYY-MM-DD strings")
             if any(not isinstance(d, str) or len(d) != 10 for d in dates):
                 raise ValueError("each date must be YYYY-MM-DD")
-            if paths is not None and (
-                not isinstance(paths, list) or not 1 <= len(paths) <= 100
-            ):
+            if paths is not None and (not isinstance(paths, list) or not 1 <= len(paths) <= 100):
                 raise ValueError("paths must contain 1..100 strings")
             if region_ids is not None:
                 _ids(region_ids, "region_ids")
